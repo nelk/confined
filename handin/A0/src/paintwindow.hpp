@@ -24,6 +24,8 @@ private:
   Gtk::Menu m_menu_app;
   Gtk::Menu m_menu_tools;
   Gtk::Menu m_menu_help;
+  // Quit Button
+  Gtk::Button quit_button;
 
   // The canvas onto which the user draws.
   PaintCanvas m_canvas;

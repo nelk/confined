@@ -63,6 +63,10 @@ PaintWindow::PaintWindow()
   m_canvas.set_size_request(300, 300);
   m_vbox.pack_start(m_canvas);
 
+  quit_button.set_label("Quit");
+  m_vbox.pack_start(quit_button);
+  quit_button.signal_clicked().connect(sigc::mem_fun(*this, &PaintWindow::hide));
+
   show_all();
 }
 
