@@ -38,13 +38,18 @@ PaintWindow::PaintWindow() {
   // that calls set_mode with the given mode (line/oval/rectangle).
 
   Gtk::RadioMenuItem::Group group;
-  Gtk::RadioMenuItem *rb_line = Gtk::manage(new Gtk::RadioMenuItem(group, "Line"));
-  Gtk::RadioMenuItem *rb_oval = Gtk::manage(new Gtk::RadioMenuItem(group, "Oval"));
-  Gtk::RadioMenuItem *rb_rectangle = Gtk::manage( new Gtk::RadioMenuItem(group, "Rectangle"));
+  Gtk::RadioMenuItem *rb_line = Gtk::manage(new Gtk::RadioMenuItem(group, "_Line", true));
+  Gtk::RadioMenuItem *rb_oval = Gtk::manage(new Gtk::RadioMenuItem(group, "_Oval", true));
+  Gtk::RadioMenuItem *rb_rectangle = Gtk::manage( new Gtk::RadioMenuItem(group, "_Rectangle", true));
 
-  rb_line->signal_select().connect(sigc::bind( mode_slot, PaintCanvas::DRAW_LINE));
-  rb_oval->signal_select().connect(sigc::bind( mode_slot, PaintCanvas::DRAW_OVAL));
-  rb_rectangle->signal_select().connect(sigc::bind( mode_slot, PaintCanvas::DRAW_RECTANGLE));
+  rb_line->add_accelerator("activate", get_accel_group(), 'l', (Gdk::ModifierType) 0, Gtk::ACCEL_VISIBLE);
+  rb_oval->add_accelerator("activate", get_accel_group(), 'o', (Gdk::ModifierType) 0, Gtk::ACCEL_VISIBLE);
+  rb_rectangle->add_accelerator("activate", get_accel_group(), 'r', (Gdk::ModifierType) 0, Gtk::ACCEL_VISIBLE);
+
+
+  rb_line->signal_activate().connect(sigc::bind( mode_slot, PaintCanvas::DRAW_LINE));
+  rb_oval->signal_activate().connect(sigc::bind( mode_slot, PaintCanvas::DRAW_OVAL));
+  rb_rectangle->signal_activate().connect(sigc::bind( mode_slot, PaintCanvas::DRAW_RECTANGLE));
 
   m_menu_tools.items().push_back(*rb_line);
   m_menu_tools.items().push_back(*rb_oval);
@@ -66,7 +71,7 @@ PaintWindow::PaintWindow() {
         sigc::bind( colour_slot, red ) ) );
   m_menu_colours.items().push_back( MenuElem("_Green", 
         sigc::bind( colour_slot, green ) ) );
-  m_menu_colours.items().push_back( MenuElem("_Blue", 
+  m_menu_colours.items().push_back( MenuElem("B_lue", 
         sigc::bind( colour_slot, blue ) ) );
 
 
