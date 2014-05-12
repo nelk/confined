@@ -1,0 +1,15 @@
+
+Paint 488
+===========
+by Alex Klen (ayklen@uwaterloo.ca)
+
+
+Compiling
+-----------
+Run "make" to build the executable paint488.
+
+
+Running
+--------
+Run the paint488 executable ("./paint488").
+
