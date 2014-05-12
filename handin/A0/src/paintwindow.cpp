@@ -37,15 +37,14 @@ PaintWindow::PaintWindow() {
   // declared above, and bind in the appropriate mode, making a slot
   // that calls set_mode with the given mode (line/oval/rectangle).
 
-  Gtk::RadioMenuItem::Group group;
-  Gtk::RadioMenuItem *rb_line = Gtk::manage(new Gtk::RadioMenuItem(group, "_Line", true));
-  Gtk::RadioMenuItem *rb_oval = Gtk::manage(new Gtk::RadioMenuItem(group, "_Oval", true));
-  Gtk::RadioMenuItem *rb_rectangle = Gtk::manage( new Gtk::RadioMenuItem(group, "_Rectangle", true));
+  Gtk::RadioMenuItem::Group tool_group;
+  Gtk::RadioMenuItem *rb_line = Gtk::manage(new Gtk::RadioMenuItem(tool_group, "_Line", true));
+  Gtk::RadioMenuItem *rb_oval = Gtk::manage(new Gtk::RadioMenuItem(tool_group, "_Oval", true));
+  Gtk::RadioMenuItem *rb_rectangle = Gtk::manage( new Gtk::RadioMenuItem(tool_group, "_Rectangle", true));
 
   rb_line->add_accelerator("activate", get_accel_group(), 'l', (Gdk::ModifierType) 0, Gtk::ACCEL_VISIBLE);
   rb_oval->add_accelerator("activate", get_accel_group(), 'o', (Gdk::ModifierType) 0, Gtk::ACCEL_VISIBLE);
   rb_rectangle->add_accelerator("activate", get_accel_group(), 'r', (Gdk::ModifierType) 0, Gtk::ACCEL_VISIBLE);
-
 
   rb_line->signal_activate().connect(sigc::bind( mode_slot, PaintCanvas::DRAW_LINE));
   rb_oval->signal_activate().connect(sigc::bind( mode_slot, PaintCanvas::DRAW_OVAL));
@@ -65,15 +64,22 @@ PaintWindow::PaintWindow() {
   green.set("green");
   blue.set("blue");
 
-  m_menu_colours.items().push_back( MenuElem("_Black", 
-        sigc::bind( colour_slot, black ) ) );
-  m_menu_colours.items().push_back( MenuElem("_Red", 
-        sigc::bind( colour_slot, red ) ) );
-  m_menu_colours.items().push_back( MenuElem("_Green", 
-        sigc::bind( colour_slot, green ) ) );
-  m_menu_colours.items().push_back( MenuElem("B_lue", 
-        sigc::bind( colour_slot, blue ) ) );
 
+  Gtk::RadioMenuItem::Group colour_group;
+  Gtk::RadioMenuItem *rb_black = Gtk::manage(new Gtk::RadioMenuItem(colour_group, "_Black", true));
+  Gtk::RadioMenuItem *rb_red = Gtk::manage(new Gtk::RadioMenuItem(colour_group, "_Red", true));
+  Gtk::RadioMenuItem *rb_green = Gtk::manage( new Gtk::RadioMenuItem(colour_group, "_Green", true));
+  Gtk::RadioMenuItem *rb_blue = Gtk::manage( new Gtk::RadioMenuItem(colour_group, "_Blue", true));
+
+  rb_black->signal_activate().connect(sigc::bind(colour_slot, black));
+  rb_red->signal_activate().connect(sigc::bind(colour_slot, red));
+  rb_green->signal_activate().connect(sigc::bind(colour_slot, green));
+  rb_blue->signal_activate().connect(sigc::bind(colour_slot, blue));
+
+  m_menu_colours.items().push_back(*rb_black);
+  m_menu_colours.items().push_back(*rb_red);
+  m_menu_colours.items().push_back(*rb_green);
+  m_menu_colours.items().push_back(*rb_blue);
 
   // Set up the help menu
   m_menu_help.items().push_back(MenuElem("_Line Help",
