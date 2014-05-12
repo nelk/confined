@@ -10,13 +10,16 @@ public:
   PaintWindow();
   virtual ~PaintWindow() {}
 
-  // Display a message box providing assistance with the line drawing
-  // function.
+  // Help dialogs.
   void help_line();
+  void help_oval();
+  void help_rectangle();
 
   void clear();
 
 protected:
+  void help_dialog(const char *message);
+
 private:
   // A "vertical box" which holds everything in our window
   Gtk::VBox m_vbox;

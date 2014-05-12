@@ -73,6 +73,10 @@ PaintWindow::PaintWindow() {
   // Set up the help menu
   m_menu_help.items().push_back(MenuElem("_Line Help",
         sigc::mem_fun(*this, &PaintWindow::help_line)));
+  m_menu_help.items().push_back(MenuElem("_Oval Help",
+        sigc::mem_fun(*this, &PaintWindow::help_oval)));
+  m_menu_help.items().push_back(MenuElem("_Rectangle Help",
+        sigc::mem_fun(*this, &PaintWindow::help_rectangle)));
 
   // Set up the menu bar
   m_menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Application", m_menu_app));
@@ -101,16 +105,35 @@ PaintWindow::PaintWindow() {
   show_all();
 }
 
+void PaintWindow::help_dialog(const char *message) {
+  Gtk::MessageDialog dialog(*this, message, true, Gtk::MESSAGE_INFO, Gtk::BUTTONS_OK, true);
+  dialog.run();
+}
+
 void PaintWindow::help_line() {
   const char* message =
     "Drawing a Line\n"
     "\n"
     "To draw a line, press the left mouse button to mark the beginning of the line.  Drag the mouse to the end of the line and release the button.";
-
-  Gtk::MessageDialog dialog(*this, message, true, Gtk::MESSAGE_INFO, Gtk::BUTTONS_OK, true);
-
-  dialog.run();
+  help_dialog(message);
 }
+
+void PaintWindow::help_oval() {
+  const char* message =
+    "Drawing an Oval\n"
+    "\n"
+    "To draw an oval, press the left mouse button to mark one point.  Drag the mouse to the to form a rectangle, and release the button. An oval will be drawn within the rectangle.";
+  help_dialog(message);
+}
+
+void PaintWindow::help_rectangle() {
+  const char* message =
+    "Drawing a Rectangle\n"
+    "\n"
+    "To draw a rectangle, press the left mouse button to mark one point.  Drag the mouse to the to form a rectangle, and release the button.";
+  help_dialog(message);
+}
+
 
 void PaintWindow::clear() {
   m_canvas.clear();
