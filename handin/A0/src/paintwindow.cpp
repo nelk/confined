@@ -1,6 +1,7 @@
 
 #include "paintwindow.hpp"
 #include <gdkmm/color.h>
+#include <gtkmm/radiomenuitem.h>
 
 PaintWindow::PaintWindow() {
   set_title("488 Paint");
@@ -36,12 +37,37 @@ PaintWindow::PaintWindow() {
   // declared above, and bind in the appropriate mode, making a slot
   // that calls set_mode with the given mode (line/oval/rectangle).
 
+  Gtk::RadioMenuItem::Group group;
+  //GSList *group = NULL;
+  //Gtk::RadioMenuItem rb_line = gtk_radio_menu_item_new_with_label(group, "Line");
+  Gtk::RadioMenuItem rb_line(group, "Line", true);
+  Gtk::RadioMenuItem rb_oval(group, "_Oval");
+  Gtk::RadioMenuItem rb_rectangle(group, "_Rectangle");
+
+  rb_line.signal_select().connect(sigc::bind( mode_slot, PaintCanvas::DRAW_LINE));
+  rb_oval.signal_select().connect(sigc::bind( mode_slot, PaintCanvas::DRAW_OVAL));
+  rb_rectangle.signal_select().connect(sigc::bind( mode_slot, PaintCanvas::DRAW_RECTANGLE));
+
+  m_menu_tools.items().push_back(rb_line);
+  m_menu_tools.items().push_back(rb_oval);
+  m_menu_tools.items().push_back(rb_rectangle);
+
+  //m_menu_tools.items().push_back( MenuElem("Blah", 
+        //sigc::bind( mode_slot, PaintCanvas::DRAW_LINE ) ) );
+
+  //m_menu_tools.items().push_back(MenuElem(rb_line));
+  //m_menu_tools.items().push_back(MenuElem(rb_oval));
+  //m_menu_tools.items().push_back(MenuElem(rb_rectangle));
+
+
+  /*
   m_menu_tools.items().push_back( MenuElem("_Line", 
         sigc::bind( mode_slot, PaintCanvas::DRAW_LINE ) ) );
   m_menu_tools.items().push_back( MenuElem("_Oval", 
         sigc::bind( mode_slot, PaintCanvas::DRAW_OVAL ) ) );
   m_menu_tools.items().push_back( MenuElem("_Rectangle", 
         sigc::bind( mode_slot, PaintCanvas::DRAW_RECTANGLE ) ) );
+  */
 
   // Colour menu.
   sigc::slot1<void, Gdk::Color> colour_slot =
