@@ -6,20 +6,25 @@
 PaintWindow::PaintWindow() {
   set_title("488 Paint");
 
-  // A utility class for constructing things that go into menus, which
-  // we'll set up next.
   using Gtk::Menu_Helpers::MenuElem;
 
-  // Set up the application menu
-  // The slot we use here just causes PaintWindow::hide() on this,
-  // which shuts down the application.
-  m_menu_app.items().push_back(MenuElem("_Clear", Gtk::AccelKey("C"),
-        sigc::mem_fun(*this, &PaintWindow::clear)));
-  m_menu_app.items().push_back(MenuElem("_Quit", Gtk::AccelKey("Q"),
-        sigc::mem_fun(*this, &PaintWindow::hide)));
+  // Set up the application menu.
+  Gtk::MenuItem *clear = Gtk::manage(new Gtk::MenuItem("_Clear", true));
+  Gtk::MenuItem *quit = Gtk::manage(new Gtk::MenuItem("_Quit", true));
+
+  clear->signal_activate().connect(sigc::mem_fun(*this, &PaintWindow::clear));
+  quit->signal_activate().connect(sigc::mem_fun(*this, &PaintWindow::hide));
+
+  clear->add_accelerator("activate", get_accel_group(), 'c', (Gdk::ModifierType) 0, Gtk::ACCEL_VISIBLE);
+  clear->add_accelerator("activate", get_accel_group(), 'c', Gdk::SHIFT_MASK, Gtk::ACCEL_VISIBLE);
+  quit->add_accelerator("activate", get_accel_group(), 'q', (Gdk::ModifierType) 0, Gtk::ACCEL_VISIBLE);
+  quit->add_accelerator("activate", get_accel_group(), 'q', Gdk::SHIFT_MASK, Gtk::ACCEL_VISIBLE);
+
+  m_menu_app.items().push_back(*clear);
+  m_menu_app.items().push_back(*quit);
 
   // Set up the tools menu
-
+  //
   // We're going to be connecting a bunch of menu entries to the same
   // function. So, we put a slot corresponding to that function in
   // mode_slot.
@@ -43,8 +48,11 @@ PaintWindow::PaintWindow() {
   Gtk::RadioMenuItem *rb_rectangle = Gtk::manage( new Gtk::RadioMenuItem(tool_group, "_Rectangle", true));
 
   rb_line->add_accelerator("activate", get_accel_group(), 'l', (Gdk::ModifierType) 0, Gtk::ACCEL_VISIBLE);
+  rb_line->add_accelerator("activate", get_accel_group(), 'l', Gdk::SHIFT_MASK, Gtk::ACCEL_VISIBLE);
   rb_oval->add_accelerator("activate", get_accel_group(), 'o', (Gdk::ModifierType) 0, Gtk::ACCEL_VISIBLE);
+  rb_oval->add_accelerator("activate", get_accel_group(), 'o', Gdk::SHIFT_MASK, Gtk::ACCEL_VISIBLE);
   rb_rectangle->add_accelerator("activate", get_accel_group(), 'r', (Gdk::ModifierType) 0, Gtk::ACCEL_VISIBLE);
+  rb_rectangle->add_accelerator("activate", get_accel_group(), 'r', Gdk::SHIFT_MASK, Gtk::ACCEL_VISIBLE);
 
   rb_line->signal_activate().connect(sigc::bind( mode_slot, PaintCanvas::DRAW_LINE));
   rb_oval->signal_activate().connect(sigc::bind( mode_slot, PaintCanvas::DRAW_OVAL));
@@ -63,7 +71,6 @@ PaintWindow::PaintWindow() {
   red.set("red");
   green.set("green");
   blue.set("blue");
-
 
   Gtk::RadioMenuItem::Group colour_group;
   Gtk::RadioMenuItem *rb_black = Gtk::manage(new Gtk::RadioMenuItem(colour_group, "_Black", true));
