@@ -2,6 +2,7 @@
 #define PAINTWINDOW_HPP
 
 #include <gtkmm.h>
+
 #include "paintcanvas.hpp"
 
 class PaintWindow : public Gtk::Window {
@@ -13,6 +14,8 @@ public:
   // function.
   void help_line();
 
+  void clear();
+
 protected:
 private:
   // A "vertical box" which holds everything in our window
@@ -23,6 +26,7 @@ private:
   // Each menu itself
   Gtk::Menu m_menu_app;
   Gtk::Menu m_menu_tools;
+  Gtk::Menu m_menu_colours;
   Gtk::Menu m_menu_help;
   // Quit Button
   Gtk::Button quit_button;

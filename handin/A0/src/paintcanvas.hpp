@@ -4,6 +4,7 @@
 #include <list>
 
 #include <gtkmm.h>
+#include <gdkmm/color.h>
 
 #include "algebra.hpp"
 
@@ -19,89 +20,97 @@ typedef Cairo::RefPtr<Cairo::Context> Graphics;
 // 
 class PaintShape
 {
-public:
-	virtual ~PaintShape() {}
+  public:
+    virtual ~PaintShape() {}
 
-	virtual void draw( Graphics gc ) = 0;
+    virtual void draw( Graphics gc ) = 0;
 
-protected:
-	PaintShape( const Point2D& from, const Point2D& to )
-		: m_from( from )
-		, m_to( to )
-	{}
+  protected:
+    PaintShape(const Point2D& from, const Point2D& to, const Gdk::Color& colour)
+      : m_from( from )
+      , m_to( to )
+      , m_colour( colour )
+  {}
 
-protected:
-	Point2D		m_from;
-	Point2D		m_to;
+  protected:
+    Point2D m_from;
+    Point2D m_to;
+    Gdk::Color m_colour;
 };
 
 class PaintLine
-	: public PaintShape
+: public PaintShape
 {
-public:
-	PaintLine( const Point2D& from, const Point2D& to )
-		: PaintShape( from, to )
-	{}
+  public:
+    PaintLine(const Point2D& from, const Point2D& to, const Gdk::Color &colour)
+      : PaintShape(from, to, colour)
+    {}
 
-	virtual void draw( Graphics gc );
+    virtual void draw( Graphics gc );
 };
 
 class PaintRect
-	: public PaintShape
+: public PaintShape
 {
-public:
-	PaintRect( const Point2D& from, const Point2D& to )
-		: PaintShape( from, to )
-	{}
+  public:
+    PaintRect(const Point2D& from, const Point2D& to, const Gdk::Color& colour)
+      : PaintShape(from, to, colour)
+    {}
 
-	virtual void draw( Graphics gc );
+    virtual void draw( Graphics gc );
 };
 
 class PaintOval
-	: public PaintShape
+: public PaintShape
 {
-public:
-	PaintOval( const Point2D& from, const Point2D& to )
-		: PaintShape( from, to )
-	{}
+  public:
+    PaintOval(const Point2D& from, const Point2D& to, const Gdk::Color &colour)
+      : PaintShape(from, to, colour)
+    {}
 
-	virtual void draw( Graphics gc );
+    virtual void draw( Graphics gc );
 };
 
 class PaintCanvas 
-	: public Gtk::DrawingArea
+: public Gtk::DrawingArea
 {
-public:
-  enum Mode {
-    DRAW_LINE,
-    DRAW_OVAL,
-    DRAW_RECTANGLE
-  };
+  public:
+    enum Mode {
+      DRAW_LINE,
+      DRAW_OVAL,
+      DRAW_RECTANGLE
+    };
 
-  PaintCanvas();
-  virtual ~PaintCanvas();
+    PaintCanvas();
+    virtual ~PaintCanvas();
 
-  void set_mode(Mode mode) { m_mode = mode; }
+    void set_mode(Mode mode) { m_mode = mode; }
+    void set_colour(Gdk::Color colour) { m_colour = colour; }
+    void clear();
 
-protected:
+  protected:
 
-  // Events we implement
-  // Note that we could use gtkmm's "signals and slots" mechanism
-  // instead, but for many classes there's a convenient member
-  // function one just needs to define that'll be called with the
-  // event.
-  
-  virtual bool on_button_press_event(GdkEventButton* button);
-  virtual bool on_button_release_event(GdkEventButton* button);
+    // Events we implement
+    // Note that we could use gtkmm's "signals and slots" mechanism
+    // instead, but for many classes there's a convenient member
+    // function one just needs to define that'll be called with the
+    // event.
 
-  virtual bool on_expose_event( GdkEventExpose *event );
+    virtual bool on_button_press_event(GdkEventButton* button);
+    virtual bool on_button_release_event(GdkEventButton* button);
 
-private:
-  Mode m_mode; // what to do when a user clicks
+    virtual bool on_expose_event( GdkEventExpose *event );
+    virtual void repaint(Graphics &gc);
 
-  Point2D m_start_pos; // position where the user last clicked
+  private:
+    Graphics getGraphics();
 
-  std::list<PaintShape*> m_shapes;
+    Mode m_mode; // what to do when a user clicks
+    Gdk::Color m_colour;
+
+    Point2D m_start_pos; // position where the user last clicked
+
+    std::list<PaintShape*> m_shapes;
 };
 
 #endif

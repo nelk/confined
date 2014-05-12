@@ -1,19 +1,22 @@
-#include "paintwindow.hpp"
 
-PaintWindow::PaintWindow()
-{
+#include "paintwindow.hpp"
+#include <gdkmm/color.h>
+
+PaintWindow::PaintWindow() {
   set_title("488 Paint");
 
   // A utility class for constructing things that go into menus, which
   // we'll set up next.
   using Gtk::Menu_Helpers::MenuElem;
-  
+
   // Set up the application menu
   // The slot we use here just causes PaintWindow::hide() on this,
   // which shuts down the application.
+  m_menu_app.items().push_back(MenuElem("_Clear", Gtk::AccelKey("C"),
+        sigc::mem_fun(*this, &PaintWindow::clear)));
   m_menu_app.items().push_back(MenuElem("_Quit", Gtk::AccelKey("Q"),
-    sigc::mem_fun(*this, &PaintWindow::hide)));
-  
+        sigc::mem_fun(*this, &PaintWindow::hide)));
+
   // Set up the tools menu
 
   // We're going to be connecting a bunch of menu entries to the same
@@ -23,7 +26,7 @@ PaintWindow::PaintWindow()
   // The type shows that this slot returns void (nothing, and takes
   // one argument, a PaintCanvas::Mode.
   sigc::slot1<void, PaintCanvas::Mode> mode_slot = 
-  	sigc::mem_fun(m_canvas, &PaintCanvas::set_mode);
+    sigc::mem_fun(m_canvas, &PaintCanvas::set_mode);
 
   // Now we set up the actual tools. SigC::bind takes a slot and makes
   // a new slot with one fewer parameter than the one passed to it,
@@ -34,24 +37,45 @@ PaintWindow::PaintWindow()
   // that calls set_mode with the given mode (line/oval/rectangle).
 
   m_menu_tools.items().push_back( MenuElem("_Line", 
-  	sigc::bind( mode_slot, PaintCanvas::DRAW_LINE ) ) );
+        sigc::bind( mode_slot, PaintCanvas::DRAW_LINE ) ) );
   m_menu_tools.items().push_back( MenuElem("_Oval", 
-  	sigc::bind( mode_slot, PaintCanvas::DRAW_OVAL ) ) );
+        sigc::bind( mode_slot, PaintCanvas::DRAW_OVAL ) ) );
   m_menu_tools.items().push_back( MenuElem("_Rectangle", 
-  	sigc::bind( mode_slot, PaintCanvas::DRAW_RECTANGLE ) ) );
+        sigc::bind( mode_slot, PaintCanvas::DRAW_RECTANGLE ) ) );
+
+  // Colour menu.
+  sigc::slot1<void, Gdk::Color> colour_slot =
+    sigc::mem_fun(m_canvas, &PaintCanvas::set_colour);
+
+  Gdk::Color black, red, green, blue;
+  black.set("black");
+  red.set("red");
+  green.set("green");
+  blue.set("blue");
+
+  m_menu_colours.items().push_back( MenuElem("_Black", 
+        sigc::bind( colour_slot, black ) ) );
+  m_menu_colours.items().push_back( MenuElem("_Red", 
+        sigc::bind( colour_slot, red ) ) );
+  m_menu_colours.items().push_back( MenuElem("_Green", 
+        sigc::bind( colour_slot, green ) ) );
+  m_menu_colours.items().push_back( MenuElem("_Blue", 
+        sigc::bind( colour_slot, blue ) ) );
+
 
   // Set up the help menu
   m_menu_help.items().push_back(MenuElem("_Line Help",
-    sigc::mem_fun(*this, &PaintWindow::help_line)));
+        sigc::mem_fun(*this, &PaintWindow::help_line)));
 
   // Set up the menu bar
   m_menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Application", m_menu_app));
   m_menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Tools", m_menu_tools));
+  m_menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Colours", m_menu_colours));
   m_menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Help", m_menu_help));
   m_menubar.items().back().set_right_justified(true);
-  
+
   // Pack in our widgets
-  
+
   // First add the vertical box as our single "top" widget
   add(m_vbox);
 
@@ -70,14 +94,18 @@ PaintWindow::PaintWindow()
   show_all();
 }
 
-void PaintWindow::help_line()
-{
+void PaintWindow::help_line() {
   const char* message =
     "Drawing a Line\n"
     "\n"
     "To draw a line, press the left mouse button to mark the beginning of the line.  Drag the mouse to the end of the line and release the button.";
-  
+
   Gtk::MessageDialog dialog(*this, message, true, Gtk::MESSAGE_INFO, Gtk::BUTTONS_OK, true);
 
   dialog.run();
 }
+
+void PaintWindow::clear() {
+  m_canvas.clear();
+}
+
