@@ -73,10 +73,10 @@ PaintWindow::PaintWindow() {
   blue.set("blue");
 
   Gtk::RadioMenuItem::Group colour_group;
-  Gtk::RadioMenuItem *rb_black = Gtk::manage(new Gtk::RadioMenuItem(colour_group, "_Black", true));
+  Gtk::RadioMenuItem *rb_black = Gtk::manage(new Gtk::RadioMenuItem(colour_group, "Blac_k", true));
   Gtk::RadioMenuItem *rb_red = Gtk::manage(new Gtk::RadioMenuItem(colour_group, "_Red", true));
-  Gtk::RadioMenuItem *rb_green = Gtk::manage( new Gtk::RadioMenuItem(colour_group, "_Green", true));
-  Gtk::RadioMenuItem *rb_blue = Gtk::manage( new Gtk::RadioMenuItem(colour_group, "_Blue", true));
+  Gtk::RadioMenuItem *rb_green = Gtk::manage(new Gtk::RadioMenuItem(colour_group, "_Green", true));
+  Gtk::RadioMenuItem *rb_blue = Gtk::manage(new Gtk::RadioMenuItem(colour_group, "_Blue", true));
 
   rb_black->signal_activate().connect(sigc::bind(colour_slot, black));
   rb_red->signal_activate().connect(sigc::bind(colour_slot, red));
