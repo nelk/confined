@@ -96,8 +96,27 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   glTranslated(-5.0, -12.0, 0.0);
 
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-  glColor3d(1.0, 0.0, 0.0);
+  glColor3d(0.3, 0.1, 0.8);
 
+  // Draw U-shaped game well.
+  // Sides.
+  for (int r = 0; r < m_game->getHeight(); r++) {
+    glPushMatrix();
+    glTranslated(-1, r, 0.0);
+    drawCube();
+    glTranslated(m_game->getWidth() + 1, 0.0, 0.0);
+    drawCube();
+    glPopMatrix();
+  }
+  // Bottom.
+  for (int c = -1; c < m_game->getWidth() + 1; c++) {
+    glPushMatrix();
+    glTranslated(c, -1, 0.0);
+    drawCube();
+    glPopMatrix();
+  }
+
+  /*
   glBegin(GL_TRIANGLES);
   glVertex3d(0.0, 0.0, 0.0);
   glVertex3d(1.0, 0.0, 0.0);
@@ -115,6 +134,7 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   glVertex3d(10.0, 20.0, 0.0);
   glVertex3d(9.0, 20.0, 0.0);
   glEnd();
+  */
 
   // Draw game state.
   if (m_view_mode == WIREFRAME) {
@@ -125,7 +145,6 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
 
   glColor3d(0.0, 1.0, 0.0);
 
-  //std::cout << "Drawing ";
   for (int r = 0; r < m_game->getHeight() + 4; r++) {
     for (int c = 0; c < m_game->getWidth(); c++) {
       int pieceId = m_game->get(r, c);
@@ -137,13 +156,11 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
         setColourForId(pieceId);
       }
       glPushMatrix();
-      //std::cout << "(" << c << "," << r << ") ";
       glTranslated(c, r, 0.0);
       drawCube();
       glPopMatrix();
     }
   }
-  //std::cout << std::endl;
 
   // We pushed a matrix onto the PROJECTION stack earlier, we
   // need to pop it.
@@ -188,7 +205,6 @@ void Viewer::setColourForId(int id) {
   }
 }
 
-// TODO: Display lists
 void Viewer::drawCube() {
   // Draw Cube, going arround points cw.
   glBegin(GL_QUADS);
