@@ -147,9 +147,13 @@ void AppWindow::setupTickTimer() {
 }
 
 bool AppWindow::tick() {
-  int success = m_game->tick();
+  int result = m_game->tick();
   m_viewer->invalidate();
-  // TODO: Handle success < 0
+  if (result < 0) {
+    // Game Over.
+  } else if (result > 0) {
+    // 1-4 rows destroyed.
+  }
   return true;
 }
 

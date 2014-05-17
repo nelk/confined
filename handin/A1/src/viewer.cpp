@@ -95,9 +95,7 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   // it appear centered in the window.
   glTranslated(-5.0, -12.0, 0.0);
 
-  // Not implemented: actually draw the current game state.
-  // Here's some test code that draws red triangles at the
-  // corners of the game board.
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   glColor3d(1.0, 0.0, 0.0);
 
   glBegin(GL_TRIANGLES);
@@ -119,13 +117,24 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   glEnd();
 
   // Draw game state.
-  glColor3d(0.1, 1.0, 0.0);
+  if (m_view_mode == WIREFRAME) {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  } else {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  }
+
+  glColor3d(0.0, 1.0, 0.0);
+
   //std::cout << "Drawing ";
   for (int r = 0; r < m_game->getHeight() + 4; r++) {
     for (int c = 0; c < m_game->getWidth(); c++) {
       int pieceId = m_game->get(r, c);
       if (pieceId == -1) {
         continue;
+      }
+
+      if (m_view_mode == MULTICOLOUR) {
+        setColourForId(pieceId);
       }
       glPushMatrix();
       //std::cout << "(" << c << "," << r << ") ";
@@ -149,6 +158,34 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   gldrawable->gl_end();
 
   return true;
+}
+
+void Viewer::setColourForId(int id) {
+  switch (id) {
+    case 0:
+      glColor3d(1.0, 0.0, 0.0);
+      break;
+    case 1:
+      glColor3d(0.0, 1.0, 0.0);
+      break;
+    case 2:
+      glColor3d(0.0, 0.0, 1.0);
+      break;
+    case 3:
+      glColor3d(1.0, 1.0, 0.0);
+      break;
+    case 4:
+      glColor3d(1.0, 0.0, 1.0);
+      break;
+    case 5:
+      glColor3d(0.0, 1.0, 1.0);
+      break;
+    case 6:
+      glColor3d(1.0, 1.0, 1.0);
+      break;
+    default:
+      break;
+  }
 }
 
 // TODO: Display lists

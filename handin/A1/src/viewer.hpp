@@ -25,6 +25,7 @@ class Viewer : public Gtk::GL::DrawingArea {
 
     void setViewMode(ViewMode vm) {
       m_view_mode = vm;
+      invalidate();
     }
 
   protected:
@@ -48,9 +49,10 @@ class Viewer : public Gtk::GL::DrawingArea {
     // Called when the mouse moves
     virtual bool on_motion_notify_event(GdkEventMotion* event);
 
-    void drawCube();
-
   private:
+    void drawCube();
+    void setColourForId(int id);
+
     ViewMode m_view_mode;
     Game *m_game;
 };
