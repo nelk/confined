@@ -3,8 +3,7 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 
-Viewer::Viewer()
-{
+Viewer::Viewer(Game *game) : m_view_mode(WIREFRAME), m_game(game) {
   Glib::RefPtr<Gdk::GL::Config> glconfig;
 
   // Ask for an OpenGL Setup with
@@ -12,8 +11,8 @@ Viewer::Viewer()
   //  - a depth buffer to avoid things overlapping wrongly
   //  - double-buffered rendering to avoid tearing/flickering
   glconfig = Gdk::GL::Config::create(Gdk::GL::MODE_RGB |
-                                     Gdk::GL::MODE_DEPTH |
-                                     Gdk::GL::MODE_DOUBLE);
+      Gdk::GL::MODE_DEPTH |
+      Gdk::GL::MODE_DOUBLE);
   if (glconfig == 0) {
     // If we can't get this configuration, die
     std::cerr << "Unable to setup OpenGL Configuration!" << std::endl;
@@ -25,34 +24,31 @@ Viewer::Viewer()
 
   // Register the fact that we want to receive these events
   add_events(Gdk::BUTTON1_MOTION_MASK    |
-             Gdk::BUTTON2_MOTION_MASK    |
-             Gdk::BUTTON3_MOTION_MASK    |
-             Gdk::BUTTON_PRESS_MASK      | 
-             Gdk::BUTTON_RELEASE_MASK    |
-             Gdk::VISIBILITY_NOTIFY_MASK);
+      Gdk::BUTTON2_MOTION_MASK    |
+      Gdk::BUTTON3_MOTION_MASK    |
+      Gdk::BUTTON_PRESS_MASK      |
+      Gdk::BUTTON_RELEASE_MASK    |
+      Gdk::VISIBILITY_NOTIFY_MASK);
 }
 
-Viewer::~Viewer()
-{
+Viewer::~Viewer() {
   // Nothing to do here right now.
 }
 
-void Viewer::invalidate()
-{
+void Viewer::invalidate() {
   //Force a rerender
   Gtk::Allocation allocation = get_allocation();
-  get_window()->invalidate_rect( allocation, false);
-  
+  get_window()->invalidate_rect(allocation, false);
+
 }
 
-void Viewer::on_realize()
-{
+void Viewer::on_realize() {
   // Do some OpenGL setup.
   // First, let the base class do whatever it needs to
   Gtk::GL::DrawingArea::on_realize();
-  
+
   Glib::RefPtr<Gdk::GL::Drawable> gldrawable = get_gl_drawable();
-  
+
   if (!gldrawable)
     return;
 
@@ -66,8 +62,7 @@ void Viewer::on_realize()
   gldrawable->gl_end();
 }
 
-bool Viewer::on_expose_event(GdkEventExpose* event)
-{
+bool Viewer::on_expose_event(GdkEventExpose* event) {
   Glib::RefPtr<Gdk::GL::Drawable> gldrawable = get_gl_drawable();
 
   if (!gldrawable) return false;
@@ -123,7 +118,25 @@ bool Viewer::on_expose_event(GdkEventExpose* event)
   glVertex3d(9.0, 20.0, 0.0);
   glEnd();
 
-  // We pushed a matrix onto the PROJECTION stack earlier, we 
+  // Draw game state.
+  glColor3d(0.1, 1.0, 0.0);
+  //std::cout << "Drawing ";
+  for (int r = 0; r < m_game->getHeight() + 4; r++) {
+    for (int c = 0; c < m_game->getWidth(); c++) {
+      int pieceId = m_game->get(r, c);
+      if (pieceId == -1) {
+        continue;
+      }
+      glPushMatrix();
+      //std::cout << "(" << c << "," << r << ") ";
+      glTranslated(c, r, 0.0);
+      drawCube();
+      glPopMatrix();
+    }
+  }
+  //std::cout << std::endl;
+
+  // We pushed a matrix onto the PROJECTION stack earlier, we
   // need to pop it.
 
   glMatrixMode(GL_PROJECTION);
@@ -138,12 +151,55 @@ bool Viewer::on_expose_event(GdkEventExpose* event)
   return true;
 }
 
-bool Viewer::on_configure_event(GdkEventConfigure* event)
-{
+// TODO: Display lists
+void Viewer::drawCube() {
+  // Draw Cube, going arround points cw.
+  glBegin(GL_QUADS);
+
+  // Back.
+  glVertex3d(0.0, 0.0, 0.0);
+  glVertex3d(1.0, 0.0, 0.0);
+  glVertex3d(1.0, 1.0, 0.0);
+  glVertex3d(0.0, 1.0, 0.0);
+
+  // Front.
+  glVertex3d(0.0, 0.0, 1.0);
+  glVertex3d(0.0, 1.0, 1.0);
+  glVertex3d(1.0, 1.0, 1.0);
+  glVertex3d(1.0, 0.0, 1.0);
+
+  // Left.
+  glVertex3d(0.0, 0.0, 0.0);
+  glVertex3d(0.0, 1.0, 0.0);
+  glVertex3d(0.0, 1.0, 1.0);
+  glVertex3d(0.0, 0.0, 1.0);
+
+  // Right.
+  glVertex3d(1.0, 0.0, 0.0);
+  glVertex3d(1.0, 0.0, 1.0);
+  glVertex3d(1.0, 1.0, 1.0);
+  glVertex3d(1.0, 1.0, 0.0);
+
+  // Bottom.
+  glVertex3d(0.0, 0.0, 0.0);
+  glVertex3d(0.0, 0.0, 1.0);
+  glVertex3d(1.0, 0.0, 1.0);
+  glVertex3d(1.0, 0.0, 0.0);
+
+  // Top.
+  glVertex3d(0.0, 1.0, 0.0);
+  glVertex3d(1.0, 1.0, 0.0);
+  glVertex3d(1.0, 1.0, 1.0);
+  glVertex3d(0.0, 1.0, 1.0);
+
+  glEnd();
+}
+
+bool Viewer::on_configure_event(GdkEventConfigure* event) {
   Glib::RefPtr<Gdk::GL::Drawable> gldrawable = get_gl_drawable();
 
   if (!gldrawable) return false;
-  
+
   if (!gldrawable->gl_begin(get_gl_context()))
     return false;
 
@@ -156,7 +212,7 @@ bool Viewer::on_configure_event(GdkEventConfigure* event)
   gluPerspective(40.0, (GLfloat)event->width/(GLfloat)event->height, 0.1, 1000.0);
 
   // Reset to modelview matrix mode
-  
+
   glMatrixMode(GL_MODELVIEW);
 
   gldrawable->gl_end();
@@ -164,20 +220,18 @@ bool Viewer::on_configure_event(GdkEventConfigure* event)
   return true;
 }
 
-bool Viewer::on_button_press_event(GdkEventButton* event)
-{
+bool Viewer::on_button_press_event(GdkEventButton* event) {
   std::cerr << "Stub: Button " << event->button << " pressed" << std::endl;
   return true;
 }
 
-bool Viewer::on_button_release_event(GdkEventButton* event)
-{
+bool Viewer::on_button_release_event(GdkEventButton* event) {
   std::cerr << "Stub: Button " << event->button << " released" << std::endl;
   return true;
 }
 
-bool Viewer::on_motion_notify_event(GdkEventMotion* event)
-{
+bool Viewer::on_motion_notify_event(GdkEventMotion* event) {
   std::cerr << "Stub: Motion at " << event->x << ", " << event->y << std::endl;
   return true;
 }
+
