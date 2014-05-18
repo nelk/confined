@@ -10,6 +10,9 @@ int main(int argc, char** argv)
   // Initialize OpenGL
   Gtk::GL::init(argc, argv);
 
+  // Seed randomness.
+  srand(getpid());
+
   // Construct our (only) window
   AppWindow window;
 

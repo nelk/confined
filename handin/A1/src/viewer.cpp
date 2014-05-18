@@ -60,9 +60,27 @@ void Viewer::on_realize() {
   if (!gldrawable->gl_begin(get_gl_context()))
     return;
 
-  // Just enable depth testing and set the background colour.
+  //glClearColor(0.7, 0.7, 1.0, 0.0);
+  glClearColor(0.0, 0.0, 0.0, 1.0);
+
+  // Lighting/shading.
+  glShadeModel(GL_SMOOTH);
+  GLfloat light_ambient[] = { 0.2, 0.2, 0.2, 1.0 };
+  GLfloat light_diffuse[] = { 0.6, 0.6, 0.6, 1.0 };
+  GLfloat mat_specular[] = { 0.3, 0.3, 0.3, 1.0 };
+  GLfloat mat_shininess[] = { 100.0 };
+
+  glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+  glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+
+  glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+  glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+
+  glEnable(GL_LIGHTING);
+  glEnable(GL_LIGHT0);
+  glEnable(GL_COLOR_MATERIAL);
+
   glEnable(GL_DEPTH_TEST);
-  glClearColor(0.7, 0.7, 1.0, 0.0);
 
   gldrawable->gl_end();
 }
@@ -77,27 +95,30 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
 
   // Clear the screen
 
-  glClearColor(0.0, 0.0, 0.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   // Modify the current projection matrix so that we move the 
   // camera away from the origin.  We'll draw the game at the
   // origin, and we need to back up to see it.
 
-  glMatrixMode(GL_PROJECTION);
-  glPushMatrix();
-  glTranslated(0.0, 0.0, -40.0);
+
+  //glMatrixMode(GL_PROJECTION);
+  //glLoadIdentity();
 
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
 
-  // Not implemented: set up lighting (if necessary)
+  glPushMatrix();
 
-  glScaled(m_scale, m_scale, m_scale);
+  GLfloat light_position[] = { 0.0, 0.0, 0.0, 1.0 };
+  glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
+  // Perform view movement on modelview matrix so that light moves with viewport.
+  glTranslated(0.0, 0.0, -40.0);
   glRotated(m_rot[0], 1, 0, 0);
   glRotated(m_rot[1], 0, 1, 0);
   glRotated(m_rot[2], 0, 0, 1);
+  glScaled(m_scale, m_scale, m_scale);
 
   // You'll be drawing unit cubes, so the game will have width
   // 10 and height 24 (game = 20, stripe = 4).  Let's translate
@@ -105,10 +126,10 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   // it appear centered in the window.
   glTranslated(-5.0, -12.0, 0.0);
 
-  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-  glColor3d(0.3, 0.1, 0.8);
-
   // Draw U-shaped game well.
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  glColor3d(0.0, 0.0, 1.0);
+
   // Sides.
   for (int r = 0; r < m_game->getHeight(); r++) {
     glPushMatrix();
@@ -172,11 +193,13 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
     }
   }
 
+  glPopMatrix();
+
   // We pushed a matrix onto the PROJECTION stack earlier, we
   // need to pop it.
 
-  glMatrixMode(GL_PROJECTION);
-  glPopMatrix();
+  //glMatrixMode(GL_PROJECTION);
+  //glPopMatrix();
 
   // Swap the contents of the front and back buffers so we see what we
   // just drew. This should only be done if double buffering is enabled.
@@ -219,40 +242,46 @@ void Viewer::setColourForId(int id) {
 }
 
 void Viewer::drawCube() {
-  // Draw Cube, going arround points cw.
+  // Draw Cube, going arround points ccw as per opengl standard.
   glBegin(GL_QUADS);
 
   // Back.
+  glNormal3d(0.0, 0.0, -1.0);
   glVertex3d(0.0, 0.0, 0.0);
   glVertex3d(1.0, 0.0, 0.0);
   glVertex3d(1.0, 1.0, 0.0);
   glVertex3d(0.0, 1.0, 0.0);
 
   // Front.
+  glNormal3d(0.0, 0.0, 1.0);
   glVertex3d(0.0, 0.0, 1.0);
   glVertex3d(0.0, 1.0, 1.0);
   glVertex3d(1.0, 1.0, 1.0);
   glVertex3d(1.0, 0.0, 1.0);
 
   // Left.
+  glNormal3d(-1.0, 0.0, 0.0);
   glVertex3d(0.0, 0.0, 0.0);
   glVertex3d(0.0, 1.0, 0.0);
   glVertex3d(0.0, 1.0, 1.0);
   glVertex3d(0.0, 0.0, 1.0);
 
   // Right.
+  glNormal3d(1.0, 0.0, 0.0);
   glVertex3d(1.0, 0.0, 0.0);
   glVertex3d(1.0, 0.0, 1.0);
   glVertex3d(1.0, 1.0, 1.0);
   glVertex3d(1.0, 1.0, 0.0);
 
   // Bottom.
+  glNormal3d(0.0, -1.0, 0.0);
   glVertex3d(0.0, 0.0, 0.0);
   glVertex3d(0.0, 0.0, 1.0);
   glVertex3d(1.0, 0.0, 1.0);
   glVertex3d(1.0, 0.0, 0.0);
 
   // Top.
+  glNormal3d(0.0, 1.0, 0.0);
   glVertex3d(0.0, 1.0, 0.0);
   glVertex3d(1.0, 1.0, 0.0);
   glVertex3d(1.0, 1.0, 1.0);

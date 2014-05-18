@@ -8,11 +8,6 @@
 #define GAME_COLUMNS 10
 #define GAME_ROWS 20
 
-void AppWindow::add_accelerator(Gtk::MenuItem *it, char accelerator) {
-  it->add_accelerator("activate", get_accel_group(), accelerator, (Gdk::ModifierType) 0, Gtk::ACCEL_VISIBLE);
-  it->add_accelerator("activate", get_accel_group(), accelerator, Gdk::SHIFT_MASK, Gtk::ACCEL_VISIBLE);
-}
-
 AppWindow::AppWindow() : m_tick_delay(SLOW_TICK_DELAY) {
   set_title("488 Tetrominoes on the Wall, by Alex Klen");
   resize(800, 600);
@@ -107,6 +102,12 @@ AppWindow::~AppWindow() {
   delete m_viewer;
   delete m_game;
 }
+
+void AppWindow::add_accelerator(Gtk::MenuItem *it, char accelerator) {
+  it->add_accelerator("activate", get_accel_group(), accelerator, (Gdk::ModifierType) 0, Gtk::ACCEL_VISIBLE);
+  it->add_accelerator("activate", get_accel_group(), accelerator, Gdk::SHIFT_MASK, Gtk::ACCEL_VISIBLE);
+}
+
 
 bool AppWindow::on_key_press_event( GdkEventKey *ev ) {
   bool need_invalidate = false;

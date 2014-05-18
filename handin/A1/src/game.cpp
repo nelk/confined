@@ -140,16 +140,15 @@ void Piece::getColumnRev(int col, char *buf) const {
   buf[3] = desc_[col];
 }
 
-  Game::Game(int width, int height)
-  : board_width_(width)
-    , board_height_(height)
-    , stopped_(false) {
-      int sz = board_width_ * (board_height_+4);
+Game::Game(int width, int height) : board_width_(width),
+    board_height_(height) , stopped_(false) {
 
-      board_ = new int[ sz ];
-      std::fill(board_, board_ + sz, -1);
-      generateNewPiece();
-    }
+  int sz = board_width_ * (board_height_+4);
+
+  board_ = new int[ sz ];
+  std::fill(board_, board_ + sz, -1);
+  generateNewPiece();
+}
 
 void Game::reset() {
   stopped_ = false;
