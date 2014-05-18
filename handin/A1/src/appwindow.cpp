@@ -94,6 +94,7 @@ AppWindow::AppWindow() : m_tick_delay(SLOW_TICK_DELAY) {
 
   show_all();
 
+  AppWindow::reset();
   setupTickTimer();
   Glib::signal_timeout().connect(sigc::mem_fun(m_viewer, &Viewer::refresh), REFRESH_DELAY);
 }
@@ -157,7 +158,7 @@ bool AppWindow::tick() {
   // TODO: Display something on lose?
   int result = m_game->tick();
   if (result < 0) {
-    // Game Over.
+    m_viewer->setGameOver(true);
   } else if (result > 0) {
     // 1-4 rows destroyed.
   }
@@ -167,10 +168,11 @@ bool AppWindow::tick() {
 void AppWindow::reset() {
   // TODO: Reset speed as well?
   m_viewer->resetView();
-  m_menu_draw_mode.items()[0].activate();
+  m_menu_draw_mode.items()[1].activate();
 }
 
 void AppWindow::newgame() {
   m_game->reset();
+  m_viewer->setGameOver(false);
 }
 

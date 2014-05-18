@@ -31,6 +31,10 @@ class Viewer : public Gtk::GL::DrawingArea {
       invalidate();
     }
 
+    void setGameOver(bool go) {
+      m_game_over = go;
+    }
+
   protected:
 
     // Events we implement
@@ -53,7 +57,7 @@ class Viewer : public Gtk::GL::DrawingArea {
     virtual bool on_motion_notify_event(GdkEventMotion* event);
 
   private:
-    void drawCube();
+    void drawCube(bool differentColours = false, bool randomColours = false);
     void setColourForId(int id);
 
     ViewMode m_view_mode;
@@ -64,6 +68,7 @@ class Viewer : public Gtk::GL::DrawingArea {
     guint m_mouse_button;
     gdouble m_last_mouse_x;
     gdouble m_last_delta_x;
+    bool m_game_over;
 };
 
 #endif

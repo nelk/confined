@@ -1,5 +1,6 @@
 #include "viewer.hpp"
 #include <iostream>
+#include <algorithm>
 #include <GL/gl.h>
 #include <GL/glu.h>
 
@@ -8,7 +9,7 @@
 #define MAX_SCALE 1.5
 #define MIN_SCALE 0.1
 
-Viewer::Viewer(Game *game) : m_view_mode(WIREFRAME), m_game(game), m_scale(1.0) {
+Viewer::Viewer(Game *game) : m_view_mode(WIREFRAME), m_game(game), m_scale(1.0), m_game_over(false) {
   Glib::RefPtr<Gdk::GL::Config> glconfig;
 
   // Ask for an OpenGL Setup with
@@ -126,8 +127,14 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   // it appear centered in the window.
   glTranslated(-5.0, -12.0, 0.0);
 
+  // Set polygon mode.
+  if (m_view_mode == WIREFRAME) {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  } else {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  }
+
   // Draw U-shaped game well.
-  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   glColor3d(0.0, 0.0, 1.0);
 
   // Sides.
@@ -168,11 +175,6 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   */
 
   // Draw game state.
-  if (m_view_mode == WIREFRAME) {
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  } else {
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-  }
 
   glColor3d(0.0, 1.0, 0.0);
 
@@ -183,12 +185,12 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
         continue;
       }
 
-      if (m_view_mode == MULTICOLOUR) {
+      if (m_view_mode != MULTICOLOUR) {
         setColourForId(pieceId);
       }
       glPushMatrix();
       glTranslated(c, r, 0.0);
-      drawCube();
+      drawCube(m_view_mode == MULTICOLOUR, m_game_over);
       glPopMatrix();
     }
   }
@@ -241,11 +243,21 @@ void Viewer::setColourForId(int id) {
   }
 }
 
-void Viewer::drawCube() {
-  // Draw Cube, going arround points ccw as per opengl standard.
+void Viewer::drawCube(bool differenColours, bool randomColours) {
+  // Draw Cube, going around points ccw as per opengl standard.
   glBegin(GL_QUADS);
 
+  int colourIds[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+  int onColour = 0;
+  if (randomColours) {
+    std::random_shuffle(colourIds, colourIds + 8);
+    if (!differenColours) {
+      setColourForId(colourIds[0]);
+    }
+  }
+
   // Back.
+  if (differenColours) setColourForId(colourIds[onColour++]);
   glNormal3d(0.0, 0.0, -1.0);
   glVertex3d(0.0, 0.0, 0.0);
   glVertex3d(1.0, 0.0, 0.0);
@@ -253,6 +265,7 @@ void Viewer::drawCube() {
   glVertex3d(0.0, 1.0, 0.0);
 
   // Front.
+  if (differenColours) setColourForId(colourIds[onColour++]);
   glNormal3d(0.0, 0.0, 1.0);
   glVertex3d(0.0, 0.0, 1.0);
   glVertex3d(0.0, 1.0, 1.0);
@@ -260,6 +273,7 @@ void Viewer::drawCube() {
   glVertex3d(1.0, 0.0, 1.0);
 
   // Left.
+  if (differenColours) setColourForId(colourIds[onColour++]);
   glNormal3d(-1.0, 0.0, 0.0);
   glVertex3d(0.0, 0.0, 0.0);
   glVertex3d(0.0, 1.0, 0.0);
@@ -267,6 +281,7 @@ void Viewer::drawCube() {
   glVertex3d(0.0, 0.0, 1.0);
 
   // Right.
+  if (differenColours) setColourForId(colourIds[onColour++]);
   glNormal3d(1.0, 0.0, 0.0);
   glVertex3d(1.0, 0.0, 0.0);
   glVertex3d(1.0, 0.0, 1.0);
@@ -274,6 +289,7 @@ void Viewer::drawCube() {
   glVertex3d(1.0, 1.0, 0.0);
 
   // Bottom.
+  if (differenColours) setColourForId(colourIds[onColour++]);
   glNormal3d(0.0, -1.0, 0.0);
   glVertex3d(0.0, 0.0, 0.0);
   glVertex3d(0.0, 0.0, 1.0);
@@ -281,6 +297,7 @@ void Viewer::drawCube() {
   glVertex3d(1.0, 0.0, 0.0);
 
   // Top.
+  if (differenColours) setColourForId(colourIds[onColour++]);
   glNormal3d(0.0, 1.0, 0.0);
   glVertex3d(0.0, 1.0, 0.0);
   glVertex3d(1.0, 1.0, 0.0);
