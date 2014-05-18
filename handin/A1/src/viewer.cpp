@@ -3,7 +3,7 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 
-Viewer::Viewer(Game *game) : m_view_mode(WIREFRAME), m_game(game) {
+Viewer::Viewer(Game *game) : m_view_mode(WIREFRAME), m_game(game), m_scale(1.0) {
   Glib::RefPtr<Gdk::GL::Config> glconfig;
 
   // Ask for an OpenGL Setup with
@@ -72,6 +72,7 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
 
   // Clear the screen
 
+  glClearColor(0.0, 0.0, 0.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   // Modify the current projection matrix so that we move the 
@@ -88,6 +89,10 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   // Not implemented: set up lighting (if necessary)
 
   // Not implemented: scale and rotate the scene
+  glRotated(m_rot[0], 1, 0, 0);
+  glRotated(m_rot[1], 0, 1, 0);
+  glRotated(m_rot[2], 0, 0, 1);
+  //std::cout << "ROT " << m_rot[0] << ", " << m_rot[1] << ", " << m_rot[2] << std::endl;
 
   // You'll be drawing unit cubes, so the game will have width
   // 10 and height 24 (game = 20, stripe = 4).  Let's translate
@@ -273,18 +278,41 @@ bool Viewer::on_configure_event(GdkEventConfigure* event) {
   return true;
 }
 
+// TODO: Scaling
 bool Viewer::on_button_press_event(GdkEventButton* event) {
-  std::cerr << "Stub: Button " << event->button << " pressed" << std::endl;
+  m_last_mouse_x = event->x;
+  m_mouse_button = event->button;
+  m_last_delta_x = 0;
+  m_rotv[m_mouse_button - 1] = 0;
+  //invalidate();
   return true;
 }
 
 bool Viewer::on_button_release_event(GdkEventButton* event) {
-  std::cerr << "Stub: Button " << event->button << " released" << std::endl;
+  m_rotv[m_mouse_button - 1] = m_last_delta_x;
+  //invalidate();
   return true;
 }
 
 bool Viewer::on_motion_notify_event(GdkEventMotion* event) {
-  std::cerr << "Stub: Motion at " << event->x << ", " << event->y << std::endl;
+  m_last_delta_x = event->x - m_last_mouse_x;
+  m_last_mouse_x = event->x;
+  m_rot[m_mouse_button - 1] += m_last_delta_x * 0.1;
+  //invalidate();
   return true;
+}
+
+bool Viewer::refresh() {
+  for (int i = 0; i < 3; i++) {
+    m_rot[i] += m_rotv[i];
+  }
+  invalidate();
+  return true;
+}
+
+
+void Viewer::resetView() {
+  m_rot = Vector3D();
+  m_rotv = Vector3D();
 }
 

@@ -6,6 +6,7 @@
 #include <gtkglmm.h>
 
 #include "game.hpp"
+#include "algebra.hpp"
 
 // The "main" OpenGL widget
 class Viewer : public Gtk::GL::DrawingArea {
@@ -22,6 +23,8 @@ class Viewer : public Gtk::GL::DrawingArea {
     // directly. Instead call this, which will cause an on_expose_event
     // call when the time is right.
     void invalidate();
+    bool refresh(); // Viewing animation.
+    void resetView();
 
     void setViewMode(ViewMode vm) {
       m_view_mode = vm;
@@ -55,6 +58,11 @@ class Viewer : public Gtk::GL::DrawingArea {
 
     ViewMode m_view_mode;
     Game *m_game;
+    Vector3D m_rot, m_rotv;
+    double m_scale;
+    guint m_mouse_button;
+    gdouble m_last_mouse_x;
+    gdouble m_last_delta_x;
 };
 
 #endif

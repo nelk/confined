@@ -4,6 +4,7 @@
 #define SLOW_TICK_DELAY 500
 #define MEDIUM_TICK_DELAY 250
 #define FAST_TICK_DELAY 100
+#define REFRESH_DELAY 30
 
 void AppWindow::add_accelerator(Gtk::MenuItem *it, char accelerator) {
   it->add_accelerator("activate", get_accel_group(), accelerator, (Gdk::ModifierType) 0, Gtk::ACCEL_VISIBLE);
@@ -96,6 +97,7 @@ AppWindow::AppWindow() : m_tick_delay(SLOW_TICK_DELAY) {
   show_all();
 
   setupTickTimer();
+  Glib::signal_timeout().connect(sigc::mem_fun(m_viewer, &Viewer::refresh), REFRESH_DELAY);
 }
 
 AppWindow::~AppWindow() {
@@ -126,7 +128,8 @@ bool AppWindow::on_key_press_event( GdkEventKey *ev )
     return Gtk::Window::on_key_press_event( ev );
   }
   if (need_invalidate) {
-    m_viewer->invalidate();
+    // TODO
+    //m_viewer->invalidate();
   }
   return true;
 }
@@ -148,7 +151,6 @@ void AppWindow::setupTickTimer() {
 
 bool AppWindow::tick() {
   int result = m_game->tick();
-  m_viewer->invalidate();
   if (result < 0) {
     // Game Over.
   } else if (result > 0) {
@@ -159,7 +161,7 @@ bool AppWindow::tick() {
 
 void AppWindow::reset() {
   // TODO: Reset all window states.
-  m_game->reset();
+  m_viewer->resetView();
 }
 
 void AppWindow::newgame() {
