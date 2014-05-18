@@ -332,5 +332,6 @@ bool Viewer::refresh() {
 void Viewer::resetView() {
   m_rot = Vector3D();
   m_rotv = Vector3D();
+  m_scale = 1.0;
 }
 

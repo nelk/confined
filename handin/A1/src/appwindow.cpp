@@ -164,8 +164,9 @@ bool AppWindow::tick() {
 }
 
 void AppWindow::reset() {
-  // TODO: Reset view state.
+  // TODO: Reset speed as well?
   m_viewer->resetView();
+  m_menu_draw_mode.items()[0].activate();
 }
 
 void AppWindow::newgame() {
