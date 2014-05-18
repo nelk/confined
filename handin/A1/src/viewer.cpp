@@ -68,7 +68,7 @@ void Viewer::on_realize() {
   glShadeModel(GL_SMOOTH);
   GLfloat light_ambient[] = { 0.2, 0.2, 0.2, 1.0 };
   GLfloat light_diffuse[] = { 0.6, 0.6, 0.6, 1.0 };
-  GLfloat mat_specular[] = { 0.3, 0.3, 0.3, 1.0 };
+  GLfloat mat_specular[] = { 0.4, 0.4, 0.4, 1.0 };
   GLfloat mat_shininess[] = { 100.0 };
 
   glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
