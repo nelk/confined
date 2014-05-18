@@ -16,42 +16,49 @@
 
 #include "game.hpp"
 
+#define NUM_PIECES 8
+
 static const Piece PIECES[] = {
   Piece(
       ".x.."
       ".x.."
       ".x.."
-      ".x..", 0,			1,0,2,0),
+      ".x..", 0 ,1 ,0 ,2 ,0),
   Piece(
       "...."
       ".xx."
       ".x.."
-      ".x..", 1,			1,1,1,0),
+      ".x..", 1, 1, 1, 1, 0),
   Piece(
       "...."
       ".xx."
       "..x."
-      "..x.", 2,			1,1,1,0),
+      "..x.", 2, 1, 1, 1, 0),
   Piece(
       "...."
       ".x.."
       ".xx."
-      "..x.", 3,			1,1,1,0),
+      "..x.", 3, 1, 1, 1, 0),
   Piece(
       "...."
       "..x."
       ".xx."
-      ".x..", 4,			1,1,1,0),
+      ".x..", 4, 1, 1, 1, 0),
   Piece(
       "...."
       "xxx."
       ".x.."
-      "....", 5,			0,1,1,1),
+      "....", 5, 0, 1, 1, 1),
   Piece(
       "...."
       ".xx."
       ".xx."
-      "....", 6,			1,1,1,1)
+      "....", 6, 1, 1, 1, 1),
+  Piece(
+      "xx.."
+      ".x.."
+      "xx.."
+      "....", 7, 0, 0, 2, 1)
 };
 
 Piece::Piece(const char *desc, int cindex,
@@ -133,16 +140,16 @@ void Piece::getColumnRev(int col, char *buf) const {
   buf[3] = desc_[col];
 }
 
-Game::Game(int width, int height)
+  Game::Game(int width, int height)
   : board_width_(width)
-  , board_height_(height)
-  , stopped_(false) {
-  int sz = board_width_ * (board_height_+4);
+    , board_height_(height)
+    , stopped_(false) {
+      int sz = board_width_ * (board_height_+4);
 
-  board_ = new int[ sz ];
-  std::fill(board_, board_ + sz, -1);
-  generateNewPiece();
-}
+      board_ = new int[ sz ];
+      std::fill(board_, board_ + sz, -1);
+      generateNewPiece();
+    }
 
 void Game::reset() {
   stopped_ = false;
@@ -257,7 +264,7 @@ void Game::placePiece(const Piece& p, int x, int y) {
 }
 
 void Game::generateNewPiece() {
-  piece_ = PIECES[ rand() % 7 ];
+  piece_ = PIECES[ rand() % NUM_PIECES ];
 
   int xleft = (board_width_-3) / 2;
 

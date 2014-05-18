@@ -196,7 +196,7 @@ void Viewer::setColourForId(int id) {
       glColor3d(0.0, 1.0, 0.0);
       break;
     case 2:
-      glColor3d(0.0, 0.0, 1.0);
+      glColor3d(0.0, 0.7647, 1.0);
       break;
     case 3:
       glColor3d(1.0, 1.0, 0.0);
@@ -205,10 +205,13 @@ void Viewer::setColourForId(int id) {
       glColor3d(1.0, 0.0, 1.0);
       break;
     case 5:
-      glColor3d(0.0, 1.0, 1.0);
+      glColor3d(1.0, 0.647, 0.0);
       break;
     case 6:
-      glColor3d(1.0, 1.0, 1.0);
+      glColor3d(0.933, 0.5098, 0.933);
+      break;
+    case 7:
+      glColor3d(0.9, 0.9, 0.9);
       break;
     default:
       break;
