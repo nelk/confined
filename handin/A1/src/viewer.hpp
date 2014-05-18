@@ -60,6 +60,7 @@ class Viewer : public Gtk::GL::DrawingArea {
     Game *m_game;
     Vector3D m_rot, m_rotv;
     double m_scale;
+    bool m_currently_scaling;
     guint m_mouse_button;
     gdouble m_last_mouse_x;
     gdouble m_last_delta_x;

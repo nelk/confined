@@ -3,6 +3,11 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 
+#define MOUSE_ROT_FACTOR 0.2
+#define MOUSE_SCALE_FACTOR 0.03
+#define MAX_SCALE 1.5
+#define MIN_SCALE 0.1
+
 Viewer::Viewer(Game *game) : m_view_mode(WIREFRAME), m_game(game), m_scale(1.0) {
   Glib::RefPtr<Gdk::GL::Config> glconfig;
 
@@ -88,11 +93,11 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
 
   // Not implemented: set up lighting (if necessary)
 
-  // Not implemented: scale and rotate the scene
+  glScaled(m_scale, m_scale, m_scale);
+
   glRotated(m_rot[0], 1, 0, 0);
   glRotated(m_rot[1], 0, 1, 0);
   glRotated(m_rot[2], 0, 0, 1);
-  //std::cout << "ROT " << m_rot[0] << ", " << m_rot[1] << ", " << m_rot[2] << std::endl;
 
   // You'll be drawing unit cubes, so the game will have width
   // 10 and height 24 (game = 20, stripe = 4).  Let's translate
@@ -278,31 +283,44 @@ bool Viewer::on_configure_event(GdkEventConfigure* event) {
   return true;
 }
 
-// TODO: Scaling
 bool Viewer::on_button_press_event(GdkEventButton* event) {
   m_last_mouse_x = event->x;
   m_mouse_button = event->button;
   m_last_delta_x = 0;
-  m_rotv[m_mouse_button - 1] = 0;
-  //invalidate();
+  m_currently_scaling = event->state & GDK_SHIFT_MASK;
+  if (!m_currently_scaling) {
+    m_rotv[m_mouse_button - 1] = 0;
+  }
   return true;
 }
 
 bool Viewer::on_button_release_event(GdkEventButton* event) {
-  m_rotv[m_mouse_button - 1] = m_last_delta_x;
-  //invalidate();
+  if (!m_currently_scaling) {
+    m_rotv[m_mouse_button - 1] = m_last_delta_x;
+  }
   return true;
 }
 
 bool Viewer::on_motion_notify_event(GdkEventMotion* event) {
   m_last_delta_x = event->x - m_last_mouse_x;
   m_last_mouse_x = event->x;
-  m_rot[m_mouse_button - 1] += m_last_delta_x * 0.1;
-  //invalidate();
+  if (m_currently_scaling) {
+    m_scale += m_last_delta_x * MOUSE_SCALE_FACTOR;
+    // Clamp scale.
+    if (m_scale < MIN_SCALE) {
+      m_scale = MIN_SCALE;
+    } else if (m_scale > MAX_SCALE) {
+      m_scale = MAX_SCALE;
+    }
+  } else {
+    m_rot[m_mouse_button - 1] += m_last_delta_x * MOUSE_ROT_FACTOR;
+  }
   return true;
 }
 
 bool Viewer::refresh() {
+  // Ties rotational velocity to refresh rate.
+  // Alternatively I could check the milliseconds since last refresh.
   for (int i = 0; i < 3; i++) {
     m_rot[i] += m_rotv[i];
   }

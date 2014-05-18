@@ -5,6 +5,8 @@
 #define MEDIUM_TICK_DELAY 250
 #define FAST_TICK_DELAY 100
 #define REFRESH_DELAY 30
+#define GAME_COLUMNS 10
+#define GAME_ROWS 20
 
 void AppWindow::add_accelerator(Gtk::MenuItem *it, char accelerator) {
   it->add_accelerator("activate", get_accel_group(), accelerator, (Gdk::ModifierType) 0, Gtk::ACCEL_VISIBLE);
@@ -13,8 +15,9 @@ void AppWindow::add_accelerator(Gtk::MenuItem *it, char accelerator) {
 
 AppWindow::AppWindow() : m_tick_delay(SLOW_TICK_DELAY) {
   set_title("488 Tetrominoes on the Wall, by Alex Klen");
+  resize(800, 600);
 
-  m_game = new Game(10, 20);
+  m_game = new Game(GAME_COLUMNS, GAME_ROWS);
   m_viewer = new Viewer(m_game);
 
   // A utility class for constructing things that go into menus, which
@@ -105,8 +108,7 @@ AppWindow::~AppWindow() {
   delete m_game;
 }
 
-bool AppWindow::on_key_press_event( GdkEventKey *ev )
-{
+bool AppWindow::on_key_press_event( GdkEventKey *ev ) {
   bool need_invalidate = false;
 
   if (ev->keyval == GDK_Left) {
@@ -150,6 +152,8 @@ void AppWindow::setupTickTimer() {
 }
 
 bool AppWindow::tick() {
+  // TODO: Effects on row clear?
+  // TODO: Display something on lose?
   int result = m_game->tick();
   if (result < 0) {
     // Game Over.
@@ -160,7 +164,7 @@ bool AppWindow::tick() {
 }
 
 void AppWindow::reset() {
-  // TODO: Reset all window states.
+  // TODO: Reset view state.
   m_viewer->resetView();
 }
 
