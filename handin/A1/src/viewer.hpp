@@ -4,6 +4,8 @@
 
 #include <gtkmm.h>
 #include <gtkglmm.h>
+#include <list>
+#include <vector>
 
 #include "game.hpp"
 #include "algebra.hpp"
@@ -25,6 +27,7 @@ class Viewer : public Gtk::GL::DrawingArea {
     void invalidate();
     bool refresh(); // Viewing animation.
     void resetView();
+    void rowsDestroyed(const std::vector<int> &removed_rows);
 
     void setViewMode(ViewMode vm) {
       m_view_mode = vm;
@@ -33,6 +36,14 @@ class Viewer : public Gtk::GL::DrawingArea {
 
     void setGameOver(bool go) {
       m_game_over = go;
+    }
+
+    void toggleShowGuide() {
+      m_show_guide = !m_show_guide;
+    }
+
+    void toggleLighting() {
+      m_lighting = !m_lighting;
     }
 
   protected:
@@ -69,6 +80,11 @@ class Viewer : public Gtk::GL::DrawingArea {
     gdouble m_last_mouse_x;
     gdouble m_last_delta_x;
     bool m_game_over;
+    bool m_show_guide;
+    bool m_lighting;
+
+    std::list<Point3D> m_fragment_pos;
+    std::list<Vector3D> m_fragment_vel;
 };
 
 #endif

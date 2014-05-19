@@ -15,6 +15,8 @@
 #ifndef CS488_GAME_HPP
 #define CS488_GAME_HPP
 
+#include <vector>
+
 class Piece {
   public:
     Piece();
@@ -65,7 +67,7 @@ class Game
     //   		 0: business as usual.
     // 	 {1,2,3,4}: the most recent piece removed 1,2,3 or 4 rows, and
     // 				a new piece has started to fall.
-    int tick();
+    int tick(std::vector<int> &removed_rows);
 
     // Move the currently falling piece left or right by one unit.
     // Returns whether the move was successful.
@@ -75,6 +77,7 @@ class Game
     // Drop the current piece to the lowest position it can legally 
     // occupy.  Returns whether anything happened.
     bool drop();
+    void getGuide(std::vector<int> &guide);
 
     // Rotate the piece clockwise or counter-clockwise.  Returns whether
     // the rotation was successful.
@@ -104,7 +107,7 @@ class Game
     bool doesPieceFit(const Piece& p, int x, int y) const;
 
     void removeRow(int y);
-    int collapse();
+    int collapse(std::vector<int> &removed_rows);
 
     void removePiece(const Piece& p, int x, int y);
     void placePiece(const Piece& p, int x, int y);

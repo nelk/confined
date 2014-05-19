@@ -55,10 +55,10 @@ static const Piece PIECES[] = {
       ".xx."
       "....", 6, 1, 1, 1, 1),
   Piece(
-      "xx.."
-      ".x.."
-      "xx.."
-      "....", 7, 0, 0, 2, 1)
+      "...."
+      ".xx."
+      "..x."
+      "....", 7, 1, 1, 1, 1)
 };
 
 Piece::Piece(const char *desc, int cindex,
@@ -216,7 +216,7 @@ void Game::removeRow(int y) {
   }
 }
 
-int Game::collapse() {
+int Game::collapse(std::vector<int> &removed_rows) {
   // This method is implemented in a brain-dead way.  Repeatedly
   // walk up from the bottom of the well, removing the first full 
   // row, stopping when there are no more full rows.  It could be
@@ -239,6 +239,7 @@ int Game::collapse() {
       if(holes == 0) {
         got_one = 1;
         ++removed;
+        removed_rows.push_back(r);
         removeRow(r);
         break;
       }
@@ -272,7 +273,7 @@ void Game::generateNewPiece() {
   placePiece(piece_, px_, py_);
 }
 
-int Game::tick() {
+int Game::tick(std::vector<int> &removed_rows) {
   if(stopped_) {
     return -1;
   }
@@ -288,7 +289,7 @@ int Game::tick() {
       stopped_ = true;
       return -1;
     } else {
-      int rm = collapse();
+      int rm = collapse(removed_rows);
       generateNewPiece();
       return rm;
     }
@@ -331,6 +332,33 @@ bool Game::moveRight() {
   } else {
     placePiece(piece_, px_, py_);
     return false;
+  }
+}
+
+void Game::getGuide(std::vector<int> &guide) {
+  removePiece(piece_, px_, py_);
+  int ny = py_;
+
+  while(true) {
+    --ny;
+    if(!doesPieceFit(piece_, px_, ny)) {
+      break;
+    }
+  }
+
+  ++ny;
+  placePiece(piece_, px_, py_);
+
+  if(ny == py_) {
+    return;
+  }
+  for(int r = 0; r < 4; ++r) {
+    for(int c = 0; c < 4; ++c) {
+      if(piece_.isOn(r, c) && get(ny - r, px_ + c) == -1) {
+        guide.push_back(px_ + c);
+        guide.push_back(ny - r);
+      }
+    }
   }
 }
 

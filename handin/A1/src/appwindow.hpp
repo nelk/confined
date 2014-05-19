@@ -32,6 +32,7 @@ class AppWindow : public Gtk::Window {
     Gtk::Menu m_menu_app;
     Gtk::Menu m_menu_draw_mode;
     Gtk::Menu m_menu_speed;
+    Gtk::Menu m_menu_extras;
 
     // The main OpenGL area
     Game *m_game;

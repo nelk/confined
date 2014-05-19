@@ -1,6 +1,7 @@
 #include "viewer.hpp"
 #include <iostream>
 #include <algorithm>
+#include <limits>
 #include <GL/gl.h>
 #include <GL/glu.h>
 
@@ -8,8 +9,11 @@
 #define MOUSE_SCALE_FACTOR 0.03
 #define MAX_SCALE 1.5
 #define MIN_SCALE 0.1
+#define GRAVITY 0.4
+#define FRAGMENT_SCALE 0.3
+#define FRAGMENT_MOVE_FACTOR 0.1
 
-Viewer::Viewer(Game *game) : m_view_mode(WIREFRAME), m_game(game), m_scale(1.0), m_game_over(false) {
+Viewer::Viewer(Game *game) : m_view_mode(WIREFRAME), m_game(game), m_scale(1.0), m_game_over(false), m_show_guide(true), m_lighting(true) {
   Glib::RefPtr<Gdk::GL::Config> glconfig;
 
   // Ask for an OpenGL Setup with
@@ -66,10 +70,12 @@ void Viewer::on_realize() {
 
   // Lighting/shading.
   glShadeModel(GL_SMOOTH);
-  GLfloat light_ambient[] = { 0.2, 0.2, 0.2, 1.0 };
+  GLfloat light_ambient[] = { 0.0, 0.0, 0.0, 1.0 };
+  //GLfloat light_ambient[] = { 0.2, 0.2, 0.2, 1.0 };
   GLfloat light_diffuse[] = { 0.6, 0.6, 0.6, 1.0 };
-  GLfloat mat_specular[] = { 0.4, 0.4, 0.4, 1.0 };
-  GLfloat mat_shininess[] = { 100.0 };
+  // TODO: Fix specular lights at a distance.
+  GLfloat mat_specular[] = { 0.1, 0.1, 0.1, 1.0 };
+  GLfloat mat_shininess[] = { 10.0 };
 
   glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
   glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
@@ -77,7 +83,10 @@ void Viewer::on_realize() {
   glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
   glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
 
-  glEnable(GL_LIGHTING);
+  //glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 1.0);
+  //glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 0.0005);
+  //glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.005);
+
   glEnable(GL_LIGHT0);
   glEnable(GL_COLOR_MATERIAL);
 
@@ -97,6 +106,12 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   // Clear the screen
 
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  if (m_lighting) {
+    glEnable(GL_LIGHTING);
+  } else {
+    glDisable(GL_LIGHTING);
+  }
 
   // Modify the current projection matrix so that we move the 
   // camera away from the origin.  We'll draw the game at the
@@ -154,30 +169,18 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
     glPopMatrix();
   }
 
-  /*
-  glBegin(GL_TRIANGLES);
-  glVertex3d(0.0, 0.0, 0.0);
-  glVertex3d(1.0, 0.0, 0.0);
-  glVertex3d(0.0, 1.0, 0.0);
-
-  glVertex3d(9.0, 0.0, 0.0);
-  glVertex3d(10.0, 0.0, 0.0);
-  glVertex3d(10.0, 1.0, 0.0);
-
-  glVertex3d(0.0, 19.0, 0.0);
-  glVertex3d(1.0, 20.0, 0.0);
-  glVertex3d(0.0, 20.0, 0.0);
-
-  glVertex3d(10.0, 19.0, 0.0);
-  glVertex3d(10.0, 20.0, 0.0);
-  glVertex3d(9.0, 20.0, 0.0);
-  glEnd();
-  */
+  // Draw fragments (effect).
+  glColor3d(1.0, 1.0, 1.0);
+  for (std::list<Point3D>::iterator it = m_fragment_pos.begin(); it != m_fragment_pos.end(); it++) {
+    glPushMatrix();
+    glTranslated((*it)[0], (*it)[1], (*it)[2]);
+    glScaled(FRAGMENT_SCALE, FRAGMENT_SCALE, FRAGMENT_SCALE);
+    //std::cout << "(" << (*it)[0] << "," << (*it)[1] << "," << (*it)[2] << ")" << std::endl;
+    drawCube();
+    glPopMatrix();
+  }
 
   // Draw game state.
-
-  glColor3d(0.0, 1.0, 0.0);
-
   for (int r = 0; r < m_game->getHeight() + 4; r++) {
     for (int c = 0; c < m_game->getWidth(); c++) {
       int pieceId = m_game->get(r, c);
@@ -191,6 +194,29 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
       glPushMatrix();
       glTranslated(c, r, 0.0);
       drawCube(m_view_mode == MULTICOLOUR, m_game_over);
+      glPopMatrix();
+    }
+  }
+
+  // Draw piece guide.
+  if (m_show_guide) {
+    if (m_view_mode == WIREFRAME) {
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    } else {
+      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    }
+    glColor4d(0.5, 0.5, 0.5, 0.5);
+    std::vector<int> guide;
+    m_game->getGuide(guide);
+    std::vector<int>::const_iterator guide_piece_it = guide.begin();
+    while (guide_piece_it != guide.end()) {
+      glPushMatrix();
+      int c = *guide_piece_it;
+      ++guide_piece_it;
+      int r = *guide_piece_it;
+      ++guide_piece_it;
+      glTranslated(c, r, 0.0);
+      drawCube();
       glPopMatrix();
     }
   }
@@ -236,7 +262,7 @@ void Viewer::setColourForId(int id) {
       glColor3d(0.933, 0.5098, 0.933);
       break;
     case 7:
-      glColor3d(0.9, 0.9, 0.9);
+      glColor3d(0.3098, 0.8706, 0.5216);
       break;
     default:
       break;
@@ -373,6 +399,23 @@ bool Viewer::refresh() {
   for (int i = 0; i < 3; i++) {
     m_rot[i] += m_rotv[i];
   }
+  std::list<Point3D>::iterator pos_iter = m_fragment_pos.begin();
+  std::list<Vector3D>::iterator vel_iter = m_fragment_vel.begin();
+  while (pos_iter != m_fragment_pos.end() && vel_iter != m_fragment_vel.end()) {
+    (*vel_iter)[1] -= GRAVITY;
+    //for (int d = 0; d < 3; d++) {
+      //(*pos_iter)[d] += (*vel_iter)[d];
+    //}
+    *pos_iter = *pos_iter + (FRAGMENT_MOVE_FACTOR * *vel_iter);
+    if ((*pos_iter)[1] < -10) {
+      pos_iter = m_fragment_pos.erase(pos_iter);
+      vel_iter = m_fragment_vel.erase(vel_iter);
+    } else {
+      pos_iter++;
+      vel_iter++;
+    }
+  }
+
   invalidate();
   return true;
 }
@@ -382,5 +425,22 @@ void Viewer::resetView() {
   m_rot = Vector3D();
   m_rotv = Vector3D();
   m_scale = 1.0;
+  m_lighting = true;
+  m_show_guide = true;
+}
+
+double randZeroOne() {
+  return ((double) rand()) / std::numeric_limits<int>::max();
+}
+
+void Viewer::rowsDestroyed(const std::vector<int> &removed_rows) {
+  for (std::vector<int>::const_iterator r_it = removed_rows.begin(); r_it != removed_rows.end(); r_it++) {
+    for (int c = 0; c < m_game->getWidth(); c++) {
+      for (int i = 0; i < 4; i++) {
+        m_fragment_pos.push_back(Point3D(c, *r_it, 0));
+        m_fragment_vel.push_back(Vector3D(randZeroOne() * 4.0 - 2.0, randZeroOne() * 2.0 + 2.0, randZeroOne() * 4.0 - 2.0));
+      }
+    }
+  }
 }
 

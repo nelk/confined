@@ -74,10 +74,24 @@ AppWindow::AppWindow() : m_tick_delay(SLOW_TICK_DELAY) {
   m_menu_speed.items().push_back(*rb_medium);
   m_menu_speed.items().push_back(*rb_fast);
 
+  // Extras Menu.
+  Gtk::MenuItem *lighting = Gtk::manage(new Gtk::MenuItem("Toggle _Lighting", true));
+  Gtk::MenuItem *guide = Gtk::manage(new Gtk::MenuItem("Toggle _Guide", true));
+
+  lighting->signal_activate().connect(sigc::mem_fun(m_viewer, &Viewer::toggleLighting));
+  guide->signal_activate().connect(sigc::mem_fun(m_viewer, &Viewer::toggleShowGuide));
+
+  add_accelerator(lighting, 'l');
+  add_accelerator(guide, 'g');
+
+  m_menu_extras.items().push_back(*lighting);
+  m_menu_extras.items().push_back(*guide);
+
   // Set up the menu bar
   m_menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Application", m_menu_app));
   m_menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Draw Mode", m_menu_draw_mode));
   m_menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Speed", m_menu_speed));
+  m_menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Extras", m_menu_extras));
 
   // Pack in our widgets
 
@@ -154,13 +168,13 @@ void AppWindow::setupTickTimer() {
 }
 
 bool AppWindow::tick() {
-  // TODO: Effects on row clear?
-  // TODO: Display something on lose?
-  int result = m_game->tick();
+  std::vector<int> removed_rows;
+  int result = m_game->tick(removed_rows);
   if (result < 0) {
     m_viewer->setGameOver(true);
   } else if (result > 0) {
     // 1-4 rows destroyed.
+    m_viewer->rowsDestroyed(removed_rows);
   }
   return true;
 }
