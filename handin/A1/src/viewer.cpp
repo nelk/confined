@@ -72,13 +72,12 @@ void Viewer::on_realize() {
   glShadeModel(GL_SMOOTH);
   GLfloat light_ambient[] = { 0.0, 0.0, 0.0, 1.0 };
   //GLfloat light_ambient[] = { 0.2, 0.2, 0.2, 1.0 };
-  GLfloat light_diffuse[] = { 0.6, 0.6, 0.6, 1.0 };
-  // TODO: Fix specular lights at a distance.
+  GLfloat light_diffuse[] = { 0.4, 0.4, 0.4, 1.0 };
   GLfloat mat_specular[] = { 0.1, 0.1, 0.1, 1.0 };
-  GLfloat mat_shininess[] = { 10.0 };
+  //GLfloat mat_shininess[] = { 0.0 };
 
   glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-  glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+  //glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
 
   glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
   glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
@@ -104,7 +103,6 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
     return false;
 
   // Clear the screen
-
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   if (m_lighting) {
@@ -113,7 +111,7 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
     glDisable(GL_LIGHTING);
   }
 
-  // Modify the current projection matrix so that we move the 
+  // Modify the current projection matrix so that we move the
   // camera away from the origin.  We'll draw the game at the
   // origin, and we need to back up to see it.
 
@@ -358,6 +356,7 @@ bool Viewer::on_configure_event(GdkEventConfigure* event) {
   return true;
 }
 
+// TODO: Fix letting mouse go after moving and stopping - should not keep rotating.
 bool Viewer::on_button_press_event(GdkEventButton* event) {
   m_last_mouse_x = event->x;
   m_mouse_button = event->button;
