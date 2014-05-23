@@ -1,0 +1,67 @@
+sum is: /usr/bin/sum
+
+
+2014-05-23 02:34        Checksum for A1 for ayklen on gl01        Page 1
+
+
+A1:
+total 728
+76431481 drwxrwx--- 2 ayklen cs488    4096 May 23 02:32 src/
+76431477 drwxrwx--- 4 ayklen cs488    4096 May 23 02:32 ./
+36374872 -rwxr-xr-x 1 ayklen ayklen 699477 May 23 02:32 game488*
+62385363 -rw-r--r-- 1 ayklen ayklen    545 May 23 02:32 README
+62385365 -rw-r--r-- 1 ayklen ayklen   9163 May 23 02:14 screenshot02.png
+62385364 -rw-r--r-- 1 ayklen ayklen   4992 May 23 02:14 screenshot01.png
+ 3109025 drwxrwx--- 8 ayklen cs488    4096 May 14 13:02 ../
+76431492 drwxrwx--- 2 ayklen cs488    4096 May  7 23:18 data/
+
+A1/src:
+total 76
+76431481 drwxrwx--- 2 ayklen cs488   4096 May 23 02:32 ./
+76431477 drwxrwx--- 4 ayklen cs488   4096 May 23 02:32 ../
+36374861 -rw-r--r-- 1 ayklen ayklen  2282 May 23 02:32 viewer.hpp
+36374860 -rw-r--r-- 1 ayklen ayklen 11375 May 23 02:32 viewer.cpp
+36374859 -rw-r--r-- 1 ayklen ayklen   405 May 23 02:32 main.cpp
+36374858 -rw-r--r-- 1 ayklen ayklen  3608 May 23 02:32 game.hpp
+36374857 -rw-r--r-- 1 ayklen ayklen  8210 May 23 02:32 game.cpp
+36374856 -rw-r--r-- 1 ayklen ayklen   947 May 23 02:32 appwindow.hpp
+46885960 -rw-r--r-- 1 ayklen ayklen  6266 May 23 02:32 appwindow.cpp
+46885959 -rw-r--r-- 1 ayklen ayklen  9513 May 23 02:32 algebra.hpp
+46885944 -rw-r--r-- 1 ayklen ayklen  3347 May 23 02:32 algebra.cpp
+76431490 -rw-r-x--- 1 ayklen cs488    678 May  7 23:18 Makefile*
+
+A1/data:
+total 8
+76431477 drwxrwx--- 4 ayklen cs488 4096 May 23 02:32 ../
+76431492 drwxrwx--- 2 ayklen cs488 4096 May  7 23:18 ./
+
+A1                                      
+A1/data                                 
+A1/game488                              20351   684
+A1/README                               02321     1
+A1/screenshot01.png                     47012     5
+A1/screenshot02.png                     53562     9
+A1/src                                  
+A1/src/algebra.cpp                      32866     4
+A1/src/algebra.hpp                      58690    10
+A1/src/appwindow.cpp                    38182     7
+A1/src/appwindow.hpp                    51073     1
+A1/src/game.cpp                         55027     9
+A1/src/game.hpp                         23763     4
+A1/src/main.cpp                         47923     1
+A1/src/Makefile                         20079     1
+A1/src/viewer.cpp                       32580    12
+A1/src/viewer.hpp                       42372     3
+
+
+
+
+
+
+
+
+
+
+
+
+
