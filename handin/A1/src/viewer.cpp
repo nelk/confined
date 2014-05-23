@@ -14,7 +14,9 @@
 #define FRAGMENT_MOVE_FACTOR 0.1
 #define MOUSE_NO_MOMENTUM_THRESHOLD 20
 
-Viewer::Viewer(Game *game) : m_view_mode(WIREFRAME), m_game(game), m_scale(1.0), m_game_over(false), m_show_guide(true), m_lighting(true) {
+Viewer::Viewer(Game *game) : m_view_mode(WIREFRAME), m_game(game), m_scale(1.0),
+    m_game_over(false), m_show_guide(true), m_lighting(true) {
+
   Glib::RefPtr<Gdk::GL::Config> glconfig;
 
   // Ask for an OpenGL Setup with
@@ -25,7 +27,7 @@ Viewer::Viewer(Game *game) : m_view_mode(WIREFRAME), m_game(game), m_scale(1.0),
       Gdk::GL::MODE_DEPTH |
       Gdk::GL::MODE_DOUBLE);
   if (glconfig == 0) {
-    // If we can't get this configuration, die
+    // If we can't get this configuration, die.
     std::cerr << "Unable to setup OpenGL Configuration!" << std::endl;
     abort();
   }
@@ -72,9 +74,10 @@ void Viewer::on_realize() {
   // Lighting/shading.
   glShadeModel(GL_SMOOTH);
   GLfloat light_ambient[] = { 0.0, 0.0, 0.0, 1.0 };
-  //GLfloat light_ambient[] = { 0.2, 0.2, 0.2, 1.0 };
   GLfloat light_diffuse[] = { 0.4, 0.4, 0.4, 1.0 };
   GLfloat mat_specular[] = { 0.1, 0.1, 0.1, 1.0 };
+
+  // Shininess looks bad at distance from flat surface with small reflection angle.
   //GLfloat mat_shininess[] = { 0.0 };
 
   glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
@@ -112,14 +115,6 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
     glDisable(GL_LIGHTING);
   }
 
-  // Modify the current projection matrix so that we move the
-  // camera away from the origin.  We'll draw the game at the
-  // origin, and we need to back up to see it.
-
-
-  //glMatrixMode(GL_PROJECTION);
-  //glLoadIdentity();
-
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
 
@@ -135,10 +130,7 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   glRotated(m_rot[2], 0, 0, 1);
   glScaled(m_scale, m_scale, m_scale);
 
-  // You'll be drawing unit cubes, so the game will have width
-  // 10 and height 24 (game = 20, stripe = 4).  Let's translate
-  // the game so that we can draw it starting at (0,0) but have
-  // it appear centered in the window.
+  // Position game.
   glTranslated(-5.0, -12.0, 0.0);
 
   // Set polygon mode.
@@ -149,6 +141,7 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   }
 
   // Draw U-shaped game well.
+
   glColor3d(0.0, 0.0, 1.0);
 
   // Sides.
@@ -174,7 +167,6 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
     glPushMatrix();
     glTranslated((*it)[0], (*it)[1], (*it)[2]);
     glScaled(FRAGMENT_SCALE, FRAGMENT_SCALE, FRAGMENT_SCALE);
-    //std::cout << "(" << (*it)[0] << "," << (*it)[1] << "," << (*it)[2] << ")" << std::endl;
     drawCube();
     glPopMatrix();
   }
@@ -221,17 +213,7 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   }
 
   glPopMatrix();
-
-  // We pushed a matrix onto the PROJECTION stack earlier, we
-  // need to pop it.
-
-  //glMatrixMode(GL_PROJECTION);
-  //glPopMatrix();
-
-  // Swap the contents of the front and back buffers so we see what we
-  // just drew. This should only be done if double buffering is enabled.
   gldrawable->swap_buffers();
-
   gldrawable->gl_end();
 
   return true;
@@ -357,7 +339,6 @@ bool Viewer::on_configure_event(GdkEventConfigure* event) {
   return true;
 }
 
-// TODO: Fix letting mouse go after moving and stopping - should not keep rotating.
 bool Viewer::on_button_press_event(GdkEventButton* event) {
   m_last_mouse_x = event->x;
   m_mouse_button = event->button;
@@ -438,6 +419,7 @@ double randZeroOne() {
   return ((double) rand()) / std::numeric_limits<int>::max();
 }
 
+// Display particle effects for blocks that were destroyed.
 void Viewer::rowsDestroyed(const std::vector<int> &removed_rows) {
   for (std::vector<int>::const_iterator r_it = removed_rows.begin(); r_it != removed_rows.end(); r_it++) {
     for (int c = 0; c < m_game->getWidth(); c++) {

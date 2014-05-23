@@ -50,11 +50,7 @@ class Viewer : public Gtk::GL::DrawingArea {
 
   protected:
 
-    // Events we implement
-    // Note that we could use gtkmm's "signals and slots" mechanism
-    // instead, but for many classes there's a convenient member
-    // function one just needs to define that'll be called with the
-    // event.
+    // Events.
 
     // Called when GL is first initialized
     virtual void on_realize();

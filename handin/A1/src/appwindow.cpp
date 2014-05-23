@@ -4,7 +4,6 @@
 #define SLOW_TICK_DELAY 500
 #define MEDIUM_TICK_DELAY 250
 #define FAST_TICK_DELAY 100
-#define REFRESH_DELAY 30
 #define GAME_COLUMNS 10
 #define GAME_ROWS 20
 
@@ -125,29 +124,18 @@ void AppWindow::add_accelerator(Gtk::MenuItem *it, char accelerator) {
 
 
 bool AppWindow::on_key_press_event( GdkEventKey *ev ) {
-  bool need_invalidate = false;
-
   if (ev->keyval == GDK_Left) {
     m_game->moveLeft();
-    need_invalidate = true;
   } else if (ev->keyval == GDK_Right) {
     m_game->moveRight();
-    need_invalidate = true;
   } else if (ev->keyval == GDK_Up) {
     m_game->rotateCCW();
-    need_invalidate = true;
   } else if (ev->keyval == GDK_Down) {
     m_game->rotateCW();
-    need_invalidate = true;
   } else if (ev->keyval == ' ') {
     m_game->drop();
-    need_invalidate = true;
   } else {
     return Gtk::Window::on_key_press_event( ev );
-  }
-  if (need_invalidate) {
-    // TODO
-    //m_viewer->invalidate();
   }
   return true;
 }
@@ -180,7 +168,6 @@ bool AppWindow::tick() {
 }
 
 void AppWindow::reset() {
-  // TODO: Reset speed as well?
   m_viewer->resetView();
   m_menu_draw_mode.items()[1].activate();
 }
