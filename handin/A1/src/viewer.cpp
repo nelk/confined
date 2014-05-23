@@ -1,3 +1,6 @@
+/*
+ * Alex Klen, ayklen, 20372654
+ */
 #include "viewer.hpp"
 #include <iostream>
 #include <algorithm>

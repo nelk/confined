@@ -1,3 +1,6 @@
+/*
+ * Alex Klen, ayklen, 20372654
+ */
 #ifndef APPWINDOW_HPP
 #define APPWINDOW_HPP
 

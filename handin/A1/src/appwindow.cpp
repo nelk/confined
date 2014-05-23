@@ -1,3 +1,6 @@
+/*
+ * Alex Klen, ayklen, 20372654
+ */
 #include "appwindow.hpp"
 #include <iostream>
 

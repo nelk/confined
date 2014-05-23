@@ -1,4 +1,6 @@
-
+/*
+ * Alex Klen, ayklen, 20372654
+ */
 #ifndef CS488_VIEWER_HPP
 #define CS488_VIEWER_HPP
 

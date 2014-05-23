@@ -1,3 +1,6 @@
+/*
+ * Alex Klen, ayklen, 20372654
+ */
 #include <gtkmm.h>
 #include <gtkglmm.h>
 #include "appwindow.hpp"

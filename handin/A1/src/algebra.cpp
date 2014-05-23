@@ -12,6 +12,10 @@
 //
 //---------------------------------------------------------------------------
 
+/*
+ * Alex Klen, ayklen, 20372654
+ */
+
 #include "algebra.hpp"
 
 double Vector3D::normalize()
