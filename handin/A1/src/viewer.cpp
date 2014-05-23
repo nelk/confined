@@ -9,9 +9,10 @@
 #define MOUSE_SCALE_FACTOR 0.03
 #define MAX_SCALE 1.5
 #define MIN_SCALE 0.1
-#define GRAVITY 0.4
+#define GRAVITY 0.4 // For particles.
 #define FRAGMENT_SCALE 0.3
 #define FRAGMENT_MOVE_FACTOR 0.1
+#define MOUSE_NO_MOMENTUM_THRESHOLD 20
 
 Viewer::Viewer(Game *game) : m_view_mode(WIREFRAME), m_game(game), m_scale(1.0), m_game_over(false), m_show_guide(true), m_lighting(true) {
   Glib::RefPtr<Gdk::GL::Config> glconfig;
@@ -360,6 +361,8 @@ bool Viewer::on_configure_event(GdkEventConfigure* event) {
 bool Viewer::on_button_press_event(GdkEventButton* event) {
   m_last_mouse_x = event->x;
   m_mouse_button = event->button;
+  m_last_time = event->time;
+  m_last_delta_time = 0;
   m_last_delta_x = 0;
   m_currently_scaling = event->state & GDK_SHIFT_MASK;
   if (!m_currently_scaling) {
@@ -369,8 +372,12 @@ bool Viewer::on_button_press_event(GdkEventButton* event) {
 }
 
 bool Viewer::on_button_release_event(GdkEventButton* event) {
+  guint32 delta_time = event->time - m_last_time;
+  if (delta_time > MOUSE_NO_MOMENTUM_THRESHOLD) {
+    return true;
+  }
   if (!m_currently_scaling) {
-    m_rotv[m_mouse_button - 1] = m_last_delta_x;
+    m_rotv[m_mouse_button - 1] = m_last_delta_x / m_last_delta_time * MOUSE_ROT_FACTOR;
   }
   return true;
 }
@@ -378,6 +385,8 @@ bool Viewer::on_button_release_event(GdkEventButton* event) {
 bool Viewer::on_motion_notify_event(GdkEventMotion* event) {
   m_last_delta_x = event->x - m_last_mouse_x;
   m_last_mouse_x = event->x;
+  m_last_delta_time = event->time - m_last_time;
+  m_last_time = event->time;
   if (m_currently_scaling) {
     m_scale += m_last_delta_x * MOUSE_SCALE_FACTOR;
     // Clamp scale.
@@ -396,15 +405,12 @@ bool Viewer::refresh() {
   // Ties rotational velocity to refresh rate.
   // Alternatively I could check the milliseconds since last refresh.
   for (int i = 0; i < 3; i++) {
-    m_rot[i] += m_rotv[i];
+    m_rot[i] += m_rotv[i] * REFRESH_DELAY;
   }
   std::list<Point3D>::iterator pos_iter = m_fragment_pos.begin();
   std::list<Vector3D>::iterator vel_iter = m_fragment_vel.begin();
   while (pos_iter != m_fragment_pos.end() && vel_iter != m_fragment_vel.end()) {
     (*vel_iter)[1] -= GRAVITY;
-    //for (int d = 0; d < 3; d++) {
-      //(*pos_iter)[d] += (*vel_iter)[d];
-    //}
     *pos_iter = *pos_iter + (FRAGMENT_MOVE_FACTOR * *vel_iter);
     if ((*pos_iter)[1] < -10) {
       pos_iter = m_fragment_pos.erase(pos_iter);

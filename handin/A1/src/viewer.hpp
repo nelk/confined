@@ -10,6 +10,8 @@
 #include "game.hpp"
 #include "algebra.hpp"
 
+#define REFRESH_DELAY 30
+
 // The "main" OpenGL widget
 class Viewer : public Gtk::GL::DrawingArea {
   public:
@@ -79,6 +81,8 @@ class Viewer : public Gtk::GL::DrawingArea {
     guint m_mouse_button;
     gdouble m_last_mouse_x;
     gdouble m_last_delta_x;
+    guint32 m_last_time;
+    guint32 m_last_delta_time;
     bool m_game_over;
     bool m_show_guide;
     bool m_lighting;
