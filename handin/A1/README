@@ -1,0 +1,15 @@
+
+Game 488 (Tetris)
+===================
+by Alex Klen (ayklen@uwaterloo.ca)
+
+
+Compiling
+-----------
+Run "make" to build the executable game488.
+
+
+Running
+--------
+Run the game488 executable ("./game488").
+
