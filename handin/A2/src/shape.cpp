@@ -1,10 +1,22 @@
 #include "shape.hpp"
+#include "a2.hpp"
 #include "draw.hpp"
 
+Node::~Node() {
+  for (std::vector<Node*>::iterator childIt = children.begin(); childIt != children.end(); childIt++) {
+    delete *childIt;
+  }
+  children.clear();
+}
 
 void Node::setTransform(const Matrix4x4& m) {
   transformation = m;
   transformed = true;
+}
+
+void Node::resetTransform() {
+  transformation = Matrix4x4();
+  transformed = false;
 }
 
 void Node::addChild(Node* n) {
@@ -12,6 +24,16 @@ void Node::addChild(Node* n) {
 }
 void Node::removeChild(Node* n) {
   children.erase(std::remove(children.begin(), children.end(), n), children.end());
+}
+
+void Node::rotate(double angle, char axis) {
+  setTransform(rotation(angle, axis) * getTransform());
+}
+void Node::translate(const Vector3D& displacement) {
+  setTransform(translation(displacement) * getTransform());
+}
+void Node::scale(const Vector3D& scale) {
+  setTransform(scaling(scale) * getTransform());
 }
 
 std::vector<LineSegment4D> Node::getTransformedLineSegments() {
@@ -23,7 +45,8 @@ std::vector<LineSegment4D> Node::getTransformedLineSegments(const Matrix4x4& m, 
   std::vector<LineSegment4D> lines;
   Matrix4x4 sentM = m;
   if (isTransformed() && !appliedOwnTransform) {
-    sentM = getTransform() * sentM;
+    std::cout << "Transforming lines in node" << std::endl;
+    sentM = sentM * getTransform();
   }
   for (std::vector<Node*>::const_iterator childIt = children.begin(); childIt != children.end(); childIt++) {
     std::vector<LineSegment4D> childLines = (*childIt)->getTransformedLineSegments(sentM);
@@ -58,7 +81,7 @@ std::vector<LineSegment4D> Shape::getTransformedLineSegments(const Matrix4x4& m,
   Matrix4x4 sentM = m;
   if (isTransformed() && !appliedOwnTransform) {
     std::cout << "Transforming lines in shape" << std::endl;
-    sentM = getTransform() * sentM;
+    sentM = sentM * getTransform();
   }
 
   // Get any lines from children.
@@ -287,5 +310,17 @@ void Gnomon::drawOrtho() {
 
 */
 
+const Point4D Gnomon::points[] = {
+  Point4D(0.0, 0.0, 0.0),
+  Point4D(0.5, 0.0, 0.0),
+  Point4D(0.0, 0.5, 0.0),
+  Point4D(0.0, 0.0, 0.5)
+};
+
+const int Gnomon::linePointIdxs[] = {
+  0, 1,
+  0, 2,
+  0, 3
+};
 
 

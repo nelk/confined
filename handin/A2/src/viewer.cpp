@@ -32,13 +32,42 @@ Viewer::Viewer() {
              Gdk::BUTTON_RELEASE_MASK    |
              Gdk::VISIBILITY_NOTIFY_MASK);
 
-  m_cube = new Cube();
-  Colour blue = Colour(0, 0, 1);
-  m_cube->setColour(blue);
+
+  // Construct scene graph (it's linear):
+  // (rootNode, Node, perspective mat)
+  // ->(worldNode, Gnomon, viewing mat)
+  //   ->(modelNode, Gnomon, model trans/rot mat)
+  //     ->(cube, Cube, model scaling mat)
+
+  const Colour WHITE = Colour(1);
+  const Colour RED = Colour(1, 0, 0);
+  const Colour BLUE = Colour(0, 0, 1);
+
+  cube = new Cube();
+  cube->setColour(BLUE);
+
+  Gnomon* modelGnomon = new Gnomon();
+  modelGnomon->setColour(RED);
+  modelNode = modelGnomon; // This gnomon will act as model node.
+
+  modelNode->addChild(cube);
+
+  Gnomon* worldGnomon = new Gnomon();
+  worldGnomon->setColour(WHITE);
+  worldNode = worldGnomon; // This gnomon will act as world node.
+
+  worldNode->addChild(modelNode);
+
+  rootNode = new Node();
+  rootNode->addChild(worldNode);
 }
 
 Viewer::~Viewer() {
-  // Nothing to do here right now.
+  // Will cascade delete everything else.
+  delete rootNode;
+  worldNode = NULL;
+  modelNode = NULL;
+  cube = NULL;
 }
 
 void Viewer::invalidate() {
@@ -49,13 +78,17 @@ void Viewer::invalidate() {
 
 void Viewer::set_perspective(double fov, double aspect,
                              double near, double far) {
-  m_perspective = perspectiveMatrix(fov, aspect, near, far);
+  Matrix4x4 m = perspective(fov, aspect, near, far);
+  rootNode->setTransform(m);
 }
 
 void Viewer::reset_view() {
   set_perspective(M_PI/4.0, 1.0, 1.0, 10.0);
-  m_view = translation(Vector3D(0.0, 0.0, -8.0));
-  m_model = Matrix4x4();
+  Matrix4x4 viewingMatrix = translation(Vector3D(-0.5, -0.5, -8.0));
+  worldNode->setTransform(viewingMatrix);
+  modelNode->resetTransform();
+  cube->resetTransform();
+
   m_screen = translation(Vector3D(get_width()/2.0, get_height()/2.0, 0.0))
     * scaling(Vector3D(get_width(), get_height(), 1.0));
 }
@@ -103,10 +136,11 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   //double scale_factor = 60.0;
   //Matrix4x4 scaleit = scaling(Vector3D(scale_factor, scale_factor, scale_factor));
 
-  Matrix4x4 transformationMatrix = m_perspective * m_view * m_model;
+  //Matrix4x4 transformationMatrix = m_perspective * m_view * m_model;
 
-  m_cube->setTransform(transformationMatrix); // Convert to homogenous coordinates.
-  std::vector<LineSegment4D> lineSegments = m_cube->getTransformedLineSegments();
+  //cube->setTransform(transformationMatrix); // Convert to homogenous coordinates.
+  worldNode->translate(Vector3D(0.1, 0.0, 0.0));
+  std::vector<LineSegment4D> lineSegments = rootNode->getTransformedLineSegments();
   renderHomogonousLines(lineSegments);
 
   /*
@@ -138,15 +172,26 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   return true;
 }
 
-void Viewer::homogonousClip(LineSegment4D& line) {
+bool Viewer::homogonousClip(LineSegment4D& line) {
   // TODO.
+  double w1 = line.getP1()[3];
+  double w2 = line.getP2()[3];
+  if (w1 >= -0.001 && w1 <= 0.001) {
+    return false;
+  } else if (w2 >= -0.001 && w2 <= 0.001) {
+    return false;
+  }
+  return true;
 }
 
 void Viewer::renderHomogonousLines(std::vector<LineSegment4D> lineSegments) {
   std::cout << "rendering!" << std::endl;
   for (std::vector<LineSegment4D>::iterator lineIt = lineSegments.begin(); lineIt != lineSegments.end(); lineIt++) {
     LineSegment4D& line = *lineIt;
-    homogonousClip(line);
+    bool keep = homogonousClip(line);
+    if (!keep) {
+      continue;
+    }
     Point3D p1 = m_screen * line.getP1().homogonize();
     Point3D p2 = m_screen * line.getP2().homogonize();
     std::cout << "draw_line " << p1 << ", " << p2 << std::endl;
@@ -231,6 +276,7 @@ bool Viewer::on_button_press_event(GdkEventButton* event) {
 
 bool Viewer::on_button_release_event(GdkEventButton* event) {
   std::cerr << "Stub: Button " << event->button << " released" << std::endl;
+  invalidate(); // TODO: Temp.
   return true;
 }
 

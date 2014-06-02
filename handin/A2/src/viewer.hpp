@@ -52,13 +52,16 @@ protected:
 
 private:
   // Clip in homogonous coordinates, before the lines have been divided/homogonized.
-  void homogonousClip(LineSegment4D& line);
+  bool homogonousClip(LineSegment4D& line);
   void renderHomogonousLines(std::vector<LineSegment4D> linesSegments);
 
-  Cube* m_cube;
-  Matrix4x4 m_model;
-  Matrix4x4 m_view;
-  Matrix4x4 m_perspective;
+  Node* rootNode; // Where perspective matrix is set (non-homogenized homogenous coordinates).
+  Node* worldNode; // Where view matrix is set (world coordinates).
+  Node* modelNode; // Where model translation and rotation are set (model coordinates).
+  Cube* cube; // Where model scaling is set.
+  //Matrix4x4 m_model;
+  //Matrix4x4 m_view;
+  //Matrix4x4 m_perspective;
   Matrix4x4 m_screen;
 };
 

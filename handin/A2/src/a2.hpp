@@ -17,6 +17,6 @@ Matrix4x4 translation(const Vector3D& displacement);
 Matrix4x4 scaling(const Vector3D& scale);
 
 // Returns perspective matrix - assumes looking down -z like OpenGL.
-Matrix4x4 perspectiveMatrix(double fov, double aspect, double near, double far);
+Matrix4x4 perspective(double fov, double aspect, double near, double far);
 
 #endif

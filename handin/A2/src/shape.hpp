@@ -5,7 +5,6 @@
 #include <vector>
 
 
-// Note - not doing polygon/face clipping, only line clipping.
 class LineSegment4D {
 public:
   LineSegment4D(): colour(0) {}
@@ -33,10 +32,18 @@ private:
 class Node {
 public:
   Node(): transformed(false) {}
+  ~Node();
 
   const Matrix4x4& getTransform() { return transformation; }
   bool isTransformed() { return transformed; }
+  void resetTransform();
   void setTransform(const Matrix4x4& m);
+
+  // Helpers for manipulating this node. Simply uses the matrices defined in a2.hpp.
+  void rotate(double angle, char axis);
+  void translate(const Vector3D& displacement);
+  void scale(const Vector3D& scale);
+
   void addChild(Node* n);
   void removeChild(Node* n);
   virtual std::vector<LineSegment4D> getTransformedLineSegments();
@@ -55,7 +62,7 @@ public:
   Shape(): colour(0) {};
   virtual std::vector<LineSegment4D> getTransformedLineSegments();
   //virtual void homogonize();
-  void setColour(Colour& c) { colour = c; }
+  void setColour(const Colour& c) { colour = c; }
 
 protected:
   virtual std::vector<LineSegment4D> getTransformedLineSegments(const Matrix4x4& m, bool appliedOwnTransform=false);
@@ -97,16 +104,27 @@ private:
   const static int linePointIdxs[NUM_LINE_POINTS];
 };
 
-/*
 class Gnomon : public Shape {
 public:
-  Gnomon();
-  Gnomon(const std::vector<Point4D>& points);
-  Gnomon(const Gnomon& gnomon);
+  Gnomon() {}
 
-  void drawOrtho();
+protected:
+  void getPoints(Point4D const*& points, int& len) {
+    points = this->points;
+    len = NUM_POINTS;
+  }
+
+  void getLinePointIdxs(int const*& linePointIdxs, int& len) {
+    linePointIdxs = this->linePointIdxs;
+    len = NUM_LINE_POINTS;
+  }
+
+private:
+  const static int NUM_POINTS = 4;
+  const static int NUM_LINE_POINTS = 6;
+  const static Point4D points[NUM_POINTS];
+  const static int linePointIdxs[NUM_LINE_POINTS];
 };
-*/
 
 #endif
 

@@ -53,7 +53,7 @@ Matrix4x4 scaling(const Vector3D& scale) {
 }
 
 // Returns perspective matrix - assumes looking down -z like OpenGL.
-Matrix4x4 perspectiveMatrix(double fov, double aspect, double near, double far) {
+Matrix4x4 perspective(double fov, double aspect, double near, double far) {
   double cotHalfAngle = 1.0/tan(fov/2);
   double planeDist = far - near;
   return Matrix4x4((double[16]){
