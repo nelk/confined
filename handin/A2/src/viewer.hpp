@@ -51,6 +51,10 @@ protected:
   virtual bool on_motion_notify_event(GdkEventMotion* event);
 
 private:
+  // Clip in homogonous coordinates, before the lines have been divided/homogonized.
+  void homogonousClip(LineSegment4D& line);
+  void renderHomogonousLines(std::vector<LineSegment4D> linesSegments);
+
   Cube* m_cube;
   Matrix4x4 m_model;
   Matrix4x4 m_view;

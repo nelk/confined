@@ -1,6 +1,5 @@
 #include "viewer.hpp"
 #include <iostream>
-#include <math.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include "a2.hpp"
@@ -34,6 +33,8 @@ Viewer::Viewer() {
              Gdk::VISIBILITY_NOTIFY_MASK);
 
   m_cube = new Cube();
+  Colour blue = Colour(0, 0, 1);
+  m_cube->setColour(blue);
 }
 
 Viewer::~Viewer() {
@@ -54,7 +55,6 @@ void Viewer::set_perspective(double fov, double aspect,
 void Viewer::reset_view() {
   set_perspective(M_PI/4.0, 1.0, 1.0, 10.0);
   m_view = translation(Vector3D(0.0, 0.0, -8.0));
-  //m_view = translation(Vector3D(1.5, 1.5, -8.0));
   m_model = Matrix4x4();
   m_screen = translation(Vector3D(get_width()/2.0, get_height()/2.0, 0.0))
     * scaling(Vector3D(get_width(), get_height(), 1.0));
@@ -75,12 +75,14 @@ void Viewer::on_realize() {
 
   gldrawable->gl_end();
 
-  // TEMP
   reset_view();
+  // TEMP
+  /*
   std::cout << (m_perspective * Point4D(0, 0, -1.0)).homogonize() << std::endl;
   std::cout << (m_perspective * Point4D(0, 0, -4.0)).homogonize() << std::endl;
   std::cout << (m_perspective * Point4D(0, 0, -10.0)).homogonize() << std::endl;
   std::cout << (m_perspective * Point4D(2.0, 0, -8.0)).homogonize() << std::endl;
+  */
 }
 
 bool Viewer::on_expose_event(GdkEventExpose* event) {
@@ -95,19 +97,23 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
 
   draw_init(get_width(), get_height());
 
-  set_colour(Colour(0.0, 0.0, 1.0));
+  //set_colour(Colour(0.0, 0.0, 1.0));
 
   //std::cout << "Drawing cube!" << std::endl;
   //double scale_factor = 60.0;
   //Matrix4x4 scaleit = scaling(Vector3D(scale_factor, scale_factor, scale_factor));
 
-  Matrix4x4 transformationMatrix = m_screen * m_perspective * m_view * m_model;
+  Matrix4x4 transformationMatrix = m_perspective * m_view * m_model;
 
-  Shape* shape = new Cube(*m_cube);
-  shape->transform(transformationMatrix); // Convert to screen coordinates.
+  m_cube->setTransform(transformationMatrix); // Convert to homogenous coordinates.
+  std::vector<LineSegment4D> lineSegments = m_cube->getTransformedLineSegments();
+  renderHomogonousLines(lineSegments);
+
+  /*
   shape->homogonize();
   shape->drawOrtho();
   delete shape;
+  */
 
   /*
   draw_line(Point2D(0.1*get_width(), 0.1*get_height()), 
@@ -130,6 +136,27 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   gldrawable->gl_end();
 
   return true;
+}
+
+void Viewer::homogonousClip(LineSegment4D& line) {
+  // TODO.
+}
+
+void Viewer::renderHomogonousLines(std::vector<LineSegment4D> lineSegments) {
+  std::cout << "rendering!" << std::endl;
+  for (std::vector<LineSegment4D>::iterator lineIt = lineSegments.begin(); lineIt != lineSegments.end(); lineIt++) {
+    LineSegment4D& line = *lineIt;
+    homogonousClip(line);
+    Point3D p1 = m_screen * line.getP1().homogonize();
+    Point3D p2 = m_screen * line.getP2().homogonize();
+    std::cout << "draw_line " << p1 << ", " << p2 << std::endl;
+    set_colour(line.getColour());
+    draw_line(
+      Point2D(p1[0], p1[1]),
+      Point2D(p2[0], p2[1])
+    );
+  }
+  std::cout << "done!" << std::endl;
 }
 
 /*
