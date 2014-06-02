@@ -2,8 +2,7 @@
 #include <gtkglmm.h>
 #include "appwindow.hpp"
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
   // Construct our main loop
   Gtk::Main kit(argc, argv);
 

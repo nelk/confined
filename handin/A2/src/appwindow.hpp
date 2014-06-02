@@ -7,10 +7,12 @@
 class AppWindow : public Gtk::Window {
 public:
   AppWindow();
-  
+
 protected:
 
 private:
+  void add_accelerator(Gtk::MenuItem *it, char accelerator);
+
   // A "vertical box" which holds everything in our window
   Gtk::VBox m_vbox;
 

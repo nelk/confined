@@ -16,4 +16,7 @@ Matrix4x4 translation(const Vector3D& displacement);
 // Return a matrix to represent a nonuniform scale with the given factors.
 Matrix4x4 scaling(const Vector3D& scale);
 
+// Returns perspective matrix - assumes looking down -z like OpenGL.
+Matrix4x4 perspectiveMatrix(double fov, double aspect, double near, double far);
+
 #endif

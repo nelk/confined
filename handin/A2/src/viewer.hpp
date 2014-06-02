@@ -4,6 +4,7 @@
 #include <gtkmm.h>
 #include <gtkglmm.h>
 #include "algebra.hpp"
+#include "shape.hpp"
 
 // The "main" OpenGL widget
 class Viewer : public Gtk::GL::DrawingArea {
@@ -50,10 +51,11 @@ protected:
   virtual bool on_motion_notify_event(GdkEventMotion* event);
 
 private:
-
-  // *** Fill me in ***
-  // You will want to declare some more matrices here
-  Matrix4x4 m_projection;
+  Cube* m_cube;
+  Matrix4x4 m_model;
+  Matrix4x4 m_view;
+  Matrix4x4 m_perspective;
+  Matrix4x4 m_screen;
 };
 
 #endif
