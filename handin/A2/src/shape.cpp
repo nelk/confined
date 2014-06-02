@@ -45,7 +45,7 @@ std::vector<LineSegment4D> Node::getTransformedLineSegments(const Matrix4x4& m, 
   std::vector<LineSegment4D> lines;
   Matrix4x4 sentM = m;
   if (isTransformed() && !appliedOwnTransform) {
-    std::cout << "Transforming lines in node" << std::endl;
+    LOG("Transforming lines in node");
     sentM = sentM * getTransform();
   }
   for (std::vector<Node*>::const_iterator childIt = children.begin(); childIt != children.end(); childIt++) {
@@ -80,7 +80,7 @@ std::vector<LineSegment4D> Shape::getTransformedLineSegments(const Matrix4x4& m,
   // Apply node's transform.
   Matrix4x4 sentM = m;
   if (isTransformed() && !appliedOwnTransform) {
-    std::cout << "Transforming lines in shape" << std::endl;
+    LOG("Transforming lines in shape");
     sentM = sentM * getTransform();
   }
 
@@ -103,14 +103,6 @@ std::vector<LineSegment4D> Shape::getTransformedLineSegments(const Matrix4x4& m,
   }
   return lines;
 }
-
-/*
-void Shape::homogonize() {
-  for (std::vector<Point4D>::iterator it = points.begin(); it != points.end(); it++) {
-    it->homogonize();
-  }
-}
-*/
 
 const Point4D Cube::points[] = {
   // Front face.

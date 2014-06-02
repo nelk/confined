@@ -51,9 +51,9 @@ protected:
   virtual bool on_motion_notify_event(GdkEventMotion* event);
 
 private:
-  // Clip in homogonous coordinates, before the lines have been divided/homogonized.
-  bool homogonousClip(LineSegment4D& line);
-  void renderHomogonousLines(std::vector<LineSegment4D> linesSegments);
+  // Clip in homogenous coordinates, before the lines have been divided/homogenized.
+  bool homogenousClip(LineSegment4D& line);
+  void renderHomogenousLines(std::vector<LineSegment4D> linesSegments);
 
   Node* rootNode; // Where perspective matrix is set (non-homogenized homogenous coordinates).
   Node* worldNode; // Where view matrix is set (world coordinates).
@@ -62,7 +62,10 @@ private:
   //Matrix4x4 m_model;
   //Matrix4x4 m_view;
   //Matrix4x4 m_perspective;
-  Matrix4x4 m_screen;
+  Matrix4x4 screenMatrix;
+
+  int lastMouseX;
+  bool axisActive[3];
 };
 
 #endif

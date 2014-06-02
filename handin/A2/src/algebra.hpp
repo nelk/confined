@@ -126,7 +126,7 @@ public:
     return v_[ idx ];
   }
 
-  Point3D homogonize() const {
+  Point3D homogenize() const {
     return Point3D(
         v_[0] / v_[3],
         v_[1] / v_[3],

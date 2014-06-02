@@ -4,7 +4,6 @@
 #include "algebra.hpp"
 #include <vector>
 
-
 class LineSegment4D {
 public:
   LineSegment4D(): colour(0) {}
@@ -61,7 +60,6 @@ class Shape : public Node {
 public:
   Shape(): colour(0) {};
   virtual std::vector<LineSegment4D> getTransformedLineSegments();
-  //virtual void homogonize();
   void setColour(const Colour& c) { colour = c; }
 
 protected:

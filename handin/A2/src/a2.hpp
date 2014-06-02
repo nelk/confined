@@ -3,6 +3,12 @@
 
 #include "algebra.hpp"
 
+#ifdef DEBUG
+#define LOG(text) { std::cout << text << std::endl; }
+#else
+#define LOG(text);
+#endif
+
 // You should implement these functions, and use them from viewer.cpp
 
 // Return a matrix to represent a counterclockwise rotation of "angle"

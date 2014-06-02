@@ -5,6 +5,8 @@
 #include "a2.hpp"
 #include "draw.hpp"
 
+#define MOUSE_TRANSLATE_FACTOR 0.02
+
 Viewer::Viewer() {
   Glib::RefPtr<Gdk::GL::Config> glconfig;
 
@@ -60,6 +62,10 @@ Viewer::Viewer() {
 
   rootNode = new Node();
   rootNode->addChild(worldNode);
+
+  axisActive[0] = false;
+  axisActive[1] = false;
+  axisActive[2] = false;
 }
 
 Viewer::~Viewer() {
@@ -83,14 +89,15 @@ void Viewer::set_perspective(double fov, double aspect,
 }
 
 void Viewer::reset_view() {
-  set_perspective(M_PI/4.0, 1.0, 1.0, 10.0);
-  Matrix4x4 viewingMatrix = translation(Vector3D(-0.5, -0.5, -8.0));
+  set_perspective(30.0 * M_PI/180.0, 1.0, 1.0, 10.0);
+  Matrix4x4 viewingMatrix = translation(Vector3D(0.0, 0.0, -5.0));
   worldNode->setTransform(viewingMatrix);
   modelNode->resetTransform();
   cube->resetTransform();
+  //cube->scale(Vector3D(1.0, 1.0, 0.2));
 
-  m_screen = translation(Vector3D(get_width()/2.0, get_height()/2.0, 0.0))
-    * scaling(Vector3D(get_width(), get_height(), 1.0));
+  screenMatrix = translation(Vector3D(get_width()/2.0, get_height()/2.0, 0.0))
+    * scaling(Vector3D(get_width()/4.0, get_height()/4.0, 1.0));
 }
 
 void Viewer::on_realize() {
@@ -111,10 +118,10 @@ void Viewer::on_realize() {
   reset_view();
   // TEMP
   /*
-  std::cout << (m_perspective * Point4D(0, 0, -1.0)).homogonize() << std::endl;
-  std::cout << (m_perspective * Point4D(0, 0, -4.0)).homogonize() << std::endl;
-  std::cout << (m_perspective * Point4D(0, 0, -10.0)).homogonize() << std::endl;
-  std::cout << (m_perspective * Point4D(2.0, 0, -8.0)).homogonize() << std::endl;
+  std::cout << (m_perspective * Point4D(0, 0, -1.0)).homogenize() << std::endl;
+  std::cout << (m_perspective * Point4D(0, 0, -4.0)).homogenize() << std::endl;
+  std::cout << (m_perspective * Point4D(0, 0, -10.0)).homogenize() << std::endl;
+  std::cout << (m_perspective * Point4D(2.0, 0, -8.0)).homogenize() << std::endl;
   */
 }
 
@@ -126,40 +133,13 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   if (!gldrawable->gl_begin(get_gl_context()))
     return false;
 
-  // Here is where your drawing code should go.
-
   draw_init(get_width(), get_height());
 
-  //set_colour(Colour(0.0, 0.0, 1.0));
-
-  //std::cout << "Drawing cube!" << std::endl;
-  //double scale_factor = 60.0;
-  //Matrix4x4 scaleit = scaling(Vector3D(scale_factor, scale_factor, scale_factor));
-
   //Matrix4x4 transformationMatrix = m_perspective * m_view * m_model;
-
   //cube->setTransform(transformationMatrix); // Convert to homogenous coordinates.
-  worldNode->translate(Vector3D(0.1, 0.0, 0.0));
+
   std::vector<LineSegment4D> lineSegments = rootNode->getTransformedLineSegments();
-  renderHomogonousLines(lineSegments);
-
-  /*
-  shape->homogonize();
-  shape->drawOrtho();
-  delete shape;
-  */
-
-  /*
-  draw_line(Point2D(0.1*get_width(), 0.1*get_height()), 
-            Point2D(0.9*get_width(), 0.9*get_height()));
-  draw_line(Point2D(0.9*get_width(), 0.1*get_height()),
-            Point2D(0.1*get_width(), 0.9*get_height()));
-
-  draw_line(Point2D(0.1*get_width(), 0.1*get_height()),
-            Point2D(0.2*get_width(), 0.1*get_height()));
-  draw_line(Point2D(0.1*get_width(), 0.1*get_height()), 
-            Point2D(0.1*get_width(), 0.2*get_height()));
-            */
+  renderHomogenousLines(lineSegments);
 
   draw_complete();
 
@@ -172,7 +152,7 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   return true;
 }
 
-bool Viewer::homogonousClip(LineSegment4D& line) {
+bool Viewer::homogenousClip(LineSegment4D& line) {
   // TODO.
   double w1 = line.getP1()[3];
   double w2 = line.getP2()[3];
@@ -184,24 +164,29 @@ bool Viewer::homogonousClip(LineSegment4D& line) {
   return true;
 }
 
-void Viewer::renderHomogonousLines(std::vector<LineSegment4D> lineSegments) {
-  std::cout << "rendering!" << std::endl;
+void Viewer::renderHomogenousLines(std::vector<LineSegment4D> lineSegments) {
+  LOG("rendering!");
   for (std::vector<LineSegment4D>::iterator lineIt = lineSegments.begin(); lineIt != lineSegments.end(); lineIt++) {
     LineSegment4D& line = *lineIt;
-    bool keep = homogonousClip(line);
+    bool keep = homogenousClip(line);
     if (!keep) {
       continue;
     }
-    Point3D p1 = m_screen * line.getP1().homogonize();
-    Point3D p2 = m_screen * line.getP2().homogonize();
-    std::cout << "draw_line " << p1 << ", " << p2 << std::endl;
+    Point3D p1 = screenMatrix * line.getP1().homogenize();
+    Point3D p2 = screenMatrix * line.getP2().homogenize();
+    LOG("draw_line " << p1 << ", " << p2);
     set_colour(line.getColour());
     draw_line(
       Point2D(p1[0], p1[1]),
       Point2D(p2[0], p2[1])
     );
+    /*
+    draw_line(
+      Point2D(p1[0]/p1[2], p1[1]/p1[2]),
+      Point2D(p2[0]/p2[2], p2[1]/p2[2])
+    );
+    */
   }
-  std::cout << "done!" << std::endl;
 }
 
 /*
@@ -270,17 +255,40 @@ bool Viewer::on_configure_event(GdkEventConfigure* event) {
 }
 
 bool Viewer::on_button_press_event(GdkEventButton* event) {
-  std::cerr << "Stub: Button " << event->button << " pressed" << std::endl;
+  //std::cerr << "Stub: Button " << event->button << " pressed" << std::endl;
+  const int axis = event->button - 1;
+  lastMouseX = event->x;
+  axisActive[axis] = true;
   return true;
 }
 
 bool Viewer::on_button_release_event(GdkEventButton* event) {
-  std::cerr << "Stub: Button " << event->button << " released" << std::endl;
-  invalidate(); // TODO: Temp.
+  //std::cerr << "Stub: Button " << event->button << " released" << std::endl;
+  const int axis = event->button - 1;
+  axisActive[axis] = false;
   return true;
 }
 
 bool Viewer::on_motion_notify_event(GdkEventMotion* event) {
-  std::cerr << "Stub: Motion at " << event->x << ", " << event->y << std::endl;
+  //std::cerr << "Stub: Motion at " << event->x << ", " << event->y << std::endl;
+
+  const int diff = event->x - lastMouseX;
+  lastMouseX = event->x;
+  bool anyChange = false;
+  Vector3D transAmount;
+  for (int axis = 0; axis < 3; axis++) {
+    if (axisActive[axis]) {
+      anyChange = true;
+      transAmount[axis] = ((double)diff) * MOUSE_TRANSLATE_FACTOR;
+    }
+  }
+  if (anyChange) {
+    // TODO.
+    LOG("Mouse translation " << transAmount);
+    LOG("Now matrix is " << worldNode->getTransform());
+    worldNode->translate(transAmount);
+    invalidate();
+  }
+  //event->time
   return true;
 }
