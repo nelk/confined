@@ -9,6 +9,13 @@
 // The "main" OpenGL widget
 class Viewer : public Gtk::GL::DrawingArea {
 public:
+  enum Mode {
+    VIEW_ROTATE, VIEW_TRANSLATE, VIEW_PERSPECTIVE,
+    MODEL_ROTATE, MODEL_TRANSLATE, MODEL_SCALE,
+    NUM_MODES
+  };
+  static const Mode DEFAULT_MODE = VIEW_TRANSLATE;
+
   Viewer();
   virtual ~Viewer();
 
@@ -29,13 +36,10 @@ public:
   // original state. Set the viewport to its initial size.
   void reset_view();
 
-protected:
+  void set_mode(Mode mode);
+  Mode get_mode();
 
-  // Events we implement
-  // Note that we could use gtkmm's "signals and slots" mechanism
-  // instead, but for many classes there's a convenient member
-  // function one just needs to define that'll be called with the
-  // event.
+protected:
 
   // Called when GL is first initialized
   virtual void on_realize();
@@ -54,6 +58,7 @@ private:
   // Clip in homogenous coordinates, before the lines have been divided/homogenized.
   bool homogenousClip(LineSegment4D& line);
   void renderHomogenousLines(std::vector<LineSegment4D> linesSegments);
+  void handleViewChange(Vector3D& p);
 
   Node* rootNode; // Where perspective matrix is set (non-homogenized homogenous coordinates).
   Node* worldNode; // Where view matrix is set (world coordinates).
@@ -66,6 +71,7 @@ private:
 
   int lastMouseX;
   bool axisActive[3];
+  Mode mode;
 };
 
 #endif

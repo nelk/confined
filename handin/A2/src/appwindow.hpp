@@ -13,6 +13,8 @@ protected:
 private:
   void add_accelerator(Gtk::MenuItem *it, char accelerator);
 
+  void reset_view();
+
   // A "vertical box" which holds everything in our window
   Gtk::VBox m_vbox;
 
@@ -20,6 +22,7 @@ private:
   Gtk::MenuBar m_menubar;
   // Each menu itself
   Gtk::Menu m_menu_app;
+  Gtk::Menu m_menu_mode;
 
   // The main OpenGL area
   Viewer m_viewer;

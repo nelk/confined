@@ -5,7 +5,9 @@
 #include "a2.hpp"
 #include "draw.hpp"
 
-#define MOUSE_TRANSLATE_FACTOR 0.02
+#define MOUSE_TRANSLATE_FACTOR 0.002
+#define MOUSE_ROTATE_FACTOR 0.002
+#define MOUSE_SCALE_FACTOR 0.002
 
 Viewer::Viewer() {
   Glib::RefPtr<Gdk::GL::Config> glconfig;
@@ -34,6 +36,11 @@ Viewer::Viewer() {
              Gdk::BUTTON_RELEASE_MASK    |
              Gdk::VISIBILITY_NOTIFY_MASK);
 
+  axisActive[0] = false;
+  axisActive[1] = false;
+  axisActive[2] = false;
+
+  mode = VIEW_TRANSLATE;
 
   // Construct scene graph (it's linear):
   // (rootNode, Node, perspective mat)
@@ -62,10 +69,6 @@ Viewer::Viewer() {
 
   rootNode = new Node();
   rootNode->addChild(worldNode);
-
-  axisActive[0] = false;
-  axisActive[1] = false;
-  axisActive[2] = false;
 }
 
 Viewer::~Viewer() {
@@ -76,8 +79,16 @@ Viewer::~Viewer() {
   cube = NULL;
 }
 
+void Viewer::set_mode(Viewer::Mode mode) {
+  this->mode = mode;
+}
+
+Viewer::Mode Viewer::get_mode() {
+  return mode;
+}
+
 void Viewer::invalidate() {
-  // Force a rerender
+  // Force a re-render.
   Gtk::Allocation allocation = get_allocation();
   get_window()->invalidate_rect( allocation, false);
 }
@@ -89,15 +100,19 @@ void Viewer::set_perspective(double fov, double aspect,
 }
 
 void Viewer::reset_view() {
-  set_perspective(30.0 * M_PI/180.0, 1.0, 1.0, 10.0);
+  //set_perspective(30.0 * M_PI/180.0, 1.0, 1.0, 10.0);
+  double aspect = 16.0/9.0; //get_width() / get_height();
+  set_perspective(M_PI/4.0, aspect, 1.0, 10.0);
   Matrix4x4 viewingMatrix = translation(Vector3D(0.0, 0.0, -5.0));
   worldNode->setTransform(viewingMatrix);
   modelNode->resetTransform();
   cube->resetTransform();
   //cube->scale(Vector3D(1.0, 1.0, 0.2));
 
+  // Note that screen coordinates are flipped vertically.
   screenMatrix = translation(Vector3D(get_width()/2.0, get_height()/2.0, 0.0))
-    * scaling(Vector3D(get_width()/4.0, get_height()/4.0, 1.0));
+    * scaling(Vector3D(get_width()/4.0, -get_height()/4.0, 1.0));
+  invalidate();
 }
 
 void Viewer::on_realize() {
@@ -251,6 +266,15 @@ bool Viewer::on_configure_event(GdkEventConfigure* event) {
 
   gldrawable->gl_end();
 
+  // TODO: Fix bug - somehow gets into state where rotation acts strangely - doesn't maintain shape of cube...?
+
+  // TODO
+  //double aspect = get_width() / get_height();
+  double aspect = 16.0/9.0; //get_width() / get_height();
+  set_perspective(M_PI/4.0, aspect, 1.0, 10.0);
+  screenMatrix = translation(Vector3D(get_width()/2.0, get_height()/2.0, 0.0))
+    * scaling(Vector3D(get_width()/4.0, -get_height()/4.0, 1.0));
+
   return true;
 }
 
@@ -269,6 +293,40 @@ bool Viewer::on_button_release_event(GdkEventButton* event) {
   return true;
 }
 
+void Viewer::handleViewChange(Vector3D& v) {
+  const char axisLabels[] = {'x', 'y', 'z'};
+  switch (mode) {
+    case VIEW_ROTATE:
+      for (int axis = 0; axis < 3; axis++) {
+        if (v[axis] != 0.0) {
+          worldNode->rotate(v[axis] * MOUSE_ROTATE_FACTOR, axisLabels[axis]);
+        }
+      }
+      break;
+    case VIEW_TRANSLATE:
+      worldNode->translate(MOUSE_TRANSLATE_FACTOR * v);
+      break;
+    case VIEW_PERSPECTIVE:
+      // TODO
+      break;
+    case MODEL_ROTATE:
+      for (int axis = 0; axis < 3; axis++) {
+        if (v[axis] != 0.0) {
+          modelNode->rotate(v[axis] * MOUSE_ROTATE_FACTOR, axisLabels[axis]);
+        }
+      }
+      break;
+    case MODEL_TRANSLATE:
+      modelNode->translate(MOUSE_TRANSLATE_FACTOR * v);
+      break;
+    case MODEL_SCALE:
+      cube->scale(MOUSE_SCALE_FACTOR * v + Vector3D(1.0, 1.0, 1.0));
+      break;
+    default:
+      break;
+  }
+}
+
 bool Viewer::on_motion_notify_event(GdkEventMotion* event) {
   //std::cerr << "Stub: Motion at " << event->x << ", " << event->y << std::endl;
 
@@ -279,14 +337,13 @@ bool Viewer::on_motion_notify_event(GdkEventMotion* event) {
   for (int axis = 0; axis < 3; axis++) {
     if (axisActive[axis]) {
       anyChange = true;
-      transAmount[axis] = ((double)diff) * MOUSE_TRANSLATE_FACTOR;
+      transAmount[axis] = diff;
     }
   }
   if (anyChange) {
-    // TODO.
     LOG("Mouse translation " << transAmount);
     LOG("Now matrix is " << worldNode->getTransform());
-    worldNode->translate(transAmount);
+    handleViewChange(transAmount);
     invalidate();
   }
   //event->time

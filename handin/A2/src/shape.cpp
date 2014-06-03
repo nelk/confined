@@ -26,14 +26,17 @@ void Node::removeChild(Node* n) {
   children.erase(std::remove(children.begin(), children.end(), n), children.end());
 }
 
-void Node::rotate(double angle, char axis) {
-  setTransform(rotation(angle, axis) * getTransform());
-}
 void Node::translate(const Vector3D& displacement) {
+  // Apply transformation to left, to maintain proper order.
   setTransform(translation(displacement) * getTransform());
 }
+void Node::rotate(double angle, char axis) {
+  // Apply transformation to right, to maintain proper order.
+  setTransform(getTransform() * rotation(angle, axis));
+}
 void Node::scale(const Vector3D& scale) {
-  setTransform(scaling(scale) * getTransform());
+  // Apply transformation to right, to maintain proper order.
+  setTransform(getTransform() * scaling(scale));
 }
 
 std::vector<LineSegment4D> Node::getTransformedLineSegments() {

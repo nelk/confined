@@ -39,8 +39,8 @@ public:
   void setTransform(const Matrix4x4& m);
 
   // Helpers for manipulating this node. Simply uses the matrices defined in a2.hpp.
-  void rotate(double angle, char axis);
   void translate(const Vector3D& displacement);
+  void rotate(double angle, char axis);
   void scale(const Vector3D& scale);
 
   void addChild(Node* n);
@@ -58,7 +58,7 @@ private:
 
 class Shape : public Node {
 public:
-  Shape(): colour(0) {};
+  Shape(): colour(0) {}
   virtual std::vector<LineSegment4D> getTransformedLineSegments();
   void setColour(const Colour& c) { colour = c; }
 

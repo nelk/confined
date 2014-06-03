@@ -1,20 +1,56 @@
 #include "appwindow.hpp"
+#include <string>
 
 AppWindow::AppWindow() {
-  set_title("CS488 Assignment Two");
+  set_title("CS488 Assignment Two, by Alex Klen");
 
-  // A utility class for constructing things that go into menus, which
-  // we'll set up next.
-  using Gtk::Menu_Helpers::MenuElem;
+  //using Gtk::Menu_Helpers::MenuElem;
 
+  // Application Menu.
+  Gtk::MenuItem *reset = Gtk::manage(new Gtk::MenuItem("_Reset", true));
   Gtk::MenuItem *quit = Gtk::manage(new Gtk::MenuItem("_Quit", true));
+
+  reset->signal_activate().connect(sigc::mem_fun(*this, &AppWindow::reset_view));
   quit->signal_activate().connect(sigc::mem_fun(*this, &AppWindow::hide));
+
+  add_accelerator(reset, 'a');
   add_accelerator(quit, 'q');
 
+  m_menu_app.items().push_back(*reset);
   m_menu_app.items().push_back(*quit);
+
+  // TODO: On-screen indication of which mode is set.
+  // TODO: Textually display near and far plane positions (fov too?).
+
+  // Mode Menu.
+  const char shortcuts[] = {
+    'o', 'n', 'p', 'r', 't', 's'
+  };
+  const std::string names[] = {
+    "R_otate View",
+    "Tra_nslate View",
+    "_Perspective",
+    "_Rotate Model",
+    "_Translate Model",
+    "_Scale Model"
+  };
+
+  Gtk::RadioMenuItem::Group view_mode_group;
+  sigc::slot1<void, Viewer::Mode> view_mode_slot = sigc::mem_fun(m_viewer, &Viewer::set_mode);
+
+  for (int mode = 0; mode < Viewer::NUM_MODES; mode++) {
+    Gtk::RadioMenuItem *rb = Gtk::manage(new Gtk::RadioMenuItem(view_mode_group, names[mode], true));
+    add_accelerator(rb, shortcuts[mode]);
+    rb->signal_activate().connect(sigc::bind(view_mode_slot, (Viewer::Mode) mode));
+    m_menu_mode.items().push_back(*rb);
+  }
 
   // Set up the menu bar
   m_menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Application", m_menu_app));
+  m_menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Mode", m_menu_mode));
+
+  // Select default radio button.
+  m_menu_mode.items()[Viewer::DEFAULT_MODE].activate();
 
   // Pack in our widgets
 
@@ -35,5 +71,11 @@ AppWindow::AppWindow() {
 void AppWindow::add_accelerator(Gtk::MenuItem *it, char accelerator) {
   it->add_accelerator("activate", get_accel_group(), accelerator, (Gdk::ModifierType) 0, Gtk::ACCEL_VISIBLE);
   it->add_accelerator("activate", get_accel_group(), accelerator, Gdk::SHIFT_MASK, Gtk::ACCEL_VISIBLE);
+}
+
+void AppWindow::reset_view() {
+  m_viewer.reset_view();
+  //Viewer::Mode startMode = m_viewer.get_mode();
+  m_menu_mode.items()[Viewer::DEFAULT_MODE].activate();
 }
 
