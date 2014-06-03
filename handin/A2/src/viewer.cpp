@@ -8,8 +8,13 @@
 #define MOUSE_TRANSLATE_FACTOR 0.002
 #define MOUSE_ROTATE_FACTOR 0.002
 #define MOUSE_SCALE_FACTOR 0.002
+#define MOUSE_FOV_FACTOR 0.01
+#define MOUSE_NEARFAR_FACTOR 0.002
 
-Viewer::Viewer() {
+#define MIN_FOV 5.0
+#define MAX_FOV 160.0
+
+Viewer::Viewer(AppWindow* appWindow): appWindow(appWindow) {
   Glib::RefPtr<Gdk::GL::Config> glconfig;
 
   // Ask for an OpenGL Setup with
@@ -41,6 +46,9 @@ Viewer::Viewer() {
   axisActive[2] = false;
 
   mode = VIEW_TRANSLATE;
+  fovDegrees = 30.0;
+  near = 1.0;
+  far = 10.0;
 
   // Construct scene graph (it's linear):
   // (rootNode, Node, perspective mat)
@@ -81,6 +89,7 @@ Viewer::~Viewer() {
 
 void Viewer::set_mode(Viewer::Mode mode) {
   this->mode = mode;
+  reset_window_label();
 }
 
 Viewer::Mode Viewer::get_mode() {
@@ -99,20 +108,30 @@ void Viewer::set_perspective(double fov, double aspect,
   rootNode->setTransform(m);
 }
 
+void Viewer::reset_perspective_screen() {
+  double aspect = ((double)get_width()) / get_height();
+  double fovRadians = fovDegrees*M_PI/180.0;
+  set_perspective(fovRadians, aspect, near, far);
+
+  // Note that screen coordinates are flipped vertically.
+  screenMatrix = translation(Vector3D(get_width()/2.0, get_height()/2.0, 0.0))
+    * scaling(Vector3D(get_width()/4.0, -get_height()/4.0, 1.0));
+  invalidate();
+}
+
+void Viewer::reset_window_label() {
+  appWindow->redraw_label(mode, fovDegrees, near, far);
+}
+
 void Viewer::reset_view() {
-  //set_perspective(30.0 * M_PI/180.0, 1.0, 1.0, 10.0);
-  double aspect = 16.0/9.0; //get_width() / get_height();
-  set_perspective(M_PI/4.0, aspect, 1.0, 10.0);
+  reset_perspective_screen(); // Will invalidate.
   Matrix4x4 viewingMatrix = translation(Vector3D(0.0, 0.0, -5.0));
   worldNode->setTransform(viewingMatrix);
   modelNode->resetTransform();
   cube->resetTransform();
   //cube->scale(Vector3D(1.0, 1.0, 0.2));
 
-  // Note that screen coordinates are flipped vertically.
-  screenMatrix = translation(Vector3D(get_width()/2.0, get_height()/2.0, 0.0))
-    * scaling(Vector3D(get_width()/4.0, -get_height()/4.0, 1.0));
-  invalidate();
+  //invalidate();
 }
 
 void Viewer::on_realize() {
@@ -131,6 +150,9 @@ void Viewer::on_realize() {
   gldrawable->gl_end();
 
   reset_view();
+  // Redraw label first time.
+  reset_window_label();
+
   // TEMP
   /*
   std::cout << (m_perspective * Point4D(0, 0, -1.0)).homogenize() << std::endl;
@@ -195,66 +217,8 @@ void Viewer::renderHomogenousLines(std::vector<LineSegment4D> lineSegments) {
       Point2D(p1[0], p1[1]),
       Point2D(p2[0], p2[1])
     );
-    /*
-    draw_line(
-      Point2D(p1[0]/p1[2], p1[1]/p1[2]),
-      Point2D(p2[0]/p2[2], p2[1]/p2[2])
-    );
-    */
   }
 }
-
-/*
-std::vector<Point4D> Viewer::createCube() {
-  // Create Cube, going around points ccw as per opengl standard.
-
-  std::vector<Point3D> points(12);
-
-  // Back.
-  //glNormal3d(0.0, 0.0, -1.0);
-  glVertex3d(0.0, 0.0, 0.0);
-  glVertex3d(1.0, 0.0, 0.0);
-  glVertex3d(1.0, 1.0, 0.0);
-  glVertex3d(0.0, 1.0, 0.0);
-  draw_line();
-
-  // Front.
-  //glNormal3d(0.0, 0.0, 1.0);
-  glVertex3d(0.0, 0.0, 1.0);
-  glVertex3d(0.0, 1.0, 1.0);
-  glVertex3d(1.0, 1.0, 1.0);
-  glVertex3d(1.0, 0.0, 1.0);
-
-  // Left.
-  //glNormal3d(-1.0, 0.0, 0.0);
-  glVertex3d(0.0, 0.0, 0.0);
-  glVertex3d(0.0, 1.0, 0.0);
-  glVertex3d(0.0, 1.0, 1.0);
-  glVertex3d(0.0, 0.0, 1.0);
-
-  // Right.
-  //glNormal3d(1.0, 0.0, 0.0);
-  glVertex3d(1.0, 0.0, 0.0);
-  glVertex3d(1.0, 0.0, 1.0);
-  glVertex3d(1.0, 1.0, 1.0);
-  glVertex3d(1.0, 1.0, 0.0);
-
-  // Bottom.
-  //glNormal3d(0.0, -1.0, 0.0);
-  glVertex3d(0.0, 0.0, 0.0);
-  glVertex3d(0.0, 0.0, 1.0);
-  glVertex3d(1.0, 0.0, 1.0);
-  glVertex3d(1.0, 0.0, 0.0);
-
-  // Top.
-  //glNormal3d(0.0, 1.0, 0.0);
-  glVertex3d(0.0, 1.0, 0.0);
-  glVertex3d(1.0, 1.0, 0.0);
-  glVertex3d(1.0, 1.0, 1.0);
-  glVertex3d(0.0, 1.0, 1.0);
-}
-*/
-
 
 bool Viewer::on_configure_event(GdkEventConfigure* event) {
   Glib::RefPtr<Gdk::GL::Drawable> gldrawable = get_gl_drawable();
@@ -268,12 +232,7 @@ bool Viewer::on_configure_event(GdkEventConfigure* event) {
 
   // TODO: Fix bug - somehow gets into state where rotation acts strangely - doesn't maintain shape of cube...?
 
-  // TODO
-  //double aspect = get_width() / get_height();
-  double aspect = 16.0/9.0; //get_width() / get_height();
-  set_perspective(M_PI/4.0, aspect, 1.0, 10.0);
-  screenMatrix = translation(Vector3D(get_width()/2.0, get_height()/2.0, 0.0))
-    * scaling(Vector3D(get_width()/4.0, -get_height()/4.0, 1.0));
+  reset_perspective_screen();
 
   return true;
 }
@@ -307,7 +266,20 @@ void Viewer::handleViewChange(Vector3D& v) {
       worldNode->translate(MOUSE_TRANSLATE_FACTOR * v);
       break;
     case VIEW_PERSPECTIVE:
-      // TODO
+      if (v[0] != 0.0) {
+        fovDegrees += v[0] * MOUSE_FOV_FACTOR;
+        if (fovDegrees < MIN_FOV) {
+          fovDegrees = MIN_FOV;
+        } else if (fovDegrees > MAX_FOV) {
+          fovDegrees = MAX_FOV;
+        }
+      } else if (v[1] != 0.0) {
+        near += v[1] * MOUSE_NEARFAR_FACTOR;
+      } else if (v[2] != 0.0) {
+        far += v[2] * MOUSE_NEARFAR_FACTOR;
+      }
+      // Redraw label because we changed near/far.
+      reset_window_label();
       break;
     case MODEL_ROTATE:
       for (int axis = 0; axis < 3; axis++) {

@@ -5,6 +5,9 @@
 #include <gtkglmm.h>
 #include "algebra.hpp"
 #include "shape.hpp"
+#include "appwindow.hpp"
+
+class AppWindow;
 
 // The "main" OpenGL widget
 class Viewer : public Gtk::GL::DrawingArea {
@@ -16,7 +19,7 @@ public:
   };
   static const Mode DEFAULT_MODE = VIEW_TRANSLATE;
 
-  Viewer();
+  Viewer(AppWindow* appWindow);
   virtual ~Viewer();
 
   // A useful function that forces this widget to rerender. If you
@@ -35,6 +38,7 @@ public:
   // Restore all the transforms and perspective parameters to their
   // original state. Set the viewport to its initial size.
   void reset_view();
+  void reset_perspective_screen();
 
   void set_mode(Mode mode);
   Mode get_mode();
@@ -59,6 +63,9 @@ private:
   bool homogenousClip(LineSegment4D& line);
   void renderHomogenousLines(std::vector<LineSegment4D> linesSegments);
   void handleViewChange(Vector3D& p);
+  void reset_window_label();
+
+  AppWindow* appWindow;
 
   Node* rootNode; // Where perspective matrix is set (non-homogenized homogenous coordinates).
   Node* worldNode; // Where view matrix is set (world coordinates).
@@ -72,6 +79,8 @@ private:
   int lastMouseX;
   bool axisActive[3];
   Mode mode;
+  double fovDegrees;
+  double near, far;
 };
 
 #endif

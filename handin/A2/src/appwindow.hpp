@@ -4,9 +4,14 @@
 #include <gtkmm.h>
 #include "viewer.hpp"
 
+class Viewer;
+
 class AppWindow : public Gtk::Window {
 public:
   AppWindow();
+  ~AppWindow();
+
+  void redraw_label(int mode, double fov, double near, double far);
 
 protected:
 
@@ -24,8 +29,10 @@ private:
   Gtk::Menu m_menu_app;
   Gtk::Menu m_menu_mode;
 
+  Gtk::Label m_main_label;
+
   // The main OpenGL area
-  Viewer m_viewer;
+  Viewer* m_viewer;
 };
 
 #endif

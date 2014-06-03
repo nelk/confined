@@ -2,6 +2,8 @@
 #include <string>
 
 AppWindow::AppWindow() {
+  m_viewer = new Viewer(this);
+
   set_title("CS488 Assignment Two, by Alex Klen");
 
   //using Gtk::Menu_Helpers::MenuElem;
@@ -19,9 +21,6 @@ AppWindow::AppWindow() {
   m_menu_app.items().push_back(*reset);
   m_menu_app.items().push_back(*quit);
 
-  // TODO: On-screen indication of which mode is set.
-  // TODO: Textually display near and far plane positions (fov too?).
-
   // Mode Menu.
   const char shortcuts[] = {
     'o', 'n', 'p', 'r', 't', 's'
@@ -36,7 +35,7 @@ AppWindow::AppWindow() {
   };
 
   Gtk::RadioMenuItem::Group view_mode_group;
-  sigc::slot1<void, Viewer::Mode> view_mode_slot = sigc::mem_fun(m_viewer, &Viewer::set_mode);
+  sigc::slot1<void, Viewer::Mode> view_mode_slot = sigc::mem_fun(*m_viewer, &Viewer::set_mode);
 
   for (int mode = 0; mode < Viewer::NUM_MODES; mode++) {
     Gtk::RadioMenuItem *rb = Gtk::manage(new Gtk::RadioMenuItem(view_mode_group, names[mode], true));
@@ -62,10 +61,16 @@ AppWindow::AppWindow() {
 
   // Put the viewer below the menubar. pack_start "grows" the widget
   // by default, so it'll take up the rest of the window.
-  m_viewer.set_size_request(300, 300);
-  m_vbox.pack_start(m_viewer);
+  m_viewer->set_size_request(300, 300);
+  m_vbox.pack_start(*m_viewer);
+
+  m_vbox.pack_start(m_main_label, false, false);
 
   show_all();
+}
+
+AppWindow::~AppWindow() {
+  delete m_viewer;
 }
 
 void AppWindow::add_accelerator(Gtk::MenuItem *it, char accelerator) {
@@ -73,9 +78,24 @@ void AppWindow::add_accelerator(Gtk::MenuItem *it, char accelerator) {
   it->add_accelerator("activate", get_accel_group(), accelerator, Gdk::SHIFT_MASK, Gtk::ACCEL_VISIBLE);
 }
 
+void AppWindow::redraw_label(int mode, double fov, double near, double far) {
+  const char* names[] = {
+    "Rotate View",
+    "Translate View",
+    "Perspective",
+    "Rotate Model",
+    "Translate Model",
+    "Scale Model"
+  };
+  char* buf = new char[255];
+  sprintf(buf, "Mode: %s, Field of View = %.1f°, near plane = %.1f, far plane = %.1f", names[mode], fov, near, far);
+  m_main_label.set_label(buf);
+  //m_main_label.set_label("Mode: " + names[mode] + ", near plane = " + near + ", far plane = " + far);
+  delete[] buf;
+}
+
 void AppWindow::reset_view() {
-  m_viewer.reset_view();
-  //Viewer::Mode startMode = m_viewer.get_mode();
+  m_viewer->reset_view();
   m_menu_mode.items()[Viewer::DEFAULT_MODE].activate();
 }
 
