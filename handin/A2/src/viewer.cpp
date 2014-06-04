@@ -8,7 +8,7 @@
 #define MOUSE_TRANSLATE_FACTOR 0.002
 #define MOUSE_ROTATE_FACTOR 0.002
 #define MOUSE_SCALE_FACTOR 0.002
-#define MOUSE_FOV_FACTOR 0.01
+#define MOUSE_FOV_FACTOR 0.04
 #define MOUSE_NEARFAR_FACTOR 0.002
 
 #define MIN_FOV 5.0
@@ -190,13 +190,46 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
 }
 
 bool Viewer::homogenousClip(LineSegment4D& line) {
-  // TODO.
-  double w1 = line.getP1()[3];
-  double w2 = line.getP2()[3];
-  if (w1 >= -0.001 && w1 <= 0.001) {
-    return false;
-  } else if (w2 >= -0.001 && w2 <= 0.001) {
-    return false;
+  const int X = 0;
+  const int Y = 1;
+  const int Z = 2;
+  const int W = 3;
+
+  Point4D p[] = { line.getP1(), line.getP2() };
+
+  // Coordinates with respect to planes in homogeneous coordinates.
+  // Positive means on visible size.
+  double borderCoords[2][6];
+  for (int pi = 0; pi < 2; pi++) {
+    borderCoords[pi][0] = p[pi][W] - near;     // w - n = 0 (front)
+    borderCoords[pi][1] = far - p[pi][W];      // f - w = 0 (back)
+    borderCoords[pi][2] = p[pi][W] + p[pi][X]; // w + x = 0(left)
+    borderCoords[pi][3] = p[pi][W] - p[pi][X]; // w - x = 0 (left)
+    borderCoords[pi][4] = p[pi][W] + p[pi][Y]; // w + y = 0(bottom)
+    borderCoords[pi][5] = p[pi][W] - p[pi][Y]; // w - y = 0(top)
+  }
+
+  bool anyChanged = false;
+  for (int side = 0; side < 6; side++) {
+    bool inside1 = borderCoords[0][side] > 0;
+    bool inside2 = borderCoords[1][side] > 0;
+    if (!inside1 && !inside2) {
+      return false;
+    } else if (inside1 && inside2) {
+      continue;
+    } else { // One in and one out.
+      double a = borderCoords[0][side]/(borderCoords[0][side] - borderCoords[1][side]);
+      if (inside2) { // Replace point 1.
+        p[0] = (1-a)*p[0] + a*p[1];
+      } else { // Replace point 2.
+        p[1] = (1-a)*p[0] + a*p[1];
+      }
+      anyChanged = true;
+    }
+  }
+
+  if (anyChanged) {
+    line = LineSegment4D(p[0], p[1], line.getColour());
   }
   return true;
 }

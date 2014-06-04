@@ -137,6 +137,14 @@ private:
   double v_[4];
 };
 
+inline Point4D operator *(double s, const Point4D& v) {
+  return Point4D(s*v[0], s*v[1], s*v[2], s*v[3]);
+}
+
+inline Point4D operator +(const Point4D& a, const Point4D& b) {
+  return Point4D(a[0]+b[0], a[1]+b[1], a[2]+b[2], a[3]+b[3]);
+}
+
 
 class Vector3D {
 public:
@@ -418,48 +426,6 @@ inline std::ostream& operator <<(std::ostream& os, const Matrix4x4& M) {
             << M[3][2] << " " << M[3][3] << "]";
 }
 
-/*
-class Plane4D {
-  Plane3D(Vector4D& v1, Vector4D& v2): v1(v1), v2(v2) {}
-
-  Vector4D& getV1() { return v1; }
-  Vector4D& getV2() { return v2; }
-
-  Vector4D normal() {
-    return v1.cross(v2);
-  }
-
-private:
-  Vector4D v1, v2;
-};
-*/
-
-/*
-class LineSegment4D {
-  LineSegment4D() {}
-  LineSegment4D(Point4D& p1, Point4D& p2): p1(p1), p2(p2) {}
-  LineSegment4D(Point4D& p, Vector4D& v): p1(p), v(p2 - p1) {}
-
-  Point4D& getP1() { return p1; }
-  Point4D& getP2() { return p2; }
-
-  // Checks x, y, z, w against plane and 
-  void clip(Plane4D& plane) {
-    Vector4D normal = plane.normal();
-
-  }
-
-private:
-  Point4D p1, p2;
-};
-
-class Plane3D {
-  Plane3D(Vector3D& v1, Vector3D& v2): v1(v1), v2(v2) {}
-
-private:
-  Vector3D v1, v2;
-};
-*/
 
 class Colour {
 public:

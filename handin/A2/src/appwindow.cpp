@@ -87,11 +87,9 @@ void AppWindow::redraw_label(int mode, double fov, double near, double far) {
     "Translate Model",
     "Scale Model"
   };
-  char* buf = new char[255];
+  char buf[255];
   sprintf(buf, "Mode: %s, Field of View = %.1f°, near plane = %.1f, far plane = %.1f", names[mode], fov, near, far);
   m_main_label.set_label(buf);
-  //m_main_label.set_label("Mode: " + names[mode] + ", near plane = " + near + ", far plane = " + far);
-  delete[] buf;
 }
 
 void AppWindow::reset_view() {
