@@ -329,6 +329,7 @@ void Viewer::handleViewChange(Vector3D& v) {
       }
       // Redraw label because we changed near/far.
       reset_window_label();
+      reset_perspective_screen();
       break;
     case MODEL_ROTATE:
       for (int axis = 0; axis < 3; axis++) {
