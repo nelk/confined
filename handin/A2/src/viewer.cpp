@@ -41,6 +41,8 @@ Viewer::Viewer(AppWindow* appWindow): appWindow(appWindow) {
              Gdk::BUTTON_RELEASE_MASK    |
              Gdk::VISIBILITY_NOTIFY_MASK);
 
+  firstConfig = true;
+
   axisActive[0] = false;
   axisActive[1] = false;
   axisActive[2] = false;
@@ -113,9 +115,6 @@ void Viewer::reset_perspective_screen() {
   double fovRadians = fovDegrees*M_PI/180.0;
   set_perspective(fovRadians, aspect, near, far);
 
-  // Note that screen coordinates are flipped vertically.
-  screenMatrix = translation(Vector3D(get_width()/2.0, get_height()/2.0, 0.0))
-    * scaling(Vector3D(get_width()/4.0, -get_height()/4.0, 1.0));
   invalidate();
 }
 
@@ -129,9 +128,23 @@ void Viewer::reset_view() {
   worldNode->setTransform(viewingMatrix);
   modelNode->resetTransform();
   cube->resetTransform();
-  //cube->scale(Vector3D(1.0, 1.0, 0.2));
 
-  //invalidate();
+  // Setup default viewport.
+  viewportTL = Point2D(
+    get_width() * 0.05,
+    get_height() * 0.05
+  );
+  viewportBR = Point2D(
+    get_width() * 0.95,
+    get_height() * 0.95
+  );
+}
+
+Matrix4x4 Viewer::NDCToScreenMatrix() {
+  const double W = viewportBR[0] - viewportTL[0];
+  const double H = viewportBR[1] - viewportTL[1];
+  return translation(Vector3D(viewportTL[0] + W/2.0, viewportTL[1] + H/2.0, 0.0))
+    * scaling(Vector3D(W/2.0, -H/2.0, 1.0));
 }
 
 void Viewer::on_realize() {
@@ -152,14 +165,6 @@ void Viewer::on_realize() {
   reset_view();
   // Redraw label first time.
   reset_window_label();
-
-  // TEMP
-  /*
-  std::cout << (m_perspective * Point4D(0, 0, -1.0)).homogenize() << std::endl;
-  std::cout << (m_perspective * Point4D(0, 0, -4.0)).homogenize() << std::endl;
-  std::cout << (m_perspective * Point4D(0, 0, -10.0)).homogenize() << std::endl;
-  std::cout << (m_perspective * Point4D(2.0, 0, -8.0)).homogenize() << std::endl;
-  */
 }
 
 bool Viewer::on_expose_event(GdkEventExpose* event) {
@@ -176,7 +181,18 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   //cube->setTransform(transformationMatrix); // Convert to homogenous coordinates.
 
   std::vector<LineSegment4D> lineSegments = rootNode->getTransformedLineSegments();
+
   renderHomogenousLines(lineSegments);
+
+  // Draw viewport box.
+  const Colour BLACK(0);
+  set_colour(BLACK);
+  const Point2D viewportBL = Point2D(viewportTL[0], viewportBR[1]);
+  const Point2D viewportTR = Point2D(viewportBR[0], viewportTL[1]);
+  draw_line(viewportTL, viewportBL);
+  draw_line(viewportBL, viewportBR);
+  draw_line(viewportBR, viewportTR);
+  draw_line(viewportTR, viewportTL);
 
   draw_complete();
 
@@ -189,10 +205,10 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   return true;
 }
 
+// TODO: Fix a few glitches.
 bool Viewer::homogenousClip(LineSegment4D& line) {
   const int X = 0;
   const int Y = 1;
-  const int Z = 2;
   const int W = 3;
 
   Point4D p[] = { line.getP1(), line.getP2() };
@@ -236,6 +252,9 @@ bool Viewer::homogenousClip(LineSegment4D& line) {
 
 void Viewer::renderHomogenousLines(std::vector<LineSegment4D> lineSegments) {
   LOG("rendering!");
+
+  const Matrix4x4 screenMatrix = NDCToScreenMatrix();
+
   for (std::vector<LineSegment4D>::iterator lineIt = lineSegments.begin(); lineIt != lineSegments.end(); lineIt++) {
     LineSegment4D& line = *lineIt;
     bool keep = homogenousClip(line);
@@ -263,25 +282,13 @@ bool Viewer::on_configure_event(GdkEventConfigure* event) {
 
   gldrawable->gl_end();
 
-  // TODO: Fix bug - somehow gets into state where rotation acts strangely - doesn't maintain shape of cube...?
+  if (firstConfig) {
+    firstConfig = false;
+    reset_view();
+  } else {
+    reset_perspective_screen();
+  }
 
-  reset_perspective_screen();
-
-  return true;
-}
-
-bool Viewer::on_button_press_event(GdkEventButton* event) {
-  //std::cerr << "Stub: Button " << event->button << " pressed" << std::endl;
-  const int axis = event->button - 1;
-  lastMouseX = event->x;
-  axisActive[axis] = true;
-  return true;
-}
-
-bool Viewer::on_button_release_event(GdkEventButton* event) {
-  //std::cerr << "Stub: Button " << event->button << " released" << std::endl;
-  const int axis = event->button - 1;
-  axisActive[axis] = false;
   return true;
 }
 
@@ -332,9 +339,49 @@ void Viewer::handleViewChange(Vector3D& v) {
   }
 }
 
-bool Viewer::on_motion_notify_event(GdkEventMotion* event) {
-  //std::cerr << "Stub: Motion at " << event->x << ", " << event->y << std::endl;
+bool Viewer::on_button_press_event(GdkEventButton* event) {
+  const int axis = event->button - 1;
+  lastMouseX = event->x;
+  axisActive[axis] = true;
+  if (mode == VIEWPORT) {
+    newViewportPos = Point2D(event->x, event->y);
+  }
+  return true;
+}
 
+bool Viewer::on_button_release_event(GdkEventButton* event) {
+  const int axis = event->button - 1;
+  axisActive[axis] = false;
+  if (mode == VIEWPORT) {
+    double x2, y2;
+    if (event->x < 0) {
+      x2 = 0;
+    } else if (event->x > get_width()) {
+      x2 = get_width();
+    } else {
+      x2 = event->x;
+    }
+    if (event->y < 0) {
+      y2 = 0;
+    } else if (event->y > get_height()) {
+      y2 = get_height();
+    } else {
+      y2 = event->y;
+    }
+    viewportTL = Point2D(
+      std::min(newViewportPos[0], x2),
+      std::min(newViewportPos[1], y2)
+    );
+    viewportBR = Point2D(
+      std::max(newViewportPos[0], x2),
+      std::max(newViewportPos[1], y2)
+    );
+    invalidate();
+  }
+  return true;
+}
+
+bool Viewer::on_motion_notify_event(GdkEventMotion* event) {
   const int diff = event->x - lastMouseX;
   lastMouseX = event->x;
   bool anyChange = false;
@@ -351,6 +398,5 @@ bool Viewer::on_motion_notify_event(GdkEventMotion* event) {
     handleViewChange(transAmount);
     invalidate();
   }
-  //event->time
   return true;
 }

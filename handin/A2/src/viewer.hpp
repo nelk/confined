@@ -15,6 +15,7 @@ public:
   enum Mode {
     VIEW_ROTATE, VIEW_TRANSLATE, VIEW_PERSPECTIVE,
     MODEL_ROTATE, MODEL_TRANSLATE, MODEL_SCALE,
+    VIEWPORT,
     NUM_MODES
   };
   static const Mode DEFAULT_MODE = VIEW_TRANSLATE;
@@ -64,6 +65,7 @@ private:
   void renderHomogenousLines(std::vector<LineSegment4D> linesSegments);
   void handleViewChange(Vector3D& p);
   void reset_window_label();
+  Matrix4x4 NDCToScreenMatrix();
 
   AppWindow* appWindow;
 
@@ -71,16 +73,16 @@ private:
   Node* worldNode; // Where view matrix is set (world coordinates).
   Node* modelNode; // Where model translation and rotation are set (model coordinates).
   Cube* cube; // Where model scaling is set.
-  //Matrix4x4 m_model;
-  //Matrix4x4 m_view;
-  //Matrix4x4 m_perspective;
-  Matrix4x4 screenMatrix;
 
   int lastMouseX;
   bool axisActive[3];
   Mode mode;
   double fovDegrees;
   double near, far;
+
+  Point2D viewportTL, viewportBR;
+  Point2D newViewportPos;
+  bool firstConfig;
 };
 
 #endif

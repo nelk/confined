@@ -6,8 +6,6 @@ AppWindow::AppWindow() {
 
   set_title("CS488 Assignment Two, by Alex Klen");
 
-  //using Gtk::Menu_Helpers::MenuElem;
-
   // Application Menu.
   Gtk::MenuItem *reset = Gtk::manage(new Gtk::MenuItem("_Reset", true));
   Gtk::MenuItem *quit = Gtk::manage(new Gtk::MenuItem("_Quit", true));
@@ -23,7 +21,7 @@ AppWindow::AppWindow() {
 
   // Mode Menu.
   const char shortcuts[] = {
-    'o', 'n', 'p', 'r', 't', 's'
+    'o', 'n', 'p', 'r', 't', 's', 'v'
   };
   const std::string names[] = {
     "R_otate View",
@@ -31,7 +29,8 @@ AppWindow::AppWindow() {
     "_Perspective",
     "_Rotate Model",
     "_Translate Model",
-    "_Scale Model"
+    "_Scale Model",
+    "_Viewport"
   };
 
   Gtk::RadioMenuItem::Group view_mode_group;
@@ -85,7 +84,8 @@ void AppWindow::redraw_label(int mode, double fov, double near, double far) {
     "Perspective",
     "Rotate Model",
     "Translate Model",
-    "Scale Model"
+    "Scale Model",
+    "Viewport"
   };
   char buf[255];
   sprintf(buf, "Mode: %s, Field of View = %.1f°, near plane = %.1f, far plane = %.1f", names[mode], fov, near, far);
