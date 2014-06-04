@@ -122,6 +122,7 @@ void Viewer::reset_window_label() {
   appWindow->redraw_label(mode, fovDegrees, near, far);
 }
 
+// TODO: Make this properly reset on startup after window settles...
 void Viewer::reset_view() {
   reset_perspective_screen(); // Will invalidate.
   Matrix4x4 viewingMatrix = translation(Vector3D(0.0, 0.0, -5.0));
@@ -205,13 +206,12 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   return true;
 }
 
-// TODO: Fix a few glitches.
 bool Viewer::homogenousClip(LineSegment4D& line) {
   const int X = 0;
   const int Y = 1;
   const int W = 3;
 
-  Point4D p[] = { line.getP1(), line.getP2() };
+  const Point4D p[] = { line.getP1(), line.getP2() };
 
   // Coordinates with respect to planes in homogeneous coordinates.
   // Positive means on visible size.
@@ -226,6 +226,8 @@ bool Viewer::homogenousClip(LineSegment4D& line) {
   }
 
   bool anyChanged = false;
+  double truncateLower = 0.0;
+  double truncateHigher = 1.0;
   for (int side = 0; side < 6; side++) {
     bool inside1 = borderCoords[0][side] > 0;
     bool inside2 = borderCoords[1][side] > 0;
@@ -236,16 +238,23 @@ bool Viewer::homogenousClip(LineSegment4D& line) {
     } else { // One in and one out.
       double a = borderCoords[0][side]/(borderCoords[0][side] - borderCoords[1][side]);
       if (inside2) { // Replace point 1.
-        p[0] = (1-a)*p[0] + a*p[1];
+        truncateLower = std::max(truncateLower, a);
       } else { // Replace point 2.
-        p[1] = (1-a)*p[0] + a*p[1];
+        truncateHigher = std::min(truncateHigher, a);
+      }
+      if (truncateLower >= truncateHigher) {
+        return false;
       }
       anyChanged = true;
     }
   }
 
   if (anyChanged) {
-    line = LineSegment4D(p[0], p[1], line.getColour());
+    line = LineSegment4D(
+      (1-truncateLower)*p[0] + truncateLower*p[1],
+      (1-truncateHigher)*p[0] + truncateHigher*p[1],
+      line.getColour()
+    );
   }
   return true;
 }
