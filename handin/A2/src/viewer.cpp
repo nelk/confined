@@ -11,8 +11,11 @@
 #define MOUSE_FOV_FACTOR 0.04
 #define MOUSE_NEARFAR_FACTOR 0.002
 
+#define DYNAMIC_VIEWPORT true
+
 #define MIN_FOV 5.0
 #define MAX_FOV 160.0
+#define MIN_NEAR 0.002
 
 Viewer::Viewer(AppWindow* appWindow): appWindow(appWindow) {
   Glib::RefPtr<Gdk::GL::Config> glconfig;
@@ -322,10 +325,20 @@ void Viewer::handleViewChange(Vector3D& v) {
         } else if (fovDegrees > MAX_FOV) {
           fovDegrees = MAX_FOV;
         }
-      } else if (v[1] != 0.0) {
+      }
+      if (v[1] != 0.0) {
         near += v[1] * MOUSE_NEARFAR_FACTOR;
-      } else if (v[2] != 0.0) {
+        if (near < MIN_NEAR) {
+          near = MIN_NEAR;
+        } else if (near > far) {
+          near = far;
+        }
+      }
+      if (v[2] != 0.0) {
         far += v[2] * MOUSE_NEARFAR_FACTOR;
+        if (far < near) {
+          far = near;
+        }
       }
       // Redraw label because we changed near/far.
       reset_window_label();
@@ -349,6 +362,28 @@ void Viewer::handleViewChange(Vector3D& v) {
   }
 }
 
+void Viewer::update_viewport(double x2, double y2) {
+  if (x2 < 0) {
+    x2 = 0;
+  } else if (x2 > get_width()) {
+    x2 = get_width();
+  }
+  if (y2 < 0) {
+    y2 = 0;
+  } else if (y2 > get_height()) {
+    y2 = get_height();
+  }
+  viewportTL = Point2D(
+      std::min(newViewportPos[0], x2),
+      std::min(newViewportPos[1], y2)
+      );
+  viewportBR = Point2D(
+      std::max(newViewportPos[0], x2),
+      std::max(newViewportPos[1], y2)
+      );
+  invalidate();
+}
+
 bool Viewer::on_button_press_event(GdkEventButton* event) {
   const int axis = event->button - 1;
   lastMouseX = event->x;
@@ -363,30 +398,7 @@ bool Viewer::on_button_release_event(GdkEventButton* event) {
   const int axis = event->button - 1;
   axisActive[axis] = false;
   if (mode == VIEWPORT) {
-    double x2, y2;
-    if (event->x < 0) {
-      x2 = 0;
-    } else if (event->x > get_width()) {
-      x2 = get_width();
-    } else {
-      x2 = event->x;
-    }
-    if (event->y < 0) {
-      y2 = 0;
-    } else if (event->y > get_height()) {
-      y2 = get_height();
-    } else {
-      y2 = event->y;
-    }
-    viewportTL = Point2D(
-      std::min(newViewportPos[0], x2),
-      std::min(newViewportPos[1], y2)
-    );
-    viewportBR = Point2D(
-      std::max(newViewportPos[0], x2),
-      std::max(newViewportPos[1], y2)
-    );
-    invalidate();
+    update_viewport(event->x, event->y);
   }
   return true;
 }
@@ -401,6 +413,9 @@ bool Viewer::on_motion_notify_event(GdkEventMotion* event) {
       anyChange = true;
       transAmount[axis] = diff;
     }
+  }
+  if (DYNAMIC_VIEWPORT && mode == VIEWPORT) {
+    update_viewport(event->x, event->y);
   }
   if (anyChange) {
     LOG("Mouse translation " << transAmount);

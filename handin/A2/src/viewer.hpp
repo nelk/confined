@@ -65,6 +65,7 @@ private:
   void renderHomogenousLines(std::vector<LineSegment4D> linesSegments);
   void handleViewChange(Vector3D& p);
   void reset_window_label();
+  void update_viewport(double x2, double y2);
   Matrix4x4 NDCToScreenMatrix();
 
   AppWindow* appWindow;
