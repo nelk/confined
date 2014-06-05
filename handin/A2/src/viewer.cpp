@@ -56,6 +56,8 @@ Viewer::Viewer(AppWindow* appWindow): appWindow(appWindow) {
   near = 1.0;
   far = 10.0;
 
+  // TODO: Implemented viewing coordinates incorrectly. Should not move world coordinates, but instead rotate and translate eye!
+
   // Construct scene graph (it's linear):
   // (rootNode, Node, perspective mat)
   // ->(worldNode, Gnomon, viewing mat)
@@ -218,13 +220,13 @@ bool Viewer::homogenousClip(LineSegment4D& line) {
   // Coordinates with respect to planes in homogeneous coordinates.
   // Positive means on visible size.
   double borderCoords[2][6];
-  for (int pi = 0; pi < 2; pi++) {
-    borderCoords[pi][0] = p[pi][W] - near;     // w - n = 0 (front)
-    borderCoords[pi][1] = far - p[pi][W];      // f - w = 0 (back)
-    borderCoords[pi][2] = p[pi][W] + p[pi][X]; // w + x = 0(left)
-    borderCoords[pi][3] = p[pi][W] - p[pi][X]; // w - x = 0 (left)
-    borderCoords[pi][4] = p[pi][W] + p[pi][Y]; // w + y = 0(bottom)
-    borderCoords[pi][5] = p[pi][W] - p[pi][Y]; // w - y = 0(top)
+  for (int i = 0; i < 2; i++) {
+    borderCoords[i][0] = p[i][W] - near;    // w - n = 0 (front)
+    borderCoords[i][1] = far - p[i][W];     // f - w = 0 (back)
+    borderCoords[i][2] = p[i][W] + p[i][X]; // w + x = 0(left)
+    borderCoords[i][3] = p[i][W] - p[i][X]; // w - x = 0 (left)
+    borderCoords[i][4] = p[i][W] + p[i][Y]; // w + y = 0(bottom)
+    borderCoords[i][5] = p[i][W] - p[i][Y]; // w - y = 0(top)
   }
 
   // Keep track of maximum lower bound and minimum upper bound on factor a in [0, 1], where Line = (1-a)*P1 + a*P2.
@@ -240,6 +242,7 @@ bool Viewer::homogenousClip(LineSegment4D& line) {
       continue;
     } else { // One inside and one outside.
       // Compute intersection point.
+      // Note that a will be in [0, 1] because points are on either side of the line (denominator won't be 0).
       double a = borderCoords[0][side]/(borderCoords[0][side] - borderCoords[1][side]);
       if (inside2) { // Replace point 1.
         truncateLower = std::max(truncateLower, a);
@@ -276,6 +279,7 @@ void Viewer::renderHomogenousLines(std::vector<LineSegment4D> lineSegments) {
     if (!keep) {
       continue;
     }
+
     // Divide point coordinates by w and transform to screen coordinates.
     Point3D p1 = screenMatrix * line.getP1().homogenize();
     Point3D p2 = screenMatrix * line.getP2().homogenize();
