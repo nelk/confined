@@ -44,6 +44,7 @@ Viewer::Viewer(AppWindow* appWindow): appWindow(appWindow) {
              Gdk::BUTTON_RELEASE_MASK    |
              Gdk::VISIBILITY_NOTIFY_MASK);
 
+  // Initialize.
   firstConfig = true;
 
   axisActive[0] = false;
@@ -125,7 +126,6 @@ void Viewer::reset_window_label() {
   appWindow->redraw_label(mode, fovDegrees, near, far);
 }
 
-// TODO: Make this properly reset on startup after window settles...
 void Viewer::reset_view() {
   reset_perspective_screen(); // Will invalidate.
   Matrix4x4 viewingMatrix = translation(Vector3D(0.0, 0.0, -5.0));
@@ -181,9 +181,7 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
 
   draw_init(get_width(), get_height());
 
-  //Matrix4x4 transformationMatrix = m_perspective * m_view * m_model;
-  //cube->setTransform(transformationMatrix); // Convert to homogenous coordinates.
-
+  // Transforms each point by matrix m_perspective * m_view * m_model.
   std::vector<LineSegment4D> lineSegments = rootNode->getTransformedLineSegments();
 
   renderHomogenousLines(lineSegments);
@@ -209,6 +207,7 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   return true;
 }
 
+// Clip in homogenous coordinates against 6 planes.
 bool Viewer::homogenousClip(LineSegment4D& line) {
   const int X = 0;
   const int Y = 1;
@@ -228,23 +227,26 @@ bool Viewer::homogenousClip(LineSegment4D& line) {
     borderCoords[pi][5] = p[pi][W] - p[pi][Y]; // w - y = 0(top)
   }
 
+  // Keep track of maximum lower bound and minimum upper bound on factor a in [0, 1], where Line = (1-a)*P1 + a*P2.
   bool anyChanged = false;
   double truncateLower = 0.0;
   double truncateHigher = 1.0;
   for (int side = 0; side < 6; side++) {
     bool inside1 = borderCoords[0][side] > 0;
     bool inside2 = borderCoords[1][side] > 0;
-    if (!inside1 && !inside2) {
+    if (!inside1 && !inside2) { // Entirely on non-visible side of this plane.
       return false;
-    } else if (inside1 && inside2) {
+    } else if (inside1 && inside2) { // Entirely inside, don't need to clip with this plane.
       continue;
-    } else { // One in and one out.
+    } else { // One inside and one outside.
+      // Compute intersection point.
       double a = borderCoords[0][side]/(borderCoords[0][side] - borderCoords[1][side]);
       if (inside2) { // Replace point 1.
         truncateLower = std::max(truncateLower, a);
       } else { // Replace point 2.
         truncateHigher = std::min(truncateHigher, a);
       }
+      // Check if line is invisible after clipping.
       if (truncateLower >= truncateHigher) {
         return false;
       }
@@ -252,6 +254,7 @@ bool Viewer::homogenousClip(LineSegment4D& line) {
     }
   }
 
+  // New clipped line.
   if (anyChanged) {
     line = LineSegment4D(
       (1-truncateLower)*p[0] + truncateLower*p[1],
@@ -273,9 +276,12 @@ void Viewer::renderHomogenousLines(std::vector<LineSegment4D> lineSegments) {
     if (!keep) {
       continue;
     }
+    // Divide point coordinates by w and transform to screen coordinates.
     Point3D p1 = screenMatrix * line.getP1().homogenize();
     Point3D p2 = screenMatrix * line.getP2().homogenize();
     LOG("draw_line " << p1 << ", " << p2);
+
+    // Finally draw the line in 2D screen coordinates (ignoring depth since only drawing lines).
     set_colour(line.getColour());
     draw_line(
       Point2D(p1[0], p1[1]),
@@ -363,6 +369,7 @@ void Viewer::handleViewChange(Vector3D& v) {
 }
 
 void Viewer::update_viewport(double x2, double y2) {
+  // Clamp second point inside window area.
   if (x2 < 0) {
     x2 = 0;
   } else if (x2 > get_width()) {
@@ -373,6 +380,7 @@ void Viewer::update_viewport(double x2, double y2) {
   } else if (y2 > get_height()) {
     y2 = get_height();
   }
+  // Set viewport top left and bottom right points.
   viewportTL = Point2D(
       std::min(newViewportPos[0], x2),
       std::min(newViewportPos[1], y2)

@@ -11,6 +11,7 @@ public:
   AppWindow();
   ~AppWindow();
 
+  // Format and update label from view parameters.
   void redraw_label(int mode, double fov, double near, double far);
 
 protected:
@@ -25,10 +26,12 @@ private:
 
   // The menubar, with all the menus at the top of the window
   Gtk::MenuBar m_menubar;
+
   // Each menu itself
   Gtk::Menu m_menu_app;
   Gtk::Menu m_menu_mode;
 
+  // Label that displays mode and perspective parameters.
   Gtk::Label m_main_label;
 
   // The main OpenGL area

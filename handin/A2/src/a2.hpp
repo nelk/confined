@@ -9,8 +9,6 @@
 #define LOG(text);
 #endif
 
-// You should implement these functions, and use them from viewer.cpp
-
 // Return a matrix to represent a counterclockwise rotation of "angle"
 // degrees around the axis "axis", where "axis" is one of the
 // characters 'x', 'y', or 'z'.

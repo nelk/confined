@@ -33,6 +33,7 @@ AppWindow::AppWindow() {
     "_Viewport"
   };
 
+  // Create and wire signals for radio buttons for each mode.
   Gtk::RadioMenuItem::Group view_mode_group;
   sigc::slot1<void, Viewer::Mode> view_mode_slot = sigc::mem_fun(*m_viewer, &Viewer::set_mode);
 

@@ -1,9 +1,10 @@
-#ifndef SHAPE_H
-#define SHAPE_H
+#ifndef SCENE_H
+#define SCENE_H
 
 #include "algebra.hpp"
 #include <vector>
 
+// 3D line segment in homogenous coordinates.
 class LineSegment4D {
 public:
   LineSegment4D(): colour(0) {}
@@ -28,26 +29,37 @@ private:
   Colour colour;
 };
 
+// Base class for scene graph nodes.
+// Can transform it and recursively get transformed line segments from its descendents.
 class Node {
 public:
   Node(): transformed(false) {}
   ~Node();
 
+  // Basic matrix manipulation functions.
   const Matrix4x4& getTransform() { return transformation; }
   bool isTransformed() { return transformed; }
   void resetTransform();
   void setTransform(const Matrix4x4& m);
 
-  // Helpers for manipulating this node. Simply uses the matrices defined in a2.hpp.
+  // Helpers for manipulating this node.
+
+  // Pre-multiply translation matrix to this node's transformation matrix.
   void translate(const Vector3D& displacement);
+  // Post-multiply rotation matrix to this node's transformation matrix.
   void rotate(double angle, char axis);
+  // Post-multiply scaling matrix to this node's transformation matrix.
   void scale(const Vector3D& scale);
 
+  // Manipulating scene graph.
   void addChild(Node* n);
   void removeChild(Node* n);
+
+  // Recursively gets line segments from all descendents, transformed by each matrix going down the stack.
   virtual std::vector<LineSegment4D> getTransformedLineSegments();
 
 protected:
+  // Internal overload that passes matrix stack so far.
   virtual std::vector<LineSegment4D> getTransformedLineSegments(const Matrix4x4& m, bool appliedOwnTransform=false);
 
 private:
@@ -56,6 +68,7 @@ private:
   bool transformed;
 };
 
+// A scene graph node that has line segments.
 class Shape : public Node {
 public:
   Shape(): colour(0) {}
@@ -64,26 +77,20 @@ public:
 
 protected:
   virtual std::vector<LineSegment4D> getTransformedLineSegments(const Matrix4x4& m, bool appliedOwnTransform=false);
-  //void drawLine(int pointIdx1, int pointIdx2);
 
+  // Template methods for derived classes to provide specific geometry.
   virtual void getPoints(Point4D const*& points, int& len) = 0;
   virtual void getLinePointIdxs(int const*& points, int& len) = 0;
 
-  //std::vector<Point4D> points;
-  //std::vector<int> lineSegmentPointIndices;
+  // Colour of all line segments for this shape.
   Colour colour;
 };
 
+// Provides cube geometry to shape.
 class Cube : public Shape {
 public:
   Cube() {}
-  /*
-  Cube();
-  Cube(const std::vector<Point4D>& points);
-  Cube(const Cube& cube);
 
-  void drawOrtho();
-  */
 protected:
   void getPoints(Point4D const*& points, int& len) {
     points = this->points;
@@ -102,6 +109,7 @@ private:
   const static int linePointIdxs[NUM_LINE_POINTS];
 };
 
+// Provides gnomon (3 orthogonal axis lines) geometry to shape.
 class Gnomon : public Shape {
 public:
   Gnomon() {}
