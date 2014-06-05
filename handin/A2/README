@@ -1,0 +1,22 @@
+Name: Alex Klen
+Student Number: 20372654
+User-id: ayklen
+Assignment: 2
+
+
+Compiling
+-----------
+Run "make" to build the executable a2.
+The executable was compiled on gl01.
+
+
+Running
+--------
+Run the a2 executable ("./a2").
+
+
+Extra Features
+----------------
+- Updating viewport while dragging.
+
+
