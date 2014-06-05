@@ -43,13 +43,12 @@ public:
   void setTransform(const Matrix4x4& m);
 
   // Helpers for manipulating this node.
-
-  // Pre-multiply translation matrix to this node's transformation matrix.
-  void translate(const Vector3D& displacement);
-  // Post-multiply rotation matrix to this node's transformation matrix.
-  void rotate(double angle, char axis);
-  // Post-multiply scaling matrix to this node's transformation matrix.
-  void scale(const Vector3D& scale);
+  void preTranslate(const Vector3D& displacement);
+  void postTranslate(const Vector3D& displacement);
+  void preRotate(double angle, char axis);
+  void postRotate(double angle, char axis);
+  void preScale(const Vector3D& scale);
+  void postScale(const Vector3D& scale);
 
   // Manipulating scene graph.
   void addChild(Node* n);

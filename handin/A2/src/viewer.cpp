@@ -6,7 +6,8 @@
 #include "draw.hpp"
 
 #define MOUSE_TRANSLATE_FACTOR 0.002
-#define MOUSE_ROTATE_FACTOR 0.002
+#define MOUSE_MODEL_ROTATE_FACTOR 0.002
+#define MOUSE_VIEW_ROTATE_FACTOR 0.0005
 #define MOUSE_SCALE_FACTOR 0.002
 #define MOUSE_FOV_FACTOR 0.04
 #define MOUSE_NEARFAR_FACTOR 0.002
@@ -55,8 +56,6 @@ Viewer::Viewer(AppWindow* appWindow): appWindow(appWindow) {
   fovDegrees = 30.0;
   near = 1.0;
   far = 10.0;
-
-  // TODO: Implemented viewing coordinates incorrectly. Should not move world coordinates, but instead rotate and translate eye!
 
   // Construct scene graph (it's linear):
   // (rootNode, Node, perspective mat)
@@ -320,12 +319,13 @@ void Viewer::handleViewChange(Vector3D& v) {
     case VIEW_ROTATE:
       for (int axis = 0; axis < 3; axis++) {
         if (v[axis] != 0.0) {
-          worldNode->rotate(v[axis] * MOUSE_ROTATE_FACTOR, axisLabels[axis]);
+          // Apply rotation after translation to rotate at eye.
+          worldNode->preRotate(v[axis] * MOUSE_VIEW_ROTATE_FACTOR, axisLabels[axis]);
         }
       }
       break;
     case VIEW_TRANSLATE:
-      worldNode->translate(MOUSE_TRANSLATE_FACTOR * v);
+      worldNode->preTranslate(-MOUSE_TRANSLATE_FACTOR * v);
       break;
     case VIEW_PERSPECTIVE:
       if (v[0] != 0.0) {
@@ -357,15 +357,15 @@ void Viewer::handleViewChange(Vector3D& v) {
     case MODEL_ROTATE:
       for (int axis = 0; axis < 3; axis++) {
         if (v[axis] != 0.0) {
-          modelNode->rotate(v[axis] * MOUSE_ROTATE_FACTOR, axisLabels[axis]);
+          modelNode->postRotate(v[axis] * MOUSE_MODEL_ROTATE_FACTOR, axisLabels[axis]);
         }
       }
       break;
     case MODEL_TRANSLATE:
-      modelNode->translate(MOUSE_TRANSLATE_FACTOR * v);
+      modelNode->preTranslate(MOUSE_TRANSLATE_FACTOR * v);
       break;
     case MODEL_SCALE:
-      cube->scale(MOUSE_SCALE_FACTOR * v + Vector3D(1.0, 1.0, 1.0));
+      cube->postScale(MOUSE_SCALE_FACTOR * v + Vector3D(1.0, 1.0, 1.0));
       break;
     default:
       break;

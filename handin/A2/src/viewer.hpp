@@ -82,8 +82,8 @@ private:
 
   // Nodes in scene graph that hold transformations int he matrix stack.
   Node* rootNode; // Where perspective matrix is set (non-homogenized homogenous coordinates).
-  Node* worldNode; // Where view matrix is set (world coordinates).
-  Node* modelNode; // Where model translation and rotation are set (model coordinates).
+  Node* worldNode; // Where view matrix is set. Maps world coordinates (not transformed) to eye coordinates.
+  Node* modelNode; // Where model translation and rotation are set (maps model to world coordinates).
   Cube* cube; // Where model scaling is set.
 
   // Variables for mouse input.
