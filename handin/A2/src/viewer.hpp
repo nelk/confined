@@ -18,7 +18,7 @@ public:
     VIEWPORT,
     NUM_MODES
   };
-  static const Mode DEFAULT_MODE = VIEW_TRANSLATE;
+  static const Mode DEFAULT_MODE = MODEL_ROTATE;
 
   Viewer(AppWindow* appWindow);
   virtual ~Viewer();

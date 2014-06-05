@@ -396,7 +396,7 @@ bool Viewer::on_button_press_event(GdkEventButton* event) {
   const int axis = event->button - 1;
   lastMouseX = event->x;
   axisActive[axis] = true;
-  if (mode == VIEWPORT) {
+  if (mode == VIEWPORT && axis == 0) { // Left mouse button only.
     newViewportPos = Point2D(event->x, event->y);
   }
   return true;
@@ -405,7 +405,7 @@ bool Viewer::on_button_press_event(GdkEventButton* event) {
 bool Viewer::on_button_release_event(GdkEventButton* event) {
   const int axis = event->button - 1;
   axisActive[axis] = false;
-  if (mode == VIEWPORT) {
+  if (mode == VIEWPORT && axis == 0) {
     update_viewport(event->x, event->y);
   }
   return true;
@@ -422,7 +422,7 @@ bool Viewer::on_motion_notify_event(GdkEventMotion* event) {
       transAmount[axis] = diff;
     }
   }
-  if (DYNAMIC_VIEWPORT && mode == VIEWPORT) {
+  if (DYNAMIC_VIEWPORT && mode == VIEWPORT && axisActive[0]) { // Left mouse button only.
     update_viewport(event->x, event->y);
   }
   if (anyChange) {
