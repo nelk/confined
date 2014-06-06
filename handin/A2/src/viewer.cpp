@@ -357,12 +357,12 @@ void Viewer::handleViewChange(Vector3D& v) {
     case MODEL_ROTATE:
       for (int axis = 0; axis < 3; axis++) {
         if (v[axis] != 0.0) {
-          modelNode->postRotate(v[axis] * MOUSE_MODEL_ROTATE_FACTOR, axisLabels[axis]);
+          modelNode->preRotate(v[axis] * MOUSE_MODEL_ROTATE_FACTOR, axisLabels[axis]);
         }
       }
       break;
     case MODEL_TRANSLATE:
-      modelNode->preTranslate(MOUSE_TRANSLATE_FACTOR * v);
+      modelNode->postTranslate(MOUSE_TRANSLATE_FACTOR * v);
       break;
     case MODEL_SCALE:
       cube->postScale(MOUSE_SCALE_FACTOR * v + Vector3D(1.0, 1.0, 1.0));
@@ -386,13 +386,13 @@ void Viewer::update_viewport(double x2, double y2) {
   }
   // Set viewport top left and bottom right points.
   viewportTL = Point2D(
-      std::min(newViewportPos[0], x2),
-      std::min(newViewportPos[1], y2)
-      );
+    std::min(newViewportPos[0], x2),
+    std::min(newViewportPos[1], y2)
+  );
   viewportBR = Point2D(
-      std::max(newViewportPos[0], x2),
-      std::max(newViewportPos[1], y2)
-      );
+    std::max(newViewportPos[0], x2),
+    std::max(newViewportPos[1], y2)
+  );
   invalidate();
 }
 
