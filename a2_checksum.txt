@@ -1,0 +1,67 @@
+sum is: /usr/bin/sum
+
+
+2014-06-05 23:19        Checksum for A2 for ayklen on gl01        Page 1
+
+
+A2:
+total 720
+76431494 drwxrwx--- 2 ayklen cs488    4096 Jun  5 23:19 src/
+76431493 drwxrwx--- 4 ayklen cs488    4096 Jun  5 23:16 ./
+31706570 -rwxr-xr-x 1 ayklen ayklen 651028 Jun  5 23:16 a2*
+76431485 -rw-r--r-- 1 ayklen ayklen  56450 Jun  5 14:01 screenshot01.png
+76431484 -rw-r--r-- 1 ayklen ayklen    294 Jun  5 14:01 README
+ 3109025 drwxrwx--- 8 ayklen cs488    4096 May 14 13:02 ../
+63220795 drwxrwx--- 2 ayklen cs488    4096 May  7 23:18 data/
+
+A2/src:
+total 80
+76431494 drwxrwx--- 2 ayklen cs488   4096 Jun  5 23:19 ./
+76431493 drwxrwx--- 4 ayklen cs488   4096 Jun  5 23:16 ../
+11429603 -rw-r--r-- 1 ayklen ayklen 12286 Jun  5 23:16 viewer.cpp
+76431487 -rw-r--r-- 1 ayklen ayklen  3064 Jun  5 23:16 appwindow.cpp
+23198238 -rw-r--r-- 1 ayklen ayklen  3415 Jun  5 14:01 viewer.hpp
+76431491 -rw-r--r-- 1 ayklen ayklen  3623 Jun  5 14:01 scene.hpp
+76431489 -rw-r--r-- 1 ayklen ayklen  3573 Jun  5 14:01 scene.cpp
+76431488 -rw-r--r-- 1 ayklen ayklen   790 Jun  5 14:01 appwindow.hpp
+76431486 -rw-r--r-- 1 ayklen ayklen   770 Jun  5 14:01 a2.hpp
+51992754 -rw-r--r-- 1 ayklen ayklen   325 Jun  4 14:32 main.cpp
+17398140 -rw-r--r-- 1 ayklen ayklen 10889 Jun  4 14:32 algebra.hpp
+17398122 -rw-r--r-- 1 ayklen ayklen  2169 Jun  4 14:32 a2.cpp
+72204240 -rw-r-x--- 1 ayklen cs488   1486 May  7 23:18 draw.cpp*
+72204238 -rw-r-x--- 1 ayklen cs488    673 May  7 23:18 Makefile*
+72204237 -rw-r-x--- 1 ayklen cs488   3308 May  7 23:18 algebra.cpp*
+67480283 -rw-r-x--- 1 ayklen cs488   1028 May  7 23:18 draw.hpp*
+
+A2/data:
+total 8
+76431493 drwxrwx--- 4 ayklen cs488 4096 Jun  5 23:16 ../
+63220795 drwxrwx--- 2 ayklen cs488 4096 May  7 23:18 ./
+
+A2                                      
+A2/a2                                   35298   636
+A2/data                                 
+A2/README                               37053     1
+A2/screenshot01.png                     11970    56
+A2/src                                  
+A2/src/a2.cpp                           51456     3
+A2/src/a2.hpp                           37968     1
+A2/src/algebra.cpp                      00294     4
+A2/src/algebra.hpp                      64514    11
+A2/src/appwindow.cpp                    20074     3
+A2/src/appwindow.hpp                    37029     1
+A2/src/draw.cpp                         56818     2
+A2/src/draw.hpp                         53140     2
+A2/src/main.cpp                         34164     1
+A2/src/Makefile                         11584     1
+A2/src/scene.cpp                        11268     4
+A2/src/scene.hpp                        08460     4
+A2/src/viewer.cpp                       47355    12
+A2/src/viewer.hpp                       04315     4
+
+
+
+
+
+
+
