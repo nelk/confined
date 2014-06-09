@@ -68,14 +68,32 @@ void Viewer::on_realize()
   if (!gldrawable->gl_begin(get_gl_context()))
     return;
 
+  // Initialize gl draw lists.
+  Sphere::init();
+
+  // Lighting/shading.
+  glEnable(GL_NORMALIZE); // Make OpenGL normalize normals.
   glShadeModel(GL_SMOOTH);
+  GLfloat light_ambient[] = { 0.1, 0.1, 0.1, 1.0 };
+  GLfloat light_diffuse[] = { 0.6, 0.6, 0.6, 1.0 };
+
+  glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+  glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+
+  //glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 1.0);
+  //glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 0.0005);
+  //glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.005);
+
+  glEnable(GL_LIGHT0);
+  //glEnable(GL_COLOR_MATERIAL);
+
+  // TODO: Toggle
+  glEnable(GL_LIGHTING);
+
   glClearColor( 0.4, 0.4, 0.4, 0.0 );
   glEnable(GL_DEPTH_TEST);
 
   gldrawable->gl_end();
-
-  // Initialize gl draw lists.
-  Sphere::init();
 }
 
 bool Viewer::on_expose_event(GdkEventExpose* event) {
@@ -91,7 +109,11 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   glLoadIdentity();
   glViewport(0, 0, get_width(), get_height());
   gluPerspective(40.0, (GLfloat)get_width()/(GLfloat)get_height(), 0.1, 1000.0);
-  glTranslated(0.0, 0.0, -10.0);
+  glTranslated(0.0, 0.0, -5.0);
+
+  GLfloat light_position[] = { 5.0, 0.0, 0.0, 1.0 };
+  glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
 
   // change to model view for drawing
   glMatrixMode(GL_MODELVIEW);
