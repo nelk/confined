@@ -6,7 +6,19 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 
-Viewer::Viewer(SceneNode* scene): mode(Viewer::DEFAULT_MODE), scene(scene) {
+const std::string Viewer::SCENE_ROOT_ID = "the_scene_root_reserved_id";
+
+Viewer::Viewer(SceneNode* luaScene): mode(Viewer::DEFAULT_MODE) {
+  // Add our own root to the scene which we can reset translations on.
+  scene = new SceneNode(SCENE_ROOT_ID);
+  scene->add_child(luaScene);
+
+  // Hold default transform of root and post-multiply our rotation onto root when orienting model.
+  scene = luaScene;
+  defaultRootTransform = scene->get_transform();
+
+  controller = new Controller(this, scene, luaScene);
+
   Glib::RefPtr<Gdk::GL::Config> glconfig;
 
   // Ask for an OpenGL Setup with
@@ -34,20 +46,27 @@ Viewer::Viewer(SceneNode* scene): mode(Viewer::DEFAULT_MODE), scene(scene) {
              Gdk::VISIBILITY_NOTIFY_MASK);
 }
 
-Viewer::~Viewer()
-{
+Viewer::~Viewer() {
   // Nothing to do here right now.
+  delete controller;
+  delete scene;
 }
 
-void Viewer::invalidate()
-{
+void Viewer::invalidate() {
   // Force a rerender
   Gtk::Allocation allocation = get_allocation();
   get_window()->invalidate_rect( allocation, false);
 }
 
-void Viewer::set_mode(Mode mode) {
-  this->mode = mode;
+void Viewer::setMode(Mode mode) {
+  if (this->mode != mode) {
+    this->mode = mode;
+    invalidate();
+  }
+}
+
+Viewer::Mode Viewer::getMode() {
+  return mode;
 }
 
 void Viewer::reset(ResetType r) {
@@ -87,9 +106,6 @@ void Viewer::on_realize()
   glEnable(GL_LIGHT0);
   //glEnable(GL_COLOR_MATERIAL);
 
-  // TODO: Toggle
-  glEnable(GL_LIGHTING);
-
   glClearColor( 0.4, 0.4, 0.4, 0.0 );
   glEnable(GL_DEPTH_TEST);
 
@@ -109,10 +125,7 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   glLoadIdentity();
   glViewport(0, 0, get_width(), get_height());
   gluPerspective(40.0, (GLfloat)get_width()/(GLfloat)get_height(), 0.1, 1000.0);
-  glTranslated(0.0, 0.0, -5.0);
-
-  GLfloat light_position[] = { 5.0, 0.0, 0.0, 1.0 };
-  glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+  glTranslated(0.0, 0.0, -8.0);
 
 
   // change to model view for drawing
@@ -122,12 +135,18 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   // Clear framebuffer
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  // Set up lighting
+  // Setup parameters.
+  // TODO: Toggle
+  glEnable(GL_LIGHTING);
+  GLfloat light_position[] = { 5.0, 0.0, 0.0, 1.0 };
+  glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
-  // Draw stuff
+  // Draw scene.
   scene->walk_gl(false);
 
-  //draw_trackball_circle();
+  if (mode == POSITION) {
+    draw_trackball_circle();
+  }
 
   // Swap the contents of the front and back buffers so we see what we
   // just drew. This should only be done if double buffering is enabled.
@@ -166,25 +185,28 @@ bool Viewer::on_configure_event(GdkEventConfigure* event)
 
 bool Viewer::on_button_press_event(GdkEventButton* event)
 {
-  std::cerr << "Stub: Button " << event->button << " pressed" << std::endl;
+  //std::cerr << "Stub: Button " << event->button << " pressed" << std::endl;
+  controller->press((Controller::Button)(event->button - 1), event->x, event->y);
   return true;
 }
 
 bool Viewer::on_button_release_event(GdkEventButton* event)
 {
-  std::cerr << "Stub: Button " << event->button << " released" << std::endl;
+  //std::cerr << "Stub: Button " << event->button << " released" << std::endl;
+  controller->release((Controller::Button)(event->button - 1), event->x, event->y);
   return true;
 }
 
 bool Viewer::on_motion_notify_event(GdkEventMotion* event)
 {
-  std::cerr << "Stub: Motion at " << event->x << ", " << event->y << std::endl;
+  //std::cerr << "Stub: Motion at " << event->x << ", " << event->y << std::endl;
+  controller->move(event->x, event->y);
   return true;
 }
 
 void Viewer::draw_trackball_circle() {
-  int current_width = get_width();
-  int current_height = get_height();
+  const int current_width = get_width();
+  const int current_height = get_height();
 
   // Set up for orthogonal drawing to draw a circle on screen.
   // You'll want to make the rest of the function conditional on

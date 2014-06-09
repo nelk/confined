@@ -7,7 +7,7 @@
 // Return a matrix to represent a counterclockwise rotation of "angle"
 // degrees around the axis "axis", where "axis" is one of the
 // characters 'x', 'y', or 'z'.
-Matrix4x4 rotation(double angle, char axis) {
+Matrix4x4 rotation(char axis, double angle) {
   switch (axis) {
     case 'x':
       return Matrix4x4((double[16]){

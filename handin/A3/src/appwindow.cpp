@@ -41,7 +41,7 @@ AppWindow::AppWindow(SceneNode* scene): m_viewer(scene) {
 
   // Create and wire signals for radio buttons for each mode.
   Gtk::RadioMenuItem::Group view_mode_group;
-  sigc::slot1<void, Viewer::Mode> view_mode_slot = sigc::mem_fun(m_viewer, &Viewer::set_mode);
+  sigc::slot1<void, Viewer::Mode> view_mode_slot = sigc::mem_fun(m_viewer, &Viewer::setMode);
 
   for (int mode = 0; mode < Viewer::NUM_MODES; mode++) {
     Gtk::RadioMenuItem *rb = Gtk::manage(new Gtk::RadioMenuItem(view_mode_group, mode_names[mode], true));
@@ -80,7 +80,7 @@ void AppWindow::add_accelerator(Gtk::MenuItem *it, char accelerator) {
 void AppWindow::reset(Viewer::ResetType r) {
   m_viewer.reset(r);
   if (r == Viewer::RESET_ALL) {
-    m_viewer.set_mode(Viewer::DEFAULT_MODE);
+    m_viewer.setMode(Viewer::DEFAULT_MODE);
     m_menu_mode.items()[Viewer::DEFAULT_MODE].activate();
   }
 }

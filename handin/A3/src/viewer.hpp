@@ -3,7 +3,11 @@
 
 #include <gtkmm.h>
 #include <gtkglmm.h>
+#include <string>
 #include "scene.hpp"
+#include "controller.hpp"
+
+class Controller;
 
 // The "main" OpenGL widget
 class Viewer : public Gtk::GL::DrawingArea {
@@ -17,6 +21,9 @@ public:
     RESET_POSITION, RESET_ORIENTATION, RESET_JOINTS, RESET_ALL, NUM_RESET_TYPES
   };
 
+  static const std::string SCENE_ROOT_ID;
+
+
   Viewer(SceneNode* scene);
   virtual ~Viewer();
 
@@ -26,7 +33,8 @@ public:
   // call when the time is right.
   void invalidate();
 
-  void set_mode(Mode mode);
+  void setMode(Mode mode);
+  Mode getMode();
   void reset(ResetType r);
 
 protected:
@@ -50,6 +58,8 @@ protected:
 private:
   Mode mode;
   SceneNode* scene;
+  Matrix4x4 defaultRootTransform;
+  Controller* controller;
 };
 
 #endif

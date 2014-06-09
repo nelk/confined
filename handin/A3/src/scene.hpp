@@ -52,9 +52,14 @@ public:
 
   // Callbacks to be implemented.
   // These will be called from Lua.
+  // Note that these are post-multiplied.
   void rotate(char axis, double angle);
   void scale(const Vector3D& amount);
   void translate(const Vector3D& amount);
+
+  void preRotate(char axis, double angle);
+  void preScale(const Vector3D& amount);
+  void preTranslate(const Vector3D& amount);
 
   // Returns true if and only if this node is a JointNode
   virtual bool is_joint() const;

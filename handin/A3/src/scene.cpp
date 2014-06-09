@@ -26,15 +26,13 @@ void SceneNode::rotate(char axis, double angleDegrees)
   //std::cerr << "Rotate " << m_name << " around " << axis << " by " << angleDegrees << std::endl;
 
   double angle = angleDegrees * M_PI / 180.0;
-  //m_trans = rotation(angle, axis) * m_trans;
-  m_trans = m_trans * rotation(angle, axis);
+  m_trans = m_trans * rotation(axis, angle);
 }
 
 void SceneNode::scale(const Vector3D& amount)
 {
   //std::cerr << "Scale " << m_name << " by " << amount << std::endl;
 
-  //m_trans = scaling(amount) * m_trans;
   m_trans = m_trans * scaling(amount);
 }
 
@@ -42,8 +40,18 @@ void SceneNode::translate(const Vector3D& amount)
 {
   //std::cerr << "Translate " << m_name << " by " << amount << std::endl;
 
-  //m_trans = translation(amount) * m_trans;
   m_trans = m_trans * translation(amount);
+}
+
+void SceneNode::preRotate(char axis, double angleDegrees) {
+  double angle = angleDegrees * M_PI / 180.0;
+  m_trans = rotation(axis, angle) * m_trans;
+}
+void SceneNode::preScale(const Vector3D& amount) {
+  m_trans = scaling(amount) * m_trans;
+}
+void SceneNode::preTranslate(const Vector3D& amount) {
+  m_trans = translation(amount) * m_trans;
 }
 
 bool SceneNode::is_joint() const
