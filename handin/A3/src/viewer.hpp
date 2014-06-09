@@ -7,6 +7,14 @@
 // The "main" OpenGL widget
 class Viewer : public Gtk::GL::DrawingArea {
 public:
+  enum Mode {
+    POSITION, JOINTS, NUM_MODES
+  };
+
+  enum ResetType {
+    RESET_POSITION, RESET_ORIENTATION, RESET_JOINTS, RESET_ALL, NUM_RESET_TYPES
+  };
+
   Viewer();
   virtual ~Viewer();
 
@@ -15,15 +23,11 @@ public:
   // directly. Instead call this, which will cause an on_expose_event
   // call when the time is right.
   void invalidate();
-  
+
+  void set_mode(Mode mode);
+  void reset(ResetType r);
+
 protected:
-
-  // Events we implement
-  // Note that we could use gtkmm's "signals and slots" mechanism
-  // instead, but for many classes there's a convenient member
-  // function one just needs to define that'll be called with the
-  // event.
-
   // Called when GL is first initialized
   virtual void on_realize();
   // Called when our window needs to be redrawn
@@ -40,8 +44,9 @@ protected:
   // Draw a circle for the trackball, with OpenGL commands.
   // Assumes the context for the viewer is active.
   void draw_trackball_circle();
-  
+
 private:
+  Mode mode;
 };
 
 #endif

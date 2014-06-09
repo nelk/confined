@@ -22,7 +22,7 @@ int main(int argc, char** argv)
     std::cerr << "Could not open " << filename << std::endl;
     return 1;
   }
-  
+
   // Construct our (only) window
   AppWindow window;
 

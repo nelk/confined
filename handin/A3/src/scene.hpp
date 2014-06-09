@@ -15,7 +15,7 @@ public:
 
   const Matrix4x4& get_transform() const { return m_trans; }
   const Matrix4x4& get_inverse() const { return m_invtrans; }
-  
+
   void set_transform(const Matrix4x4& m)
   {
     m_trans = m;
@@ -46,9 +46,9 @@ public:
 
   // Returns true if and only if this node is a JointNode
   virtual bool is_joint() const;
-  
+
 protected:
-  
+
   // Useful for picking
   int m_id;
   std::string m_name;
@@ -67,7 +67,7 @@ public:
   JointNode(const std::string& name);
   virtual ~JointNode();
 
-  virtual void walk_gl(bool bicking = false) const;
+  virtual void walk_gl(bool picking = false) const;
 
   virtual bool is_joint() const;
 
@@ -78,7 +78,7 @@ public:
     double min, init, max;
   };
 
-  
+
 protected:
 
   JointRange m_joint_x, m_joint_y;

@@ -7,10 +7,13 @@
 class AppWindow : public Gtk::Window {
 public:
   AppWindow();
-  
+
 protected:
 
 private:
+  void add_accelerator(Gtk::MenuItem *it, char accelerator);
+  void reset(Viewer::ResetType r);
+
   // A "vertical box" which holds everything in our window
   Gtk::VBox m_vbox;
 
@@ -18,6 +21,9 @@ private:
   Gtk::MenuBar m_menubar;
   // Each menu itself
   Gtk::Menu m_menu_app;
+  Gtk::Menu m_menu_mode;
+  Gtk::Menu m_menu_edit;
+  Gtk::Menu m_menu_options;
 
   // The main OpenGL area
   Viewer m_viewer;

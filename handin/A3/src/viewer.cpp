@@ -5,7 +5,7 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 
-Viewer::Viewer()
+Viewer::Viewer(): mode(Viewer::POSITION)
 {
   Glib::RefPtr<Gdk::GL::Config> glconfig;
 
@@ -46,14 +46,22 @@ void Viewer::invalidate()
   get_window()->invalidate_rect( allocation, false);
 }
 
+void Viewer::set_mode(Mode mode) {
+  this->mode = mode;
+}
+
+void Viewer::reset(ResetType r) {
+  // TODO
+}
+
 void Viewer::on_realize()
 {
   // Do some OpenGL setup.
   // First, let the base class do whatever it needs to
   Gtk::GL::DrawingArea::on_realize();
-  
+
   Glib::RefPtr<Gdk::GL::Drawable> gldrawable = get_gl_drawable();
-  
+
   if (!gldrawable)
     return;
 
@@ -67,8 +75,7 @@ void Viewer::on_realize()
   gldrawable->gl_end();
 }
 
-bool Viewer::on_expose_event(GdkEventExpose* event)
-{
+bool Viewer::on_expose_event(GdkEventExpose* event) {
   Glib::RefPtr<Gdk::GL::Drawable> gldrawable = get_gl_drawable();
 
   if (!gldrawable) return false;
@@ -148,11 +155,10 @@ bool Viewer::on_motion_notify_event(GdkEventMotion* event)
   return true;
 }
 
-void Viewer::draw_trackball_circle()
-{
+void Viewer::draw_trackball_circle() {
   int current_width = get_width();
   int current_height = get_height();
-  
+
   // Set up for orthogonal drawing to draw a circle on screen.
   // You'll want to make the rest of the function conditional on
   // whether or not we want to draw the circle this time around.
@@ -168,7 +174,7 @@ void Viewer::draw_trackball_circle()
   // Reset modelview matrix
   glLoadIdentity();
 
-  // draw a circle for use with the trackball 
+  // Draw a circle for use with the trackball
   glDisable(GL_LIGHTING);
   glEnable(GL_LINE_SMOOTH);
   glColor3f(1.0, 1.0, 1.0);
