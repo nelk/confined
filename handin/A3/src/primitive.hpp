@@ -2,6 +2,7 @@
 #define CS488_PRIMITIVE_HPP
 
 #include "algebra.hpp"
+#include <GL/gl.h>
 
 class Primitive {
 public:
@@ -13,6 +14,12 @@ class Sphere : public Primitive {
 public:
   virtual ~Sphere();
   virtual void walk_gl(bool picking) const;
+
+  static void init();
+
+private:
+  static void drawSphere(int lats, int longs);
+  static GLuint sphereList;
 };
 
 #endif

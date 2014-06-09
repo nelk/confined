@@ -1,7 +1,6 @@
 #include "appwindow.hpp"
 
-AppWindow::AppWindow()
-{
+AppWindow::AppWindow(SceneNode* scene): m_viewer(scene) {
   set_title("Advanced Ergonomics Laboratory, by Alex Klen");
 
   using Gtk::Menu_Helpers::MenuElem;
@@ -79,11 +78,10 @@ void AppWindow::add_accelerator(Gtk::MenuItem *it, char accelerator) {
 }
 
 void AppWindow::reset(Viewer::ResetType r) {
-  const Viewer::Mode DEFAULT_MODE = Viewer::POSITION;
   m_viewer.reset(r);
   if (r == Viewer::RESET_ALL) {
-    m_viewer.set_mode(DEFAULT_MODE);
-    m_menu_mode.items()[DEFAULT_MODE].activate();
+    m_viewer.set_mode(Viewer::DEFAULT_MODE);
+    m_menu_mode.items()[Viewer::DEFAULT_MODE].activate();
   }
 }
 

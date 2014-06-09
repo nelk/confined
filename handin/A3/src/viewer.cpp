@@ -1,12 +1,12 @@
 #include "viewer.hpp"
 #include "algebra.hpp"
+#include "primitive.hpp"
 #include <iostream>
 #include <math.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
 
-Viewer::Viewer(): mode(Viewer::POSITION)
-{
+Viewer::Viewer(SceneNode* scene): mode(Viewer::DEFAULT_MODE), scene(scene) {
   Glib::RefPtr<Gdk::GL::Config> glconfig;
 
   // Ask for an OpenGL Setup with
@@ -73,6 +73,9 @@ void Viewer::on_realize()
   glEnable(GL_DEPTH_TEST);
 
   gldrawable->gl_end();
+
+  // Initialize gl draw lists.
+  Sphere::init();
 }
 
 bool Viewer::on_expose_event(GdkEventExpose* event) {
@@ -83,11 +86,12 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   if (!gldrawable->gl_begin(get_gl_context()))
     return false;
 
-  // Set up for perspective drawing 
+  // Set up for perspective drawing
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   glViewport(0, 0, get_width(), get_height());
   gluPerspective(40.0, (GLfloat)get_width()/(GLfloat)get_height(), 0.1, 1000.0);
+  glTranslated(0.0, 0.0, -10.0);
 
   // change to model view for drawing
   glMatrixMode(GL_MODELVIEW);
@@ -99,8 +103,9 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   // Set up lighting
 
   // Draw stuff
+  scene->walk_gl(false);
 
-  draw_trackball_circle();
+  //draw_trackball_circle();
 
   // Swap the contents of the front and back buffers so we see what we
   // just drew. This should only be done if double buffering is enabled.
@@ -116,7 +121,7 @@ bool Viewer::on_configure_event(GdkEventConfigure* event)
   Glib::RefPtr<Gdk::GL::Drawable> gldrawable = get_gl_drawable();
 
   if (!gldrawable) return false;
-  
+
   if (!gldrawable->gl_begin(get_gl_context()))
     return false;
 
@@ -129,7 +134,7 @@ bool Viewer::on_configure_event(GdkEventConfigure* event)
   gluPerspective(40.0, (GLfloat)event->width/(GLfloat)event->height, 0.1, 1000.0);
 
   // Reset to modelview matrix mode
-  
+
   glMatrixMode(GL_MODELVIEW);
 
   gldrawable->gl_end();
@@ -178,7 +183,7 @@ void Viewer::draw_trackball_circle() {
   glDisable(GL_LIGHTING);
   glEnable(GL_LINE_SMOOTH);
   glColor3f(1.0, 1.0, 1.0);
-  double radius = current_width < current_height ? 
+  double radius = current_width < current_height ?
     (float)current_width * 0.25 : (float)current_height * 0.25;
   glTranslated((float)current_width * 0.5, (float)current_height * 0.5, 0);
   glBegin(GL_LINE_LOOP);

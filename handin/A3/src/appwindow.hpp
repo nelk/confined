@@ -6,7 +6,7 @@
 
 class AppWindow : public Gtk::Window {
 public:
-  AppWindow();
+  AppWindow(SceneNode* scene);
 
 protected:
 

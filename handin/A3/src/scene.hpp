@@ -28,6 +28,18 @@ public:
     m_invtrans = i;
   }
 
+  void push_transform_gl() const {
+    glPushMatrix();
+    Matrix4x4 columnMajorTrans = m_trans.transpose();
+    //std::cout << "Pushing " << columnMajorTrans << std::endl;
+    glMultMatrixd(columnMajorTrans.begin());
+  }
+
+  void pop_transform_gl() const {
+    //std::cout << "Popping" << std::endl;
+    glPopMatrix();
+  }
+
   void add_child(SceneNode* child)
   {
     m_children.push_back(child);
@@ -55,7 +67,7 @@ protected:
 
   // Transformations
   Matrix4x4 m_trans;
-  Matrix4x4 m_invtrans;
+  Matrix4x4 m_invtrans; // TODO
 
   // Hierarchy
   typedef std::list<SceneNode*> ChildList;
@@ -92,8 +104,12 @@ public:
 
   virtual void walk_gl(bool picking = false) const;
 
-  const Material* get_material() const;
-  Material* get_material();
+  const Material* get_material() const {
+    return m_material;
+  }
+  Material* get_material() {
+    return m_material;
+  }
 
   void set_material(Material* material)
   {

@@ -3,6 +3,7 @@
 
 #include <gtkmm.h>
 #include <gtkglmm.h>
+#include "scene.hpp"
 
 // The "main" OpenGL widget
 class Viewer : public Gtk::GL::DrawingArea {
@@ -10,12 +11,13 @@ public:
   enum Mode {
     POSITION, JOINTS, NUM_MODES
   };
+  static const Mode DEFAULT_MODE = POSITION;
 
   enum ResetType {
     RESET_POSITION, RESET_ORIENTATION, RESET_JOINTS, RESET_ALL, NUM_RESET_TYPES
   };
 
-  Viewer();
+  Viewer(SceneNode* scene);
   virtual ~Viewer();
 
   // A useful function that forces this widget to rerender. If you
@@ -47,6 +49,7 @@ protected:
 
 private:
   Mode mode;
+  SceneNode* scene;
 };
 
 #endif

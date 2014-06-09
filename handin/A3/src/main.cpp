@@ -24,7 +24,7 @@ int main(int argc, char** argv)
   }
 
   // Construct our (only) window
-  AppWindow window;
+  AppWindow window(root);
 
   // And run the application!
   Gtk::Main::run(window);

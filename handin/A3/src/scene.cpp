@@ -1,4 +1,5 @@
 #include "scene.hpp"
+#include "matrices.hpp"
 #include <iostream>
 
 SceneNode::SceneNode(const std::string& name)
@@ -6,31 +7,43 @@ SceneNode::SceneNode(const std::string& name)
 {
 }
 
-SceneNode::~SceneNode()
-{
+SceneNode::~SceneNode() {
 }
 
 void SceneNode::walk_gl(bool picking) const
 {
-  // Fill me in
+  push_transform_gl();
+
+  for (std::list<SceneNode*>::const_iterator it = m_children.begin(); it != m_children.end(); it++) {
+    (*it)->walk_gl(picking);
+  }
+
+  pop_transform_gl();
 }
 
-void SceneNode::rotate(char axis, double angle)
+void SceneNode::rotate(char axis, double angleDegrees)
 {
-  std::cerr << "Stub: Rotate " << m_name << " around " << axis << " by " << angle << std::endl;
-  // Fill me in
+  //std::cerr << "Rotate " << m_name << " around " << axis << " by " << angleDegrees << std::endl;
+
+  double angle = angleDegrees * M_PI / 180.0;
+  //m_trans = rotation(angle, axis) * m_trans;
+  m_trans = m_trans * rotation(angle, axis);
 }
 
 void SceneNode::scale(const Vector3D& amount)
 {
-  std::cerr << "Stub: Scale " << m_name << " by " << amount << std::endl;
-  // Fill me in
+  //std::cerr << "Scale " << m_name << " by " << amount << std::endl;
+
+  //m_trans = scaling(amount) * m_trans;
+  m_trans = m_trans * scaling(amount);
 }
 
 void SceneNode::translate(const Vector3D& amount)
 {
-  std::cerr << "Stub: Translate " << m_name << " by " << amount << std::endl;
-  // Fill me in
+  //std::cerr << "Translate " << m_name << " by " << amount << std::endl;
+
+  //m_trans = translation(amount) * m_trans;
+  m_trans = m_trans * translation(amount);
 }
 
 bool SceneNode::is_joint() const
@@ -49,6 +62,7 @@ JointNode::~JointNode()
 
 void JointNode::walk_gl(bool picking) const
 {
+  SceneNode::walk_gl();
   // Fill me in
 }
 
@@ -81,8 +95,14 @@ GeometryNode::~GeometryNode()
 {
 }
 
-void GeometryNode::walk_gl(bool picking) const
-{
-  // Fill me in
+void GeometryNode::walk_gl(bool picking) const {
+  SceneNode::walk_gl(picking);
+
+  push_transform_gl();
+  get_material()->apply_gl();
+
+  m_primitive->walk_gl(picking);
+
+  pop_transform_gl();
 }
- 
+

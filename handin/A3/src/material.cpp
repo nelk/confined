@@ -1,4 +1,5 @@
 #include "material.hpp"
+#include <GL/gl.h>
 
 Material::~Material()
 {
@@ -16,4 +17,5 @@ PhongMaterial::~PhongMaterial()
 void PhongMaterial::apply_gl() const
 {
   // Perform OpenGL calls necessary to set up this material.
+  glColor3d(m_kd.R(), m_kd.G(), m_kd.B());
 }
