@@ -6,6 +6,13 @@
 #include "primitive.hpp"
 #include "material.hpp"
 
+enum Axis {
+  X = 0,
+  Y = 1,
+  Z = 2,
+  NUM_AXES = 3
+};
+
 class SceneNode {
 public:
   SceneNode(const std::string& name);
@@ -88,17 +95,26 @@ public:
 
   virtual bool is_joint() const;
 
-  void set_joint_x(double min, double init, double max);
-  void set_joint_y(double min, double init, double max);
+  void set_joint_x(double min, double init, double max) {
+    setJointRange(X, min, init, max);
+  }
+  void set_joint_y(double min, double init, double max) {
+    setJointRange(Y, min, init, max);
+  }
+
+  // Set range and set current rotation to init.
+  void setJointRange(Axis axis, double min, double init, double max);
+  void rotateJoint(Axis axis, double delta);
+  void resetJoint();
 
   struct JointRange {
     double min, init, max;
   };
 
-
 protected:
 
-  JointRange m_joint_x, m_joint_y;
+  JointRange jointRanges[NUM_AXES];
+  double jointRotation[NUM_AXES];
 };
 
 class GeometryNode : public SceneNode {

@@ -59,19 +59,48 @@ bool SceneNode::is_joint() const
   return false;
 }
 
+
 JointNode::JointNode(const std::string& name)
   : SceneNode(name)
 {
+  jointRotation[X] = 0.0;
+  jointRotation[Y] = 0.0;
+  jointRotation[Z] = 0.0;
 }
 
 JointNode::~JointNode()
 {
 }
 
-void JointNode::walk_gl(bool picking) const
-{
+void JointNode::setJointRange(Axis axis, double min, double init, double max) {
+  jointRanges[axis].min = min;
+  jointRanges[axis].init = init;
+  jointRanges[axis].max = max;
+  jointRotation[axis] = init;
+}
+
+void JointNode::rotateJoint(Axis axis, double delta) {
+  const JointRange& range = jointRanges[axis];
+  double newRot = jointRotation[axis] + delta;
+
+  if (newRot < range.min) {
+    newRot = range.min;
+  } else if (newRot > range.max) {
+    newRot = range.max;
+  }
+  jointRotation[axis] = newRot;
+}
+
+void JointNode::walk_gl(bool picking) const {
+  glPushMatrix();
+
+  glRotated(jointRotation[X], 1.0, 0.0, 0.0);
+  glRotated(jointRotation[Y], 0.0, 1.0, 0.0);
+  glRotated(jointRotation[Z], 0.0, 0.0, 1.0);
+
   SceneNode::walk_gl();
-  // Fill me in
+
+  glPopMatrix();
 }
 
 bool JointNode::is_joint() const
@@ -79,19 +108,6 @@ bool JointNode::is_joint() const
   return true;
 }
 
-void JointNode::set_joint_x(double min, double init, double max)
-{
-  m_joint_x.min = min;
-  m_joint_x.init = init;
-  m_joint_x.max = max;
-}
-
-void JointNode::set_joint_y(double min, double init, double max)
-{
-  m_joint_y.min = min;
-  m_joint_y.init = init;
-  m_joint_y.max = max;
-}
 
 GeometryNode::GeometryNode(const std::string& name, Primitive* primitive)
   : SceneNode(name),
