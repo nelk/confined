@@ -57,8 +57,9 @@ protected:
 
 private:
   Mode mode;
-  SceneNode* scene;
-  Matrix4x4 defaultRootTransform;
+  SceneNode* sceneRoot;
+  SceneNode* luaSceneRoot;
+  Matrix4x4 defaultLuaRootTransform;
   Controller* controller;
 };
 

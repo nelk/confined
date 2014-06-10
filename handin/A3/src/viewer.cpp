@@ -10,14 +10,14 @@ const std::string Viewer::SCENE_ROOT_ID = "the_scene_root_reserved_id";
 
 Viewer::Viewer(SceneNode* luaScene): mode(Viewer::DEFAULT_MODE) {
   // Add our own root to the scene which we can reset translations on.
-  scene = new SceneNode(SCENE_ROOT_ID);
-  scene->add_child(luaScene);
+  luaSceneRoot = luaScene;
+  sceneRoot = new SceneNode(SCENE_ROOT_ID);
+  sceneRoot->add_child(luaSceneRoot);
 
   // Hold default transform of root and post-multiply our rotation onto root when orienting model.
-  scene = luaScene;
-  defaultRootTransform = scene->get_transform();
+  defaultLuaRootTransform = luaSceneRoot->get_transform();
 
-  controller = new Controller(this, scene, luaScene);
+  controller = new Controller(this, sceneRoot, luaSceneRoot);
 
   Glib::RefPtr<Gdk::GL::Config> glconfig;
 
@@ -49,7 +49,7 @@ Viewer::Viewer(SceneNode* luaScene): mode(Viewer::DEFAULT_MODE) {
 Viewer::~Viewer() {
   // Nothing to do here right now.
   delete controller;
-  delete scene;
+  delete sceneRoot;
 }
 
 void Viewer::invalidate() {
@@ -70,7 +70,17 @@ Viewer::Mode Viewer::getMode() {
 }
 
 void Viewer::reset(ResetType r) {
-  // TODO
+  Matrix4x4 identity;
+  if (r == RESET_POSITION || r == RESET_ALL) {
+    sceneRoot->set_transform(identity);
+  }
+  if (r == RESET_ORIENTATION || r == RESET_ALL) {
+    luaSceneRoot->set_transform(defaultLuaRootTransform);
+  }
+  if (r == RESET_JOINTS || r == RESET_ALL) {
+    // TODO
+  }
+  invalidate();
 }
 
 void Viewer::on_realize()
@@ -142,7 +152,7 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
   // Draw scene.
-  scene->walk_gl(false);
+  sceneRoot->walk_gl(false);
 
   if (mode == POSITION) {
     draw_trackball_circle();

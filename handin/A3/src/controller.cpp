@@ -3,12 +3,15 @@
 #include "matrices.hpp"
 
 #define TRACKBALL_FACTOR 50.0
+#define PAN_FACTOR 0.01
+#define ZOOM_FACTOR 0.01
 
 Controller::Controller(Viewer* v, SceneNode* translateScene, SceneNode* rotateScene):
     viewer(v),
     translateScene(translateScene),
     rotateScene(rotateScene),
     trackballDiameter(trackballDiameter) {
+
   buttonActive.push_back(false);
   buttonActive.push_back(false);
   buttonActive.push_back(false);
@@ -29,6 +32,16 @@ void Controller::move(int x, int y) {
   bool needsInvalidate = false;
   switch (viewer->getMode()) {
     case Viewer::POSITION:
+      if (buttonActive[LEFT_BUTTON]) {
+        translateScene->preTranslate(Vector3D((x - lastX) * PAN_FACTOR, -(y - lastY) * PAN_FACTOR, 0.0));
+        needsInvalidate = true;
+      }
+
+      if (buttonActive[MIDDLE_BUTTON]) {
+        translateScene->preTranslate(Vector3D(0.0, 0.0, (y - lastY) * PAN_FACTOR));
+        needsInvalidate = true;
+      }
+
       if (buttonActive[RIGHT_BUTTON]) {
         const double W = viewer->get_width();
         const double H = viewer->get_height();
