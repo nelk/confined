@@ -148,7 +148,8 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   // Setup parameters.
   // TODO: Toggle
   glEnable(GL_LIGHTING);
-  GLfloat light_position[] = { 5.0, 0.0, 0.0, 1.0 };
+  //GLfloat light_position[] = { 5.0, 0.0, 0.0, 1.0 };
+  GLfloat light_position[] = { 0.0, 0.0, 10.0, 1.0 };
   glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
   // Draw scene.

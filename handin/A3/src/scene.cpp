@@ -111,6 +111,7 @@ bool JointNode::is_joint() const
 
 GeometryNode::GeometryNode(const std::string& name, Primitive* primitive)
   : SceneNode(name),
+    m_material(NULL),
     m_primitive(primitive)
 {
 }
@@ -123,7 +124,10 @@ void GeometryNode::walk_gl(bool picking) const {
   SceneNode::walk_gl(picking);
 
   push_transform_gl();
-  get_material()->apply_gl();
+  const Material* material = get_material();
+  if (material != NULL) {
+    material->apply_gl();
+  }
 
   m_primitive->walk_gl(picking);
 

@@ -6,6 +6,8 @@
 #define PAN_FACTOR 0.01
 #define ZOOM_FACTOR 0.01
 
+// TODO: Fix trackball rotation when back-facing!
+
 Controller::Controller(Viewer* v, SceneNode* translateScene, SceneNode* rotateScene):
     viewer(v),
     translateScene(translateScene),
