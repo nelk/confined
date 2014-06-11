@@ -36,6 +36,8 @@ public:
   void setMode(Mode mode);
   Mode getMode();
   void reset(ResetType r);
+  void applyViewTransform();
+  bool blink();
 
 protected:
   // Called when GL is first initialized

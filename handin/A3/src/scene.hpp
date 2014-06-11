@@ -71,15 +71,20 @@ public:
   // Returns true if and only if this node is a JointNode
   virtual bool is_joint() const;
 
-protected:
+  bool togglePick(int id);
 
-  // Useful for picking
+protected:
+  static int nextId;
+
+  // Useful for picking.
   int m_id;
   std::string m_name;
 
+  bool picked;
+
   // Transformations
   Matrix4x4 m_trans;
-  Matrix4x4 m_invtrans; // TODO
+  Matrix4x4 m_invtrans;
 
   // Hierarchy
   typedef std::list<SceneNode*> ChildList;
@@ -137,7 +142,15 @@ public:
     m_material = material;
   }
 
+  static void togglePickHighlight() {
+    pickHighlight = !pickHighlight;
+  }
+
 protected:
+  static bool pickHighlight;
+  static PhongMaterial highlightMaterial;
+  static PhongMaterial defaultMaterial;
+
   Material* m_material;
   Primitive* m_primitive;
 };

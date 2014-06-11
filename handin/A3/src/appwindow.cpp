@@ -1,5 +1,7 @@
 #include "appwindow.hpp"
 
+#define BLINK_DELAY 500
+
 AppWindow::AppWindow(SceneNode* scene): m_viewer(scene) {
   set_title("Advanced Ergonomics Laboratory, by Alex Klen");
 
@@ -70,6 +72,9 @@ AppWindow::AppWindow(SceneNode* scene): m_viewer(scene) {
   m_vbox.pack_start(m_viewer);
 
   show_all();
+
+  // Setup refresh for blinking picked geometry.
+  Glib::signal_timeout().connect(sigc::mem_fun(m_viewer, &Viewer::blink), BLINK_DELAY);
 }
 
 void AppWindow::add_accelerator(Gtk::MenuItem *it, char accelerator) {

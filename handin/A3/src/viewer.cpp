@@ -122,6 +122,16 @@ void Viewer::on_realize()
   gldrawable->gl_end();
 }
 
+void Viewer::applyViewTransform() {
+  glTranslated(0.0, 0.0, -8.0);
+}
+
+bool Viewer::blink() {
+  GeometryNode::togglePickHighlight();
+  invalidate();
+  return true;
+}
+
 bool Viewer::on_expose_event(GdkEventExpose* event) {
   Glib::RefPtr<Gdk::GL::Drawable> gldrawable = get_gl_drawable();
 
@@ -135,7 +145,7 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   glLoadIdentity();
   glViewport(0, 0, get_width(), get_height());
   gluPerspective(40.0, (GLfloat)get_width()/(GLfloat)get_height(), 0.1, 1000.0);
-  glTranslated(0.0, 0.0, -8.0);
+  applyViewTransform();
 
 
   // change to model view for drawing

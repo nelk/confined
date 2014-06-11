@@ -138,7 +138,9 @@ c3 = gr.material({1.0, 0.0, 1.0}, {0.1, 0.1, 0.1}, 10)
 c4 = gr.material({0.8, 0.4, 0.2}, {0.1, 0.1, 0.1}, 10)
 
 -- Apply materials.
-torso_g:set_material(white)
+torso_g:set_material(green)
+hips_g:set_material(green)
+neck_g:set_material(red)
 head_g:set_material(red)
 shoulders_g:set_material(blue)
 leftUpperArm_g:set_material(c1)

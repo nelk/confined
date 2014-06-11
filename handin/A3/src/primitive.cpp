@@ -45,7 +45,5 @@ void Sphere::drawSphere(int slices, int stacks) {
 }
 
 void Sphere::walk_gl(bool picking) const {
-  if (!picking) {
-    glCallList(Sphere::sphereList);
-  }
+  glCallList(Sphere::sphereList);
 }

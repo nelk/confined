@@ -1,4 +1,6 @@
 
+#include <GL/gl.h>
+#include <GL/glu.h>
 #include "controller.hpp"
 #include "matrices.hpp"
 
@@ -21,6 +23,9 @@ void Controller::press(Button button, int x, int y) {
   buttonActive[button] = true;
   lastX = x;
   lastY = y;
+  if (button == LEFT_BUTTON && viewer->getMode() == Viewer::JOINTS) {
+    pick(x, y);
+  }
 }
 void Controller::release(Button button, int x, int y) {
   buttonActive[button] = false;
@@ -78,6 +83,65 @@ void Controller::move(int x, int y) {
   if (needsInvalidate) {
     viewer->invalidate();
   }
+}
+
+void Controller::pick(double x, double y) {
+  const int BUF_LEN = 64;
+  GLuint hitBuf[BUF_LEN];
+
+  glSelectBuffer(BUF_LEN, hitBuf);
+
+  glRenderMode(GL_SELECT);
+
+  glMatrixMode(GL_PROJECTION);
+  glPushMatrix();
+  glLoadIdentity();
+
+  GLint viewport[4];
+  glGetIntegerv(GL_VIEWPORT, viewport);
+  gluPickMatrix(x, viewport[3] - y, 5, 5, viewport);
+  gluPerspective(40.0, (GLfloat)viewer->get_width()/(GLfloat)viewer->get_height(), 0.1, 1000.0);
+  viewer->applyViewTransform();
+
+  glMatrixMode(GL_MODELVIEW);
+  glInitNames();
+
+  // TODO: Take another node - pickScene?
+  SceneNode* pickScene = translateScene;
+  pickScene->walk_gl(true);
+
+  glPopMatrix();
+  GLint numHits = glRenderMode(GL_RENDER);
+  if (numHits > 0) {
+    //std::cout << "HITS " << numHits << std::endl;
+    int hitId = processHits(numHits, hitBuf);
+    bool found = pickScene->togglePick(hitId);
+    if (found) {
+      viewer->invalidate();
+    }
+  }
+}
+
+// From red book.
+int Controller::processHits(GLint hits, GLuint buffer[]) {
+  unsigned int i, j;
+  GLuint names, *ptr, minZ,*ptrNames, numberOfNames;
+
+  ptr = (GLuint *) buffer;
+  minZ = 0xffffffff;
+  for (i = 0; i < hits; i++) {	
+    names = *ptr;
+    ptr++;
+    if (*ptr < minZ) {
+      numberOfNames = names;
+      minZ = *ptr;
+      ptrNames = ptr+2;
+    }
+
+    ptr += names+2;
+  }
+  ptr = ptrNames;
+  return *ptr;
 }
 
 

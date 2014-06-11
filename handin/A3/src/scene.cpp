@@ -2,16 +2,31 @@
 #include "matrices.hpp"
 #include <iostream>
 
+int SceneNode::nextId = 1;
+
 SceneNode::SceneNode(const std::string& name)
-  : m_name(name)
-{
+    : m_name(name), picked(false) {
+  m_id = nextId++;
 }
 
 SceneNode::~SceneNode() {
 }
 
-void SceneNode::walk_gl(bool picking) const
-{
+bool SceneNode::togglePick(int id) {
+  if (m_id == id) {
+    //std::cout << id << " PICKED!" << std::endl;
+    picked = !picked;
+    return true;
+  }
+  for (std::list<SceneNode*>::const_iterator it = m_children.begin(); it != m_children.end(); it++) {
+    if ((*it)->togglePick(id)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void SceneNode::walk_gl(bool picking) const {
   push_transform_gl();
 
   for (std::list<SceneNode*>::const_iterator it = m_children.begin(); it != m_children.end(); it++) {
@@ -104,7 +119,7 @@ void JointNode::walk_gl(bool picking) const {
   glRotated(jointRotation[Y], 0.0, 1.0, 0.0);
   glRotated(jointRotation[Z], 0.0, 0.0, 1.0);
 
-  SceneNode::walk_gl();
+  SceneNode::walk_gl(picking);
 
   glPopMatrix();
 }
@@ -126,16 +141,32 @@ GeometryNode::~GeometryNode()
 {
 }
 
+bool GeometryNode::pickHighlight = false;
+PhongMaterial GeometryNode::highlightMaterial(Colour(1.0, 1.0, 1.0), Colour(0.2, 0.2, 0.2), 15.0);
+PhongMaterial GeometryNode::defaultMaterial(Colour(0.5, 0.5, 0.5), Colour(0.1, 0.1, 0.1), 10.0);
+
 void GeometryNode::walk_gl(bool picking) const {
   SceneNode::walk_gl(picking);
 
   push_transform_gl();
-  const Material* material = get_material();
-  if (material != NULL) {
-    material->apply_gl();
+  if (!picking) {
+    const Material* material = get_material();
+    if (picked && pickHighlight) {
+      highlightMaterial.apply_gl();
+    } else if (material != NULL) {
+      material->apply_gl();
+    } else {
+      defaultMaterial.apply_gl();
+    }
   }
 
+  if (picking) {
+    glPushName(m_id);
+  }
   m_primitive->walk_gl(picking);
+  if (picking) {
+    glPopName();
+  }
 
   pop_transform_gl();
 }

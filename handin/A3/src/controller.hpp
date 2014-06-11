@@ -24,6 +24,9 @@ public:
   void move(int x, int y);
 
 private:
+  void pick(double x, double y);
+  int processHits(GLint hits, GLuint buffer[]);
+
   Viewer* viewer;
   SceneNode* translateScene;
   SceneNode* rotateScene;
