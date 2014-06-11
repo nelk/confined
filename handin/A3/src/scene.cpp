@@ -27,6 +27,7 @@ void SceneNode::rotate(char axis, double angleDegrees)
 
   double angle = angleDegrees * M_PI / 180.0;
   m_trans = m_trans * rotation(axis, angle);
+  m_invtrans = m_trans.invert();
 }
 
 void SceneNode::scale(const Vector3D& amount)
@@ -34,6 +35,7 @@ void SceneNode::scale(const Vector3D& amount)
   //std::cerr << "Scale " << m_name << " by " << amount << std::endl;
 
   m_trans = m_trans * scaling(amount);
+  m_invtrans = m_trans.invert();
 }
 
 void SceneNode::translate(const Vector3D& amount)
@@ -41,17 +43,21 @@ void SceneNode::translate(const Vector3D& amount)
   //std::cerr << "Translate " << m_name << " by " << amount << std::endl;
 
   m_trans = m_trans * translation(amount);
+  m_invtrans = m_trans.invert();
 }
 
 void SceneNode::preRotate(char axis, double angleDegrees) {
   double angle = angleDegrees * M_PI / 180.0;
   m_trans = rotation(axis, angle) * m_trans;
+  m_invtrans = m_trans.invert();
 }
 void SceneNode::preScale(const Vector3D& amount) {
   m_trans = scaling(amount) * m_trans;
+  m_invtrans = m_trans.invert();
 }
 void SceneNode::preTranslate(const Vector3D& amount) {
   m_trans = translation(amount) * m_trans;
+  m_invtrans = m_trans.invert();
 }
 
 bool SceneNode::is_joint() const

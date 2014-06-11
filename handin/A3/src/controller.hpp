@@ -35,6 +35,7 @@ private:
 class Trackball {
 public:
   static Vector3D calculateRotation(double newX, double newY, double oldX, double oldY, double diameter);
+  //static Matrix4x4 vAxisRotMatrix(Vector3D vec);
 };
 
 #endif

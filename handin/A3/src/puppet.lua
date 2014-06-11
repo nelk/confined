@@ -1,4 +1,6 @@
 
+-- A humanoid puppet.
+
 -- Create all nodes.
 root = gr.node('root')
 
@@ -7,7 +9,7 @@ shoulders = gr.node('shoulders')
 neck = gr.node('neck')
 head = gr.node('head')
 
-leftUpperArm = gr.node('leftUpperArm')
+leftUpperArm = gr.joint('leftUpperArm', {0, -45, -180}, {0, 0, 0})
 rightUpperArm = gr.node('rightUpperArm')
 leftForearm = gr.node('leftForearm')
 rightForearm = gr.node('rightForearm')

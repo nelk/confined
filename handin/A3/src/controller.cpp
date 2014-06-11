@@ -6,8 +6,6 @@
 #define PAN_FACTOR 0.01
 #define ZOOM_FACTOR 0.01
 
-// TODO: Fix trackball rotation when back-facing!
-
 Controller::Controller(Viewer* v, SceneNode* translateScene, SceneNode* rotateScene):
     viewer(v),
     translateScene(translateScene),
@@ -50,15 +48,21 @@ void Controller::move(int x, int y) {
         const double offsetX = -W / 2.0;
         const double offsetY = -H / 2.0;
         const double diameter = std::min(W, H) / 2.0;
-        Vector3D rotAxes = Trackball::calculateRotation(
+        Vector3D rotVec = Trackball::calculateRotation(
             x + offsetX, y + offsetY,
             lastX + offsetX, lastY + offsetY,
             diameter);
 
         // Use negative rotations on model. Except for y, where already inverted because of flipped screen coordinates.
-        rotateScene->rotate('x', -rotAxes[0] * TRACKBALL_FACTOR);
-        rotateScene->rotate('y', rotAxes[1] * TRACKBALL_FACTOR);
-        rotateScene->rotate('z', -rotAxes[2] * TRACKBALL_FACTOR);
+        rotVec[X] = -rotVec[X];
+        rotVec[Z] = -rotVec[Z];
+
+        // Rotate this vector by current rotation matrix.
+        rotVec = rotateScene->get_inverse() * rotVec;
+        rotateScene->rotate('x', rotVec[X] * TRACKBALL_FACTOR);
+        rotateScene->rotate('y', rotVec[Y] * TRACKBALL_FACTOR);
+        rotateScene->rotate('z', rotVec[Z] * TRACKBALL_FACTOR);
+
         needsInvalidate = true;
       }
 
@@ -164,3 +168,46 @@ Vector3D Trackball::calculateRotation(double newX, double newY, double oldX, dou
       oldVecZ * newVecX - newVecZ * oldVecX,
       oldVecX * newVecY - newVecX * oldVecY);
 }
+
+
+/**
+ * Calculate the rotation matrix for rotation about an arbitrary axis.
+ * The length of vec is the amount to rotate by.
+ */
+/*
+Matrix4x4 Trackball::vAxisRotMatrix(Vector3D vec) {
+  const float fRadians = vec.length();
+
+  // If the vector has zero length - return the identity matrix
+  if (fRadians > -0.000001 && fRadians < 0.000001) {
+    return Matrix4x4();
+  }
+
+  // Normalize the rotation vector now in preparation for making rotation matrix.
+  vec.normalize();
+
+  // Create the arbitrary axis rotation matrix
+  double dSinAlpha = sin(fRadians);
+  double dCosAlpha = cos(fRadians);
+  double dT = 1 - dCosAlpha;
+
+  return Matrix4x4((double[16]){
+      dCosAlpha + vec[X]*vec[X]*dT,
+      vec[X]*vec[Y]*dT + vec[Z]*dSinAlpha,
+      vec[X]*vec[Z]*dT - vec[Y]*dSinAlpha,
+      0,
+
+      vec[X]*vec[Y]*dT - dSinAlpha*vec[Z],
+      dCosAlpha + vec[Y]*vec[Y]*dT,
+      vec[Y]*vec[Z]*dT + dSinAlpha*vec[X],
+      0,
+
+      vec[Z]*vec[X]*dT + dSinAlpha*vec[Y],
+      vec[Z]*vec[Y]*dT - dSinAlpha*vec[X],
+      dCosAlpha + vec[Z]*vec[Z]*dT,
+      0,
+
+      0, 0, 0, 1}).transpose();
+}
+*/
+
