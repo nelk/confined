@@ -18,6 +18,7 @@ void Sphere::init() {
   glEndList();
 }
 
+// TODO: Fix culled shape. Something wrong.
 void Sphere::drawSphere(int slices, int stacks) {
   for (int i = 0; i <= stacks; i++) {
     double stack0 = M_PI * ((double) (i - 1) / stacks - 0.5);

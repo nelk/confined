@@ -4,6 +4,7 @@
 #include <gtkmm.h>
 #include <gtkglmm.h>
 #include <string>
+#include <vector>
 #include "scene.hpp"
 #include "controller.hpp"
 
@@ -21,6 +22,11 @@ public:
     RESET_POSITION, RESET_ORIENTATION, RESET_JOINTS, RESET_ALL, NUM_RESET_TYPES
   };
 
+  enum Option {
+    CIRCLE, ZBUFFER, BACKFACE_CULL, FRONTFACE_CULL,
+    NUM_OPTIONS
+  };
+
   static const std::string SCENE_ROOT_ID;
 
 
@@ -35,6 +41,9 @@ public:
 
   void setMode(Mode mode);
   Mode getMode();
+
+  void toggleOption(Option opt);
+
   void reset(ResetType r);
   void applyViewTransform();
 
@@ -71,6 +80,7 @@ private:
   Matrix4x4 defaultLuaRootTransform;
   Controller* controller;
   bool displayingFail;
+  std::vector<bool> options;
 };
 
 #endif

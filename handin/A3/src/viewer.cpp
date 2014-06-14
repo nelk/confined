@@ -10,7 +10,7 @@
 
 const std::string Viewer::SCENE_ROOT_ID = "the_scene_root_reserved_id";
 
-Viewer::Viewer(SceneNode* luaScene): mode(Viewer::DEFAULT_MODE), displayingFail(false) {
+Viewer::Viewer(SceneNode* luaScene): mode(Viewer::DEFAULT_MODE), displayingFail(false), options(Viewer::NUM_OPTIONS, false) {
   // Add our own root to the scene which we can reset translations on.
   luaSceneRoot = luaScene;
   sceneRoot = new SceneNode(SCENE_ROOT_ID);
@@ -71,6 +71,11 @@ Viewer::Mode Viewer::getMode() {
   return mode;
 }
 
+void Viewer::toggleOption(Option opt) {
+  options[opt] = !options[opt];
+  invalidate();
+}
+
 void Viewer::reset(ResetType r) {
   Matrix4x4 identity;
   if (r == RESET_POSITION || r == RESET_ALL) {
@@ -118,7 +123,7 @@ void Viewer::on_realize()
   glEnable(GL_LIGHT0);
   //glEnable(GL_COLOR_MATERIAL);
 
-  glEnable(GL_DEPTH_TEST);
+  glFrontFace(GL_CW);
 
   gldrawable->gl_end();
 }
@@ -161,6 +166,26 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   if (!gldrawable->gl_begin(get_gl_context()))
     return false;
 
+  // Toggleable options.
+  if (options[ZBUFFER]) {
+    glEnable(GL_DEPTH_TEST);
+  } else {
+    glDisable(GL_DEPTH_TEST);
+  }
+  if (options[FRONTFACE_CULL] || options[BACKFACE_CULL]) {
+    glEnable(GL_CULL_FACE);
+    if (options[FRONTFACE_CULL] && options[BACKFACE_CULL]) {
+      glCullFace(GL_FRONT_AND_BACK);
+    } else if (options[FRONTFACE_CULL]) {
+      glCullFace(GL_FRONT);
+    } else {
+      glCullFace(GL_BACK);
+    }
+  } else {
+    glDisable(GL_CULL_FACE);
+  }
+
+
   // Set up for perspective drawing
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
@@ -191,7 +216,7 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   // Draw scene.
   sceneRoot->walk_gl(false);
 
-  if (mode == POSITION) {
+  if (options[CIRCLE] && mode == POSITION) {
     draw_trackball_circle();
   }
 

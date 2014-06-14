@@ -62,6 +62,25 @@ AppWindow::AppWindow(SceneNode* scene): m_viewer(scene) {
   m_menu_edit.items().push_back(*undo);
   m_menu_edit.items().push_back(*redo);
 
+  // Options menu.
+  const char options_shortcuts[] = {
+    'c', 'z', 'b', 'f'
+  };
+  const std::string option_names[] = {
+    "Toggle Trackball _Circle",
+    "Toggle _Z-buffer",
+    "Toggle _Backface Culling",
+    "Toggle _Frontface Culling"
+  };
+  sigc::slot1<void, Viewer::Option> option_slot = sigc::mem_fun(m_viewer, &Viewer::toggleOption);
+
+  for (int opt = 0; opt < Viewer::NUM_OPTIONS; opt++) {
+    Gtk::CheckMenuItem *mi = Gtk::manage(new Gtk::CheckMenuItem(option_names[opt], true));
+    add_accelerator(mi, options_shortcuts[opt]);
+    mi->signal_activate().connect(sigc::bind(option_slot, (Viewer::Option) opt));
+    m_menu_options.items().push_back(*mi);
+  }
+
   // Set up the menu bar
   m_menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Application", m_menu_app));
   m_menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Mode", m_menu_mode));
