@@ -12,18 +12,35 @@ SceneNode::SceneNode(const std::string& name)
 SceneNode::~SceneNode() {
 }
 
-bool SceneNode::togglePick(int id) {
+bool SceneNode::togglePick(int id, bool parent_is_joint) {
   if (m_id == id) {
-    //std::cout << id << " PICKED!" << std::endl;
-    picked = !picked;
-    return true;
+    if (parent_is_joint) {
+      picked = !picked;
+      return true;
+    } else {
+      // Parent not joint, don't pick anything.
+      return false;
+    }
   }
   for (std::list<SceneNode*>::const_iterator it = m_children.begin(); it != m_children.end(); it++) {
-    if ((*it)->togglePick(id)) {
+    if ((*it)->togglePick(id, is_joint())) {
       return true;
     }
   }
   return false;
+}
+
+void SceneNode::moveJoints(double primaryDelta, double secondaryDelta) {
+  for (std::list<SceneNode*>::const_iterator it = m_children.begin(); it != m_children.end(); it++) {
+    (*it)->moveJoints(primaryDelta, secondaryDelta);
+  }
+}
+
+void SceneNode::resetJoints() {
+  picked = false;
+  for (std::list<SceneNode*>::const_iterator it = m_children.begin(); it != m_children.end(); it++) {
+    (*it)->resetJoints();
+  }
 }
 
 void SceneNode::walk_gl(bool picking) const {
@@ -84,9 +101,12 @@ bool SceneNode::is_joint() const
 JointNode::JointNode(const std::string& name)
   : SceneNode(name)
 {
-  jointRotation[X] = 0.0;
-  jointRotation[Y] = 0.0;
-  jointRotation[Z] = 0.0;
+  for (int a = 0; a < NUM_AXES; a++) {
+    jointRotation[a] = 0.0;
+    jointRanges[a].min = 0;
+    jointRanges[a].init = 0;
+    jointRanges[a].max = 0;
+  }
 }
 
 JointNode::~JointNode()
@@ -112,16 +132,39 @@ void JointNode::rotateJoint(Axis axis, double delta) {
   jointRotation[axis] = newRot;
 }
 
+void JointNode::resetJoints() {
+  jointRotation[X] = jointRanges[X].init;
+  jointRotation[Y] = jointRanges[Y].init;
+  jointRotation[Z] = jointRanges[Z].init;
+  SceneNode::resetJoints();
+}
+
+void JointNode::moveJoints(double primaryDelta, double secondaryDelta) {
+  bool childPicked = false;
+  for (std::list<SceneNode*>::const_iterator it = m_children.begin(); it != m_children.end(); it++) {
+    if ((*it)->isPicked()) {
+      childPicked = true;
+    }
+    (*it)->moveJoints(primaryDelta, secondaryDelta);
+  }
+  if (childPicked) {
+    rotateJoint(X, primaryDelta);
+    rotateJoint(Y, secondaryDelta);
+  }
+}
+
 void JointNode::walk_gl(bool picking) const {
-  glPushMatrix();
+  push_transform_gl();
 
   glRotated(jointRotation[X], 1.0, 0.0, 0.0);
   glRotated(jointRotation[Y], 0.0, 1.0, 0.0);
   glRotated(jointRotation[Z], 0.0, 0.0, 1.0);
 
-  SceneNode::walk_gl(picking);
+  for (std::list<SceneNode*>::const_iterator it = m_children.begin(); it != m_children.end(); it++) {
+    (*it)->walk_gl(picking);
+  }
 
-  glPopMatrix();
+  pop_transform_gl();
 }
 
 bool JointNode::is_joint() const

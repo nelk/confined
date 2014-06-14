@@ -7,6 +7,7 @@
 #define TRACKBALL_FACTOR 50.0
 #define PAN_FACTOR 0.01
 #define ZOOM_FACTOR 0.01
+#define JOINT_FACTOR 0.6
 
 Controller::Controller(Viewer* v, SceneNode* translateScene, SceneNode* rotateScene):
     viewer(v),
@@ -73,7 +74,26 @@ void Controller::move(int x, int y) {
 
       break;
     case Viewer::JOINTS:
+    {
+      double primaryDelta = 0.0;
+      double secondaryDelta = 0.0;
+      bool anyChange = false;
+      if (buttonActive[MIDDLE_BUTTON]) {
+        primaryDelta = y - lastY;
+        anyChange = true;
+      }
+      if (buttonActive[RIGHT_BUTTON]) {
+        secondaryDelta = x - lastX;
+        anyChange = true;
+      }
+      if (anyChange) {
+        // TODO: Take another node - pickScene?
+        SceneNode* jointScene = translateScene;
+        jointScene->moveJoints(JOINT_FACTOR * primaryDelta, JOINT_FACTOR * secondaryDelta);
+        needsInvalidate = true;
+      }
       break;
+    }
     default:
       break;
   }
@@ -124,12 +144,11 @@ void Controller::pick(double x, double y) {
 
 // From red book.
 int Controller::processHits(GLint hits, GLuint buffer[]) {
-  unsigned int i, j;
   GLuint names, *ptr, minZ,*ptrNames, numberOfNames;
 
   ptr = (GLuint *) buffer;
   minZ = 0xffffffff;
-  for (i = 0; i < hits; i++) {	
+  for (int i = 0; i < hits; i++) {	
     names = *ptr;
     ptr++;
     if (*ptr < minZ) {

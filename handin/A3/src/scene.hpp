@@ -71,7 +71,13 @@ public:
   // Returns true if and only if this node is a JointNode
   virtual bool is_joint() const;
 
-  bool togglePick(int id);
+  virtual bool togglePick(int id, bool parent_is_joint=false);
+  virtual void moveJoints(double primaryDelta, double secondaryDelta);
+  virtual void resetJoints();
+
+  bool isPicked() {
+    return picked;
+  }
 
 protected:
   static int nextId;
@@ -110,7 +116,9 @@ public:
   // Set range and set current rotation to init.
   void setJointRange(Axis axis, double min, double init, double max);
   void rotateJoint(Axis axis, double delta);
-  void resetJoint();
+
+  virtual void moveJoints(double primaryDelta, double secondaryDelta);
+  virtual void resetJoints();
 
   struct JointRange {
     double min, init, max;
@@ -118,7 +126,7 @@ public:
 
 protected:
 
-  JointRange jointRanges[NUM_AXES];
+  JointRange jointRanges[NUM_AXES]; // In degrees.
   double jointRotation[NUM_AXES];
 };
 

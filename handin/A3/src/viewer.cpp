@@ -78,7 +78,7 @@ void Viewer::reset(ResetType r) {
     luaSceneRoot->set_transform(defaultLuaRootTransform);
   }
   if (r == RESET_JOINTS || r == RESET_ALL) {
-    // TODO
+    sceneRoot->resetJoints();
   }
   invalidate();
 }
