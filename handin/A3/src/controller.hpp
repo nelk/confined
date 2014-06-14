@@ -17,22 +17,30 @@ public:
     RIGHT_BUTTON = 2
   };
 
-  Controller(Viewer* v, SceneNode* translateScene, SceneNode* rotateScene);
+  Controller(Viewer* v, SceneNode* rootscene, SceneNode* translateScene, SceneNode* rotateScene);
 
   void press(Button button, int x, int y);
   void release(Button button, int x, int y);
   void move(int x, int y);
+
+  void undo();
+  void redo();
+
+  void resetJoints();
 
 private:
   void pick(double x, double y);
   int processHits(GLint hits, GLuint buffer[]);
 
   Viewer* viewer;
+  SceneNode* rootScene;
   SceneNode* translateScene;
   SceneNode* rotateScene;
   int lastX, lastY;
   double trackballDiameter;
   std::vector<bool> buttonActive;
+  int undoStackSize, redoStackSize;
+  bool performedJointMovement;
 };
 
 class Trackball {

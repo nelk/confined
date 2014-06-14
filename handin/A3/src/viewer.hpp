@@ -37,7 +37,12 @@ public:
   Mode getMode();
   void reset(ResetType r);
   void applyViewTransform();
+
+  void undo();
+  void redo();
+
   bool blink();
+  void displayFail();
 
 protected:
   // Called when GL is first initialized
@@ -57,12 +62,15 @@ protected:
   // Assumes the context for the viewer is active.
   void draw_trackball_circle();
 
+  void stopDisplayingFail();
+
 private:
   Mode mode;
   SceneNode* sceneRoot;
   SceneNode* luaSceneRoot;
   Matrix4x4 defaultLuaRootTransform;
   Controller* controller;
+  bool displayingFail;
 };
 
 #endif

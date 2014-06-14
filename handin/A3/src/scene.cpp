@@ -43,6 +43,24 @@ void SceneNode::resetJoints() {
   }
 }
 
+void SceneNode::saveJointUndoState() {
+  for (std::list<SceneNode*>::const_iterator it = m_children.begin(); it != m_children.end(); it++) {
+    (*it)->saveJointUndoState();
+  }
+}
+
+void SceneNode::undoJoints() {
+  for (std::list<SceneNode*>::const_iterator it = m_children.begin(); it != m_children.end(); it++) {
+    (*it)->undoJoints();
+  }
+}
+
+void SceneNode::redoJoints() {
+  for (std::list<SceneNode*>::const_iterator it = m_children.begin(); it != m_children.end(); it++) {
+    (*it)->redoJoints();
+  }
+}
+
 void SceneNode::walk_gl(bool picking) const {
   push_transform_gl();
 
@@ -99,10 +117,9 @@ bool SceneNode::is_joint() const
 
 
 JointNode::JointNode(const std::string& name)
-  : SceneNode(name)
+  : SceneNode(name), jointRotation(NUM_AXES, 0.0)
 {
   for (int a = 0; a < NUM_AXES; a++) {
-    jointRotation[a] = 0.0;
     jointRanges[a].min = 0;
     jointRanges[a].init = 0;
     jointRanges[a].max = 0;
@@ -136,8 +153,39 @@ void JointNode::resetJoints() {
   jointRotation[X] = jointRanges[X].init;
   jointRotation[Y] = jointRanges[Y].init;
   jointRotation[Z] = jointRanges[Z].init;
+  undoStack.clear();
+  undoStack.push_back(jointRotation);
+  redoStack.clear();
   SceneNode::resetJoints();
 }
+
+void JointNode::saveJointUndoState() {
+  SceneNode::saveJointUndoState();
+  redoStack.clear();
+  undoStack.push_back(jointRotation);
+}
+
+void JointNode::undoJoints() {
+  SceneNode::undoJoints();
+  // Don't remove last item.
+  if (undoStack.size() <= 1) {
+    return;
+  }
+  redoStack.push_back(jointRotation);
+  undoStack.pop_back();
+  jointRotation = undoStack.back();
+}
+
+void JointNode::redoJoints() {
+  SceneNode::redoJoints();
+  if (redoStack.empty()) {
+    return;
+  }
+  jointRotation = redoStack.back();
+  undoStack.push_back(jointRotation);
+  redoStack.pop_back();
+}
+
 
 void JointNode::moveJoints(double primaryDelta, double secondaryDelta) {
   bool childPicked = false;

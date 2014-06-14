@@ -52,6 +52,16 @@ AppWindow::AppWindow(SceneNode* scene): m_viewer(scene) {
     m_menu_mode.items().push_back(*rb);
   }
 
+  // Edit menu.
+  Gtk::MenuItem *undo = Gtk::manage(new Gtk::MenuItem("_Undo", true));
+  Gtk::MenuItem *redo = Gtk::manage(new Gtk::MenuItem("_Redo", true));
+  add_accelerator(undo, 'u');
+  add_accelerator(redo, 'r');
+  undo->signal_activate().connect(sigc::mem_fun(m_viewer, &Viewer::undo));
+  redo->signal_activate().connect(sigc::mem_fun(m_viewer, &Viewer::redo));
+  m_menu_edit.items().push_back(*undo);
+  m_menu_edit.items().push_back(*redo);
+
   // Set up the menu bar
   m_menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Application", m_menu_app));
   m_menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Mode", m_menu_mode));

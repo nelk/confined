@@ -2,6 +2,7 @@
 #define SCENE_HPP
 
 #include <list>
+#include <vector>
 #include "algebra.hpp"
 #include "primitive.hpp"
 #include "material.hpp"
@@ -38,12 +39,10 @@ public:
   void push_transform_gl() const {
     glPushMatrix();
     Matrix4x4 columnMajorTrans = m_trans.transpose();
-    //std::cout << "Pushing " << columnMajorTrans << std::endl;
     glMultMatrixd(columnMajorTrans.begin());
   }
 
   void pop_transform_gl() const {
-    //std::cout << "Popping" << std::endl;
     glPopMatrix();
   }
 
@@ -57,7 +56,6 @@ public:
     m_children.remove(child);
   }
 
-  // Callbacks to be implemented.
   // These will be called from Lua.
   // Note that these are post-multiplied.
   void rotate(char axis, double angle);
@@ -72,8 +70,13 @@ public:
   virtual bool is_joint() const;
 
   virtual bool togglePick(int id, bool parent_is_joint=false);
+
+  // Joint functions that will traverse over the tree to get all joints.
   virtual void moveJoints(double primaryDelta, double secondaryDelta);
   virtual void resetJoints();
+  virtual void saveJointUndoState();
+  virtual void undoJoints();
+  virtual void redoJoints();
 
   bool isPicked() {
     return picked;
@@ -119,6 +122,9 @@ public:
 
   virtual void moveJoints(double primaryDelta, double secondaryDelta);
   virtual void resetJoints();
+  virtual void saveJointUndoState();
+  virtual void undoJoints();
+  virtual void redoJoints();
 
   struct JointRange {
     double min, init, max;
@@ -127,7 +133,11 @@ public:
 protected:
 
   JointRange jointRanges[NUM_AXES]; // In degrees.
-  double jointRotation[NUM_AXES];
+  //double jointRotation[NUM_AXES];
+  std::vector<double> jointRotation;
+
+  std::vector<std::vector<double> > undoStack;
+  std::vector<std::vector<double> > redoStack;
 };
 
 class GeometryNode : public SceneNode {

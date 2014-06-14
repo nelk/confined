@@ -9,15 +9,22 @@
 #define ZOOM_FACTOR 0.01
 #define JOINT_FACTOR 0.6
 
-Controller::Controller(Viewer* v, SceneNode* translateScene, SceneNode* rotateScene):
+Controller::Controller(Viewer* v, SceneNode* rootScene, SceneNode* translateScene, SceneNode* rotateScene):
     viewer(v),
+    rootScene(rootScene),
     translateScene(translateScene),
     rotateScene(rotateScene),
-    trackballDiameter(trackballDiameter) {
+    trackballDiameter(trackballDiameter),
+    undoStackSize(0),
+    redoStackSize(0),
+    performedJointMovement(false) {
 
   buttonActive.push_back(false);
   buttonActive.push_back(false);
   buttonActive.push_back(false);
+
+  // Save initial state on undo stack.
+  rootScene->resetJoints();
 }
 
 void Controller::press(Button button, int x, int y) {
@@ -29,6 +36,15 @@ void Controller::press(Button button, int x, int y) {
   }
 }
 void Controller::release(Button button, int x, int y) {
+  if (viewer->getMode() == Viewer::JOINTS
+      && performedJointMovement
+      && ((button == MIDDLE_BUTTON && !buttonActive[RIGHT_BUTTON])
+      || (button == RIGHT_BUTTON && !buttonActive[MIDDLE_BUTTON]))) {
+    performedJointMovement = false;
+    rootScene->saveJointUndoState();
+    undoStackSize++;
+    redoStackSize = 0;
+  }
   buttonActive[button] = false;
   lastX = x;
   lastY = y;
@@ -87,9 +103,8 @@ void Controller::move(int x, int y) {
         anyChange = true;
       }
       if (anyChange) {
-        // TODO: Take another node - pickScene?
-        SceneNode* jointScene = translateScene;
-        jointScene->moveJoints(JOINT_FACTOR * primaryDelta, JOINT_FACTOR * secondaryDelta);
+        performedJointMovement = true;
+        rootScene->moveJoints(JOINT_FACTOR * primaryDelta, JOINT_FACTOR * secondaryDelta);
         needsInvalidate = true;
       }
       break;
@@ -103,6 +118,34 @@ void Controller::move(int x, int y) {
   if (needsInvalidate) {
     viewer->invalidate();
   }
+}
+
+void Controller::undo() {
+  if (undoStackSize == 0) {
+    viewer->displayFail();
+    return;
+  }
+  rootScene->undoJoints();
+  undoStackSize--;
+  redoStackSize++;
+  viewer->invalidate();
+}
+
+void Controller::redo() {
+  if (redoStackSize == 0) {
+    viewer->displayFail();
+    return;
+  }
+  rootScene->redoJoints();
+  redoStackSize--;
+  undoStackSize++;
+  viewer->invalidate();
+}
+
+void Controller::resetJoints() {
+  undoStackSize = 0;
+  redoStackSize = 0;
+  rootScene->resetJoints();
 }
 
 void Controller::pick(double x, double y) {
@@ -126,16 +169,13 @@ void Controller::pick(double x, double y) {
   glMatrixMode(GL_MODELVIEW);
   glInitNames();
 
-  // TODO: Take another node - pickScene?
-  SceneNode* pickScene = translateScene;
-  pickScene->walk_gl(true);
+  rootScene->walk_gl(true);
 
   glPopMatrix();
   GLint numHits = glRenderMode(GL_RENDER);
   if (numHits > 0) {
-    //std::cout << "HITS " << numHits << std::endl;
     int hitId = processHits(numHits, hitBuf);
-    bool found = pickScene->togglePick(hitId);
+    bool found = rootScene->togglePick(hitId);
     if (found) {
       viewer->invalidate();
     }

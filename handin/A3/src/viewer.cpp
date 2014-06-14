@@ -6,9 +6,11 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 
+#define DISPLAY_FAIL_TIME 100.0
+
 const std::string Viewer::SCENE_ROOT_ID = "the_scene_root_reserved_id";
 
-Viewer::Viewer(SceneNode* luaScene): mode(Viewer::DEFAULT_MODE) {
+Viewer::Viewer(SceneNode* luaScene): mode(Viewer::DEFAULT_MODE), displayingFail(false) {
   // Add our own root to the scene which we can reset translations on.
   luaSceneRoot = luaScene;
   sceneRoot = new SceneNode(SCENE_ROOT_ID);
@@ -17,7 +19,7 @@ Viewer::Viewer(SceneNode* luaScene): mode(Viewer::DEFAULT_MODE) {
   // Hold default transform of root and post-multiply our rotation onto root when orienting model.
   defaultLuaRootTransform = luaSceneRoot->get_transform();
 
-  controller = new Controller(this, sceneRoot, luaSceneRoot);
+  controller = new Controller(this, sceneRoot, sceneRoot, luaSceneRoot);
 
   Glib::RefPtr<Gdk::GL::Config> glconfig;
 
@@ -78,7 +80,7 @@ void Viewer::reset(ResetType r) {
     luaSceneRoot->set_transform(defaultLuaRootTransform);
   }
   if (r == RESET_JOINTS || r == RESET_ALL) {
-    sceneRoot->resetJoints();
+    controller->resetJoints();
   }
   invalidate();
 }
@@ -116,7 +118,6 @@ void Viewer::on_realize()
   glEnable(GL_LIGHT0);
   //glEnable(GL_COLOR_MATERIAL);
 
-  glClearColor( 0.4, 0.4, 0.4, 0.0 );
   glEnable(GL_DEPTH_TEST);
 
   gldrawable->gl_end();
@@ -130,6 +131,26 @@ bool Viewer::blink() {
   GeometryNode::togglePickHighlight();
   invalidate();
   return true;
+}
+
+void Viewer::undo() {
+  controller->undo();
+}
+
+void Viewer::redo() {
+  controller->redo();
+}
+
+void Viewer::displayFail() {
+  displayingFail = true;
+  invalidate();
+
+  Glib::signal_timeout().connect_once(sigc::mem_fun(*this, &Viewer::stopDisplayingFail), DISPLAY_FAIL_TIME);
+}
+
+void Viewer::stopDisplayingFail() {
+  displayingFail = false;
+  invalidate();
 }
 
 bool Viewer::on_expose_event(GdkEventExpose* event) {
@@ -153,6 +174,11 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   glLoadIdentity();
 
   // Clear framebuffer
+  if (displayingFail) {
+    glClearColor(1.0, 1.0, 1.0, 1.0);
+  } else {
+    glClearColor(0.4, 0.4, 0.4, 1.0);
+  }
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   // Setup parameters.
