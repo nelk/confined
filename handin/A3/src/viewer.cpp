@@ -123,7 +123,7 @@ void Viewer::on_realize()
   glEnable(GL_LIGHT0);
   //glEnable(GL_COLOR_MATERIAL);
 
-  glFrontFace(GL_CW);
+  glFrontFace(GL_CCW);
 
   gldrawable->gl_end();
 }
