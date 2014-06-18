@@ -14,7 +14,7 @@ GLuint Sphere::sphereList;
 void Sphere::init() {
   Sphere::sphereList = glGenLists(1);
   glNewList(Sphere::sphereList, GL_COMPILE);
-  drawSphere(50, 50);
+  drawSphere(40, 40);
   glEndList();
 }
 

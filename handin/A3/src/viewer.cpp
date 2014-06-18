@@ -116,12 +116,10 @@ void Viewer::on_realize()
   glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
   glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
 
-  //glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 1.0);
-  //glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 0.0005);
-  //glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.005);
-
   glEnable(GL_LIGHT0);
-  //glEnable(GL_COLOR_MATERIAL);
+  glDisable(GL_COLOR_MATERIAL);
+
+  glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 
   glFrontFace(GL_CCW);
 
