@@ -1,0 +1,133 @@
+sum is: /usr/bin/sum
+
+
+2014-06-19 23:28        Checksum for A3 for ayklen on gl01        Page 1
+
+
+A3:
+total 1128
+80418030 drwxrwx--- 2 ayklen cs488     4096 Jun 19 23:28 src/
+ 3109025 drwxrwx--- 8 ayklen cs488     4096 Jun 19 23:28 ../
+42137676 drwxrwx--- 4 ayklen cs488     4096 Jun 19 23:27 ./
+72116062 -rwxr-xr-x 1 ayklen ayklen 1013918 Jun 19 23:26 puppeteer*
+21687354 -rw-r--r-- 1 ayklen ayklen    5939 Jun 19 23:25 puppet.lua
+21687353 -rw-r--r-- 1 ayklen ayklen    1032 Jun 19 23:25 a3mark.lua
+21687352 -rw-r--r-- 1 ayklen ayklen     306 Jun 19 23:25 README
+13984324 -rw-r--r-- 1 ayklen ayklen   96622 Jun 18 14:31 screenshot01.png
+80418050 drwxrwx--- 2 ayklen cs488     4096 May  7 23:18 data/
+
+A3/src:
+total 132
+80418030 drwxrwx--- 2 ayklen cs488   4096 Jun 19 23:28 ./
+42137676 drwxrwx--- 4 ayklen cs488   4096 Jun 19 23:27 ../
+80418042 -rw-r--r-- 1 ayklen ayklen  7859 Jun 19 23:25 viewer.cpp
+80418041 -rw-r--r-- 1 ayklen ayklen  4220 Jun 19 23:25 scene.hpp
+80418040 -rw-r--r-- 1 ayklen ayklen  6135 Jun 19 23:25 scene.cpp
+80418039 -rw-r--r-- 1 ayklen ayklen   557 Jun 19 23:25 primitive.hpp
+80418038 -rw-r--r-- 1 ayklen ayklen  1339 Jun 19 23:25 primitive.cpp
+80418035 -rw-r--r-- 1 ayklen ayklen  1636 Jun 19 23:25 matrices.cpp
+80418034 -rw-r--r-- 1 ayklen ayklen   709 Jun 19 23:25 material.cpp
+80418032 -rw-r--r-- 1 ayklen ayklen  1356 Jun 19 23:25 controller.hpp
+80418031 -rw-r--r-- 1 ayklen ayklen  8230 Jun 19 23:25 controller.cpp
+19183660 -rw-r--r-- 1 ayklen ayklen  4337 Jun 18 14:45 appwindow.cpp
+73243582 -rw-r--r-- 1 ayklen ayklen  2086 Jun 18 14:31 viewer.hpp
+73243580 -rw-r--r-- 1 ayklen ayklen 11629 Jun 18 14:31 scene_lua.cpp
+73243574 -rw-r--r-- 1 ayklen ayklen   526 Jun 18 14:31 matrices.hpp
+73243571 -rw-r--r-- 1 ayklen ayklen   642 Jun 18 14:31 main.cpp
+80418043 -rw-r--r-- 1 ayklen ayklen   633 Jun 18 14:31 appwindow.hpp
+80418036 -rw-r--r-- 1 ayklen ayklen  9338 Jun 18 14:31 algebra.hpp
+80418048 -rw-r-x--- 1 ayklen cs488   3308 May  7 23:18 algebra.cpp*
+80418047 -rw-r-x--- 1 ayklen cs488    703 May  7 23:18 Makefile*
+80418046 -rw-r-x--- 1 ayklen cs488    170 May  7 23:18 lua488.hpp*
+80418037 -rw-r-x--- 1 ayklen cs488    457 May  7 23:18 material.hpp*
+80418033 -rw-r-x--- 1 ayklen cs488    145 May  7 23:18 scene_lua.hpp*
+
+A3/data:
+total 8
+42137676 drwxrwx--- 4 ayklen cs488 4096 Jun 19 23:27 ../
+80418050 drwxrwx--- 2 ayklen cs488 4096 May  7 23:18 ./
+
+A3                                      
+A3/a3mark.lua                           25163     2
+A3/data                                 
+A3/puppeteer                            53296   991
+A3/puppet.lua                           34974     6
+A3/README                               55437     1
+A3/screenshot01.png                     03537    95
+A3/src                                  
+A3/src/algebra.cpp                      00294     4
+A3/src/algebra.hpp                      32644    10
+A3/src/appwindow.cpp                    00208     5
+A3/src/appwindow.hpp                    23462     1
+A3/src/controller.cpp                   55271     9
+
+
+
+
+
+
+
+2014-06-19 23:28        Checksum for A3 for ayklen on gl01        Page 2
+
+
+A3/src/controller.hpp                   61180     2
+A3/src/lua488.hpp                       04702     1
+A3/src/main.cpp                         32834     1
+A3/src/Makefile                         15129     1
+A3/src/material.cpp                     61260     1
+A3/src/material.hpp                     19923     1
+A3/src/matrices.cpp                     43811     2
+A3/src/matrices.hpp                     12685     1
+A3/src/primitive.cpp                    15964     2
+A3/src/primitive.hpp                    30582     1
+A3/src/scene.cpp                        46284     6
+A3/src/scene.hpp                        33205     5
+A3/src/scene_lua.cpp                    34042    12
+A3/src/scene_lua.hpp                    34090     1
+A3/src/viewer.cpp                       38971     8
+A3/src/viewer.hpp                       03984     3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
