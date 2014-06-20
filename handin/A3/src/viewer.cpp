@@ -120,7 +120,6 @@ void Viewer::on_realize()
   glDisable(GL_COLOR_MATERIAL);
 
   glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
-
   glFrontFace(GL_CCW);
 
   gldrawable->gl_end();
