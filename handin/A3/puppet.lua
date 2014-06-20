@@ -118,7 +118,6 @@ leftForearm_g:scale(0.16, 0.6, 0.16)
 leftHand:translate(0.0, -1.0, 0.0)
 leftHand_g:translate(0.0, -0.2, 0.0)
 leftHand_g:scale(0.15, 0.18, 0.07)
--- TODO: Figure out how to implement hand to spec.
 
 rightUpperArm:translate(1.0, 0.0, 0.0)
 rightUpperArm_g:translate(0.0, -0.5, 0.0)
@@ -183,3 +182,4 @@ rightCalf_g:set_material(c4)
 rightFoot_g:set_material(c4)
 
 return root
+
