@@ -228,13 +228,10 @@ int Controller::processHits(GLint hits, GLuint buffer[]) {
  *                         be specified in the same units as new and old.
  *                         (ie, usually pixels if new and old are transformed
  *                         mouse positions)
- *             fVec - The output rotation vector. The length of the vector
- *                    is proportional to the angle of rotation.
- *
  **/
 Vector3D Trackball::calculateRotation(double newX, double newY, double oldX, double oldY, double diameter) {
-  float newVecX, newVecY, newVecZ,        /* Vector corresponding to new mouse location */
-        oldVecX, oldVecY, oldVecZ,        /* Vector corresponding to old mouse location */
+  float newVecX, newVecY, newVecZ, // Vector corresponding to new mouse location.
+        oldVecX, oldVecY, oldVecZ, // Vector corresponding to old mouse location.
         length;
 
   /* Vector pointing from center of virtual trackball to
@@ -291,46 +288,4 @@ Vector3D Trackball::calculateRotation(double newX, double newY, double oldX, dou
       oldVecZ * newVecX - newVecZ * oldVecX,
       oldVecX * newVecY - newVecX * oldVecY);
 }
-
-
-/**
- * Calculate the rotation matrix for rotation about an arbitrary axis.
- * The length of vec is the amount to rotate by.
- */
-/*
-Matrix4x4 Trackball::vAxisRotMatrix(Vector3D vec) {
-  const float fRadians = vec.length();
-
-  // If the vector has zero length - return the identity matrix
-  if (fRadians > -0.000001 && fRadians < 0.000001) {
-    return Matrix4x4();
-  }
-
-  // Normalize the rotation vector now in preparation for making rotation matrix.
-  vec.normalize();
-
-  // Create the arbitrary axis rotation matrix
-  double dSinAlpha = sin(fRadians);
-  double dCosAlpha = cos(fRadians);
-  double dT = 1 - dCosAlpha;
-
-  return Matrix4x4((double[16]){
-      dCosAlpha + vec[X]*vec[X]*dT,
-      vec[X]*vec[Y]*dT + vec[Z]*dSinAlpha,
-      vec[X]*vec[Z]*dT - vec[Y]*dSinAlpha,
-      0,
-
-      vec[X]*vec[Y]*dT - dSinAlpha*vec[Z],
-      dCosAlpha + vec[Y]*vec[Y]*dT,
-      vec[Y]*vec[Z]*dT + dSinAlpha*vec[X],
-      0,
-
-      vec[Z]*vec[X]*dT + dSinAlpha*vec[Y],
-      vec[Z]*vec[Y]*dT - dSinAlpha*vec[X],
-      dCosAlpha + vec[Z]*vec[Z]*dT,
-      0,
-
-      0, 0, 0, 1}).transpose();
-}
-*/
 

@@ -14,8 +14,7 @@ PhongMaterial::~PhongMaterial()
 {
 }
 
-void PhongMaterial::apply_gl() const
-{
+void PhongMaterial::apply_gl() const {
   GLfloat mat_ambient[] = { 0.0, 0.0, 0.0, 1.0 };
   GLfloat mat_diffuse[] = { m_kd.R(), m_kd.G(), m_kd.B(), 1.0 };
   GLfloat mat_specular[] = { m_ks.R(), m_ks.G(), m_ks.B(), 1.0 };

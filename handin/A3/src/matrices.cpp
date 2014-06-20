@@ -1,9 +1,6 @@
 #include "matrices.hpp"
 #include <math.h>
 
-// TODO
-#include <iostream>
-
 // Return a matrix to represent a counterclockwise rotation of "angle"
 // degrees around the axis "axis", where "axis" is one of the
 // characters 'x', 'y', or 'z'.

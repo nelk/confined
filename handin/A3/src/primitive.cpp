@@ -18,6 +18,8 @@ void Sphere::init() {
   glEndList();
 }
 
+// Draw sphere using quad strips in a given resolution.
+// Note that slices * stacks polygons will be draw.
 void Sphere::drawSphere(int slices, int stacks) {
   for (int i = 0; i <= stacks; i++) {
     double stack0 = M_PI * ((double) (i - 1) / stacks - 0.5);

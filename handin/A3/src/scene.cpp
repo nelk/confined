@@ -71,10 +71,7 @@ void SceneNode::walk_gl(bool picking) const {
   pop_transform_gl();
 }
 
-void SceneNode::rotate(char axis, double angleDegrees)
-{
-  //std::cerr << "Rotate " << m_name << " around " << axis << " by " << angleDegrees << std::endl;
-
+void SceneNode::rotate(char axis, double angleDegrees) {
   double angle = angleDegrees * M_PI / 180.0;
   m_trans = m_trans * rotation(axis, angle);
   m_invtrans = m_trans.invert();
@@ -82,16 +79,12 @@ void SceneNode::rotate(char axis, double angleDegrees)
 
 void SceneNode::scale(const Vector3D& amount)
 {
-  //std::cerr << "Scale " << m_name << " by " << amount << std::endl;
-
   m_trans = m_trans * scaling(amount);
   m_invtrans = m_trans.invert();
 }
 
 void SceneNode::translate(const Vector3D& amount)
 {
-  //std::cerr << "Translate " << m_name << " by " << amount << std::endl;
-
   m_trans = m_trans * translation(amount);
   m_invtrans = m_trans.invert();
 }
@@ -110,8 +103,7 @@ void SceneNode::preTranslate(const Vector3D& amount) {
   m_invtrans = m_trans.invert();
 }
 
-bool SceneNode::is_joint() const
-{
+bool SceneNode::is_joint() const {
   return false;
 }
 
@@ -126,9 +118,7 @@ JointNode::JointNode(const std::string& name)
   }
 }
 
-JointNode::~JointNode()
-{
-}
+JointNode::~JointNode() {}
 
 void JointNode::setJointRange(Axis axis, double min, double init, double max) {
   jointRanges[axis].min = min;
@@ -215,8 +205,7 @@ void JointNode::walk_gl(bool picking) const {
   pop_transform_gl();
 }
 
-bool JointNode::is_joint() const
-{
+bool JointNode::is_joint() const {
   return true;
 }
 
@@ -224,13 +213,9 @@ bool JointNode::is_joint() const
 GeometryNode::GeometryNode(const std::string& name, Primitive* primitive)
   : SceneNode(name),
     m_material(NULL),
-    m_primitive(primitive)
-{
-}
+    m_primitive(primitive) {}
 
-GeometryNode::~GeometryNode()
-{
-}
+GeometryNode::~GeometryNode() {}
 
 bool GeometryNode::pickHighlight = false;
 PhongMaterial GeometryNode::highlightMaterial(Colour(1.0, 1.0, 1.0), Colour(0.2, 0.2, 0.2), 15.0);

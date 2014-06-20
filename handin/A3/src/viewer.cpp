@@ -11,6 +11,7 @@
 const std::string Viewer::SCENE_ROOT_ID = "the_scene_root_reserved_id";
 
 Viewer::Viewer(SceneNode* luaScene): mode(Viewer::DEFAULT_MODE), displayingFail(false), options(Viewer::NUM_OPTIONS, false) {
+
   // Add our own root to the scene which we can reset translations on.
   luaSceneRoot = luaScene;
   sceneRoot = new SceneNode(SCENE_ROOT_ID);
@@ -204,9 +205,7 @@ bool Viewer::on_expose_event(GdkEventExpose* event) {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   // Setup parameters.
-  // TODO: Toggle
   glEnable(GL_LIGHTING);
-  //GLfloat light_position[] = { 5.0, 0.0, 0.0, 1.0 };
   GLfloat light_position[] = { 0.0, 0.0, 10.0, 1.0 };
   glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
@@ -235,16 +234,12 @@ bool Viewer::on_configure_event(GdkEventConfigure* event)
   if (!gldrawable->gl_begin(get_gl_context()))
     return false;
 
-  // Set up perspective projection, using current size and aspect
-  // ratio of display
-
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   glViewport(0, 0, event->width, event->height);
   gluPerspective(40.0, (GLfloat)event->width/(GLfloat)event->height, 0.1, 1000.0);
 
   // Reset to modelview matrix mode
-
   glMatrixMode(GL_MODELVIEW);
 
   gldrawable->gl_end();
@@ -252,23 +247,17 @@ bool Viewer::on_configure_event(GdkEventConfigure* event)
   return true;
 }
 
-bool Viewer::on_button_press_event(GdkEventButton* event)
-{
-  //std::cerr << "Stub: Button " << event->button << " pressed" << std::endl;
+bool Viewer::on_button_press_event(GdkEventButton* event) {
   controller->press((Controller::Button)(event->button - 1), event->x, event->y);
   return true;
 }
 
-bool Viewer::on_button_release_event(GdkEventButton* event)
-{
-  //std::cerr << "Stub: Button " << event->button << " released" << std::endl;
+bool Viewer::on_button_release_event(GdkEventButton* event) {
   controller->release((Controller::Button)(event->button - 1), event->x, event->y);
   return true;
 }
 
-bool Viewer::on_motion_notify_event(GdkEventMotion* event)
-{
-  //std::cerr << "Stub: Motion at " << event->x << ", " << event->y << std::endl;
+bool Viewer::on_motion_notify_event(GdkEventMotion* event) {
   controller->move(event->x, event->y);
   return true;
 }
@@ -309,3 +298,4 @@ void Viewer::draw_trackball_circle() {
   glColor3f(0.0, 0.0, 0.0);
   glDisable(GL_LINE_SMOOTH);
 }
+

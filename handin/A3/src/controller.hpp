@@ -9,6 +9,10 @@
 class Viewer;
 class SceneNode;
 
+/**
+ * This class is responsible for accepting user mouse input state changes and performing changes on the scene graph through the appropriate node or to the viewer.
+ * It also accepts specific commands for undo/redo and resetting the joints.
+ */
 class Controller {
 public:
   enum Button {
@@ -43,10 +47,12 @@ private:
   bool performedJointMovement;
 };
 
+/**
+ * Class containing helper function for virtual trackball calculations.
+ */
 class Trackball {
 public:
   static Vector3D calculateRotation(double newX, double newY, double oldX, double oldY, double diameter);
-  //static Matrix4x4 vAxisRotMatrix(Vector3D vec);
 };
 
 #endif

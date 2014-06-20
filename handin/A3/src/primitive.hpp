@@ -15,6 +15,8 @@ public:
   virtual ~Sphere();
   virtual void walk_gl(bool picking) const;
 
+  // Initialization method to create the display list for this primitive.
+  // Must be called once after OpenGL has initialized.
   static void init();
 
 private:
