@@ -39,10 +39,10 @@ public:
 
   bool savePng(const std::string& filename); ///< Save this image into
                                              ///  the given PNG file
-  
+
   const double* data() const;
   double* data();
-  
+
 private:
   int m_width, m_height;
   int m_elements;

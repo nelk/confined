@@ -13,26 +13,22 @@ public:
 
   const Matrix4x4& get_transform() const { return m_trans; }
   const Matrix4x4& get_inverse() const { return m_invtrans; }
-  
-  void set_transform(const Matrix4x4& m)
-  {
+
+  void set_transform(const Matrix4x4& m) {
     m_trans = m;
     m_invtrans = m.invert();
   }
 
-  void set_transform(const Matrix4x4& m, const Matrix4x4& i)
-  {
+  void set_transform(const Matrix4x4& m, const Matrix4x4& i) {
     m_trans = m;
     m_invtrans = i;
   }
 
-  void add_child(SceneNode* child)
-  {
+  void add_child(SceneNode* child) {
     m_children.push_back(child);
   }
 
-  void remove_child(SceneNode* child)
-  {
+  void remove_child(SceneNode* child) {
     m_children.remove(child);
   }
 
@@ -44,9 +40,9 @@ public:
 
   // Returns true if and only if this node is a JointNode
   virtual bool is_joint() const;
-  
+
 protected:
-  
+
   // Useful for picking
   int m_id;
   std::string m_name;
@@ -74,7 +70,7 @@ public:
     double min, init, max;
   };
 
-  
+
 protected:
 
   JointRange m_joint_x, m_joint_y;
@@ -89,8 +85,7 @@ public:
   const Material* get_material() const;
   Material* get_material();
 
-  void set_material(Material* material)
-  {
+  void set_material(Material* material) {
     m_material = material;
   }
 

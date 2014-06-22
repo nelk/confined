@@ -13,7 +13,7 @@ public:
        const std::vector< std::vector<int> >& faces);
 
   typedef std::vector<int> Face;
-  
+
 private:
   std::vector<Point3D> m_verts;
   std::vector<Face> m_faces;

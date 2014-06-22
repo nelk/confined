@@ -9,8 +9,7 @@ public:
   virtual void apply_gl() const = 0;
 
 protected:
-  Material()
-  {
+  Material() {
   }
 };
 
