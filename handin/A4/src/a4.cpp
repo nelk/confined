@@ -70,7 +70,7 @@ Colour raytrace_pixel(SceneNode* node,
 
   //Matrix4x4 translatePixelToOrigin = translation(Vector3D(-width/2, -height/d, d));
   Matrix4x4 translatePixelToOrigin = translation(Vector3D(-width/2, -height/2, 0));
-  Matrix4x4 scalePixel = scaling(Vector3D(-virtualW/width, -virtualH/height, 1.0));
+  Matrix4x4 scalePixel = scaling(Vector3D(-virtualW/width, virtualH/height, 1.0));
 
   Vector3D w = view.view;
   //Vector3D u = view.up.cross(w);
@@ -127,20 +127,30 @@ Colour raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lightin
   for (std::list<Light*>::const_iterator it = lighting.lights.begin(); it != lighting.lights.end(); it++) {
     Light* light = *it;
     // TODO: Attenuation.
-    // TODO: Shadow rays.
     Colour lightColour = light->colour;
     Vector3D incident = light->position - intersectionPoint;
     incident.normalize();
+
+    // Check for shadow.
+    Ray shadowRay(intersectionPoint, incident);
+    Colour shadowMultiplier = raytrace_shadow(node, shadowRay, lighting);
+
     Vector3D viewerDirection = -1 * ray.dir;
     viewerDirection.normalize();
-    finalColour = finalColour + closestIntersection->material->calculateLighting(incident, closestIntersection->normal, viewerDirection, lightColour);
+    finalColour = finalColour + shadowMultiplier * closestIntersection->material->calculateLighting(incident, closestIntersection->normal, viewerDirection, lightColour);
   }
 
   return finalColour;
 }
 
 Colour raytrace_shadow(SceneNode* node, const Ray& ray, const Lighting& lighting) {
-  return Colour(0.5);
+  std::vector<Intersection> intersections = node->findIntersections(ray);
+
+  if (intersections.empty()) {
+    return Colour(1.0);
+  } else {
+    return Colour(0.0);
+  }
 }
 
 
