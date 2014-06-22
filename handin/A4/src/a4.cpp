@@ -31,13 +31,25 @@ void a4_render(
 
   Image img(width, height, 3);
 
+  int totalRays = width * height;
+  int completedRays = 0;
+  int nextDecile = 1;
+
+  std::cout << "Raytracing " << totalRays << " rays." << std::endl;
+
   for (int y = 0; y < height; y++) {
-    for (int x = 0; x < height; x++) {
+    for (int x = 0; x < width; x++) {
       Colour colour = raytrace_pixel(root, x, y, width, height, viewParams, lighting);
 
       img(x, y, 0) = colour.R();
       img(x, y, 1) = colour.G();
       img(x, y, 2) = colour.B();
+
+      completedRays++;
+      if (((double)completedRays)/totalRays * 10.0 >= nextDecile) {
+        std::cout << "Completed " << nextDecile << "0%" << std::endl;
+        nextDecile++;
+      }
 
       /*
       // Red: increasing from top to bottom
@@ -50,7 +62,9 @@ void a4_render(
       */
     }
   }
+  std::cout << "Done! Saving image..." << std::endl;
   img.savePng(filename);
+  std::cout << "Saved" << std::endl;
 
 }
 
@@ -126,10 +140,13 @@ Colour raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lightin
   // Add intensity from each light source.
   for (std::list<Light*>::const_iterator it = lighting.lights.begin(); it != lighting.lights.end(); it++) {
     Light* light = *it;
-    // TODO: Attenuation.
     Colour lightColour = light->colour;
     Vector3D incident = light->position - intersectionPoint;
-    incident.normalize();
+
+    double dist = incident.length();
+    incident = 1.0/dist * incident; // Normalize;
+    double attenuation = light->falloff[0] + light->falloff[1] * dist + light->falloff[2] * dist * dist;
+    lightColour = 1.0/attenuation * lightColour;
 
     // Check for shadow.
     Ray shadowRay(intersectionPoint, incident);

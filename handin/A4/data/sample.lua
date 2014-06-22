@@ -13,7 +13,7 @@ scene_root:add_child(s2)
 s2:set_material(mat1)
 
 --white_light = gr.light({-100.0, 150.0, 400.0}, {0.5, 0.5, 0.5}, {1, 0, 0})
-white_light = gr.light({-30, 0, -20}, {0.5, 0.5, 0.5}, {1, 0, 0})
+white_light = gr.light({-30, 0, -20}, {0.5, 0.5, 0.5}, {1, 0.0000000001, 0.0000001})
 
 gr.render(scene_root, 'sample.png', 256, 256,
   {0, 0, 0}, {0, 0, -1}, {0, 1, 0}, 50,
