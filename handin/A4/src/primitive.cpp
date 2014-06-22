@@ -58,7 +58,8 @@ std::vector<Intersection> NonhierSphere::findIntersections(const Ray& ray) {
     }
     if (t > EPSILON) {
       const Point3D p = ray.pos + t*ray.dir;
-      const Vector3D normal = p - m_pos;
+      Vector3D normal = p - m_pos;
+      normal.normalize();
       //std::cout << "INTERSECTION for ray " << ray << " with params " << t << ", " << p << std::endl;
       intersections.push_back(Intersection(
         t, normal, NULL

@@ -2,16 +2,13 @@
 #define CS488_MATERIAL_HPP
 
 #include "algebra.hpp"
-#include "raytracer.hpp"
-
-struct Ray;
 
 class Material {
 public:
   virtual ~Material();
   virtual void apply_gl() const = 0;
 
-  virtual Colour rayColour(const Ray& ray) = 0;
+  virtual Colour calculateLighting(Vector3D incident, Vector3D normal, Colour intensity) = 0;
 
 protected:
   Material() {
@@ -25,7 +22,7 @@ public:
 
   virtual void apply_gl() const;
 
-  virtual Colour rayColour(const Ray& ray);
+  virtual Colour calculateLighting(Vector3D incident, Vector3D normal, Colour intensity);
 
 private:
   Colour m_kd;
