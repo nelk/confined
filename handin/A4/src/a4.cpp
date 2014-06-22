@@ -61,19 +61,24 @@ Colour raytrace_pixel(SceneNode* node,
   const ViewParams& view,
   const Lighting& lighting
 ) {
-  double d = 2.0; // TODO - Is this derived from something?
+  double d = 50.0; // TODO - Is this derived from something?
   double virtualH = 2.0 * d * tan(view.fov / 2.0);
   double virtualW = ((double)width) / height * virtualH;
 
+  //Point3D pixel(x, y, -d);
   Point3D pixel(x, y, d);
 
-  Matrix4x4 translatePixelToOrigin = translation(Vector3D(-width/d, -height/d, -d));
-  Matrix4x4 scalePixel = scaling(Vector3D(-virtualW/width, -virtualH/height, 1.0));
+  //Matrix4x4 translatePixelToOrigin = translation(Vector3D(-width/2, -height/d, d));
+  Matrix4x4 translatePixelToOrigin = translation(Vector3D(-width/2, -height/2, 0));
+  Matrix4x4 scalePixel = scaling(Vector3D(virtualW/width, -virtualH/height, 1.0));
 
-  const Vector3D& w = view.view;
-  Vector3D u = view.up.cross(w);
+  Vector3D w = view.view;
+  //Vector3D u = view.up.cross(w);
+  Vector3D u = w.cross(view.up);
   u.normalize();
-  Vector3D v = w.cross(u);
+  w.normalize();
+  //Vector3D v = w.cross(u);
+  Vector3D v = u.cross(w);
 
   Matrix4x4 rotatePixelToWCS = Matrix4x4((double[16]) {
     u[X], v[X], w[X], 0,
@@ -82,18 +87,26 @@ Colour raytrace_pixel(SceneNode* node,
        0,    0,    0, 1
   });
 
+  //std::cout << rotatePixelToWCS << std::endl;
+
   Matrix4x4 pixelEyeTranslation = translation(view.eye - Point3D());
 
   Point3D pixelWorld = pixelEyeTranslation * rotatePixelToWCS * scalePixel * translatePixelToOrigin * pixel;
 
-  Ray ray(view.eye, pixelWorld - view.eye);
+  Vector3D rayDir = pixelWorld - view.eye;
+  //Vector3D rayDir = pixel - view.eye;
+  rayDir.normalize();
+
+  Ray ray(view.eye, rayDir);
+  //std::cout << ray << std::endl;
   return raytrace_visible(node, ray, lighting);
 }
 
 Colour raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lighting) {
   std::vector<Intersection> intersections = node->findIntersections(ray);
   if (intersections.empty()) {
-    return Colour(0.0);
+    // TODO: Background.
+    return Colour(0.3);
   }
   // TODO: add/subtract volumes?
   //std::sort(intersections.begin(), intersections.end());

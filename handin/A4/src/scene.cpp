@@ -69,6 +69,11 @@ GeometryNode::~GeometryNode() {
 }
 
 std::vector<Intersection> GeometryNode::findIntersections(const Ray& ray) {
+  /*
+  m_primitive->findIntersections(Ray(Point3D(0, 0, 0), Vector3D(0, 0, -1)));
+  exit(0);
+  */
+
   std::vector<Intersection> intersections = m_primitive->findIntersections(ray);
   for (std::vector<Intersection>::iterator it = intersections.begin(); it != intersections.end(); it++) {
     it->material = m_material;

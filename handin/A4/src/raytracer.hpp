@@ -1,6 +1,7 @@
 #ifndef RAYTRACER_H
 #define RAYTRACER_H
 
+#include <iostream>
 #include <list>
 #include "algebra.hpp"
 #include "material.hpp"
@@ -22,6 +23,10 @@ struct Ray {
   Ray(const Point3D& pos, const Vector3D& dir)
     : pos(pos), dir(dir) {}
 };
+
+inline std::ostream& operator <<(std::ostream& os, const Ray& ray) {
+  return os << "ray<" << ray.pos << " + t* " << ray.dir << ">";
+}
 
 struct Lighting {
   Colour ambient;
