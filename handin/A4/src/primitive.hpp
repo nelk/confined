@@ -1,21 +1,29 @@
 #ifndef CS488_PRIMITIVE_HPP
 #define CS488_PRIMITIVE_HPP
 
+#include <vector>
 #include "algebra.hpp"
+#include "raytracer.hpp"
 
 class Primitive {
 public:
   virtual ~Primitive();
+
+  virtual std::vector<Intersection> findIntersections(const Ray& ray) = 0;
 };
 
 class Sphere : public Primitive {
 public:
   virtual ~Sphere();
+
+  virtual std::vector<Intersection> findIntersections(const Ray& ray);
 };
 
 class Cube : public Primitive {
 public:
   virtual ~Cube();
+
+  virtual std::vector<Intersection> findIntersections(const Ray& ray);
 };
 
 class NonhierSphere : public Primitive {
@@ -24,6 +32,8 @@ public:
     : m_pos(pos), m_radius(radius) {
   }
   virtual ~NonhierSphere();
+
+  virtual std::vector<Intersection> findIntersections(const Ray& ray);
 
 private:
   Point3D m_pos;
@@ -37,6 +47,8 @@ public:
   }
 
   virtual ~NonhierBox();
+
+  virtual std::vector<Intersection> findIntersections(const Ray& ray);
 
 private:
   Point3D m_pos;

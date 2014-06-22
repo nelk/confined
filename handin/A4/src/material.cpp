@@ -14,3 +14,9 @@ PhongMaterial::~PhongMaterial() {
 void PhongMaterial::apply_gl() const {
   // Perform OpenGL calls necessary to set up this material.
 }
+
+Colour PhongMaterial::rayColour(const Ray& ray) {
+  // TODO.
+  return m_kd;
+}
+

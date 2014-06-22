@@ -2,9 +2,11 @@
 #define SCENE_HPP
 
 #include <list>
+#include <vector>
 #include "algebra.hpp"
 #include "primitive.hpp"
 #include "material.hpp"
+#include "raytracer.hpp"
 
 class SceneNode {
 public:
@@ -40,6 +42,8 @@ public:
 
   // Returns true if and only if this node is a JointNode
   virtual bool is_joint() const;
+
+  virtual std::vector<Intersection> findIntersections(const Ray& ray);
 
 protected:
 
@@ -88,6 +92,8 @@ public:
   void set_material(Material* material) {
     m_material = material;
   }
+
+  virtual std::vector<Intersection> findIntersections(const Ray& ray);
 
 protected:
   Material* m_material;

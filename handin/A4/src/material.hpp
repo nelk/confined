@@ -2,11 +2,16 @@
 #define CS488_MATERIAL_HPP
 
 #include "algebra.hpp"
+#include "raytracer.hpp"
+
+struct Ray;
 
 class Material {
 public:
   virtual ~Material();
   virtual void apply_gl() const = 0;
+
+  virtual Colour rayColour(const Ray& ray) = 0;
 
 protected:
   Material() {
@@ -19,6 +24,8 @@ public:
   virtual ~PhongMaterial();
 
   virtual void apply_gl() const;
+
+  virtual Colour rayColour(const Ray& ray);
 
 private:
   Colour m_kd;

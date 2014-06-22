@@ -27,3 +27,8 @@ std::ostream& operator<<(std::ostream& out, const Mesh& mesh) {
   return out;
 }
 
+
+std::vector<Intersection> Mesh::findIntersections(const Ray& ray) {
+  return std::vector<Intersection>();
+}
+

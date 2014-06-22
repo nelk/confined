@@ -2,13 +2,8 @@
 #include "image.hpp"
 #include "matrices.hpp"
 #include "algebra.hpp"
-
-enum Axis {
-  X = 0,
-  Y = 1,
-  Z = 2,
-  W = 3
-};
+#include <algorithm>
+#include <iostream>
 
 void a4_render(
   SceneNode* root, // What to render
@@ -68,7 +63,7 @@ Colour raytrace_pixel(SceneNode* node,
 ) {
   double d = 2.0; // TODO - Is this derived from something?
   double virtualH = 2.0 * d * tan(view.fov / 2.0);
-  double virtualW = ((double)width) / height * virtualW;
+  double virtualW = ((double)width) / height * virtualH;
 
   Point3D pixel(x, y, d);
 
@@ -96,17 +91,25 @@ Colour raytrace_pixel(SceneNode* node,
 }
 
 Colour raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lighting) {
-  return Colour(0.5);
+  std::vector<Intersection> intersections = node->findIntersections(ray);
+  if (intersections.empty()) {
+    return Colour(0.0);
+  }
+  // TODO: add/subtract volumes?
+  //std::sort(intersections.begin(), intersections.end());
+  Intersection* closestIntersection = NULL;
+  for (std::vector<Intersection>::iterator it = intersections.begin(); it != intersections.end(); it++) {
+    if (closestIntersection == NULL
+        || it->rayParam < closestIntersection->rayParam) {
+      closestIntersection = &(*it);
+    }
+  }
+  // TODO: Shadow rays.
+  return closestIntersection->material->rayColour(ray);
 }
 
 Colour raytrace_shadow(SceneNode* node, const Ray& ray, const Lighting& lighting) {
   return Colour(0.5);
-}
-
-// Returns intersections sorted by distance.
-std::vector<Intersection> ray_intersections(SceneNode* node, const Ray& ray) {
-  std::vector<Intersection> intersections;
-  return intersections;
 }
 
 

@@ -5,6 +5,7 @@
 #include <iosfwd>
 #include "primitive.hpp"
 #include "algebra.hpp"
+#include "raytracer.hpp"
 
 // A polygonal mesh.
 class Mesh : public Primitive {
@@ -13,6 +14,8 @@ public:
        const std::vector< std::vector<int> >& faces);
 
   typedef std::vector<int> Face;
+
+  virtual std::vector<Intersection> findIntersections(const Ray& ray);
 
 private:
   std::vector<Point3D> m_verts;

@@ -29,6 +29,15 @@ bool SceneNode::is_joint() const {
   return false;
 }
 
+std::vector<Intersection> SceneNode::findIntersections(const Ray& ray) {
+  std::vector<Intersection> intersections;
+  for(std::list<SceneNode*>::const_iterator it = m_children.begin(); it != m_children.end(); it++) {
+    std::vector<Intersection> childIntersections = (*it)->findIntersections(ray);
+    intersections.insert(intersections.end(), childIntersections.begin(), childIntersections.end());
+  }
+  return intersections;
+}
+
 JointNode::JointNode(const std::string& name)
   : SceneNode(name) {
 }
@@ -58,4 +67,12 @@ GeometryNode::GeometryNode(const std::string& name, Primitive* primitive)
 
 GeometryNode::~GeometryNode() {
 }
- 
+
+std::vector<Intersection> GeometryNode::findIntersections(const Ray& ray) {
+  std::vector<Intersection> intersections = m_primitive->findIntersections(ray);
+  for (std::vector<Intersection>::iterator it = intersections.begin(); it != intersections.end(); it++) {
+    it->material = m_material;
+  }
+  return intersections;
+}
+
