@@ -8,7 +8,7 @@ public:
   virtual ~Material();
   virtual void apply_gl() const = 0;
 
-  virtual Colour calculateLighting(Vector3D incident, Vector3D normal, Colour intensity) = 0;
+  virtual Colour calculateLighting(Vector3D incident, Vector3D normal, Vector3D viewer, Colour intensity) = 0;
 
 protected:
   Material() {
@@ -22,7 +22,7 @@ public:
 
   virtual void apply_gl() const;
 
-  virtual Colour calculateLighting(Vector3D incident, Vector3D normal, Colour intensity);
+  virtual Colour calculateLighting(Vector3D incident, Vector3D normal, Vector3D viewer, Colour intensity);
 
 private:
   Colour m_kd;

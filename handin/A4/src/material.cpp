@@ -15,8 +15,17 @@ void PhongMaterial::apply_gl() const {
   // Perform OpenGL calls necessary to set up this material.
 }
 
-Colour PhongMaterial::calculateLighting(Vector3D incident, Vector3D normal, Colour intensity) {
-  // TODO: Specular.
-  return m_kd * (incident.dot(normal)) * intensity;
+Colour PhongMaterial::calculateLighting(Vector3D incident, Vector3D normal, Vector3D viewer, Colour intensity) {
+  double incidentDotNormal = incident.dot(normal);
+  Colour diffuse = m_kd * (incidentDotNormal) * intensity;
+  // Phong.
+  //Vector3D reflected = incident - 2 * incident.dot(normal) * normal;
+  //Colour specular = m_ks * pow(reflected.dot(viewer), m_shininess) * intensity;
+
+  // Blinn-Phong.
+  Vector3D h = viewer + incident;
+  h.normalize();
+  Colour specular = m_ks * pow(h.dot(normal), m_shininess) * intensity;
+  return diffuse + specular;
 }
 

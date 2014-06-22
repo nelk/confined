@@ -120,8 +120,10 @@ Colour raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lightin
 
   Point3D intersectionPoint = ray.pos + closestIntersection->rayParam * ray.dir;
 
+  // Start with ambient light.
+  Colour finalColour = lighting.ambient;
+
   // Add intensity from each light source.
-  Colour finalColour(0.0);
   for (std::list<Light*>::const_iterator it = lighting.lights.begin(); it != lighting.lights.end(); it++) {
     Light* light = *it;
     // TODO: Attenuation.
@@ -129,7 +131,9 @@ Colour raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lightin
     Colour lightColour = light->colour;
     Vector3D incident = light->position - intersectionPoint;
     incident.normalize();
-    finalColour = finalColour + closestIntersection->material->calculateLighting(incident, closestIntersection->normal, lightColour);
+    Vector3D viewerDirection = -1 * ray.dir;
+    viewerDirection.normalize();
+    finalColour = finalColour + closestIntersection->material->calculateLighting(incident, closestIntersection->normal, viewerDirection, lightColour);
   }
 
   return finalColour;
