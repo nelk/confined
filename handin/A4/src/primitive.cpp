@@ -40,7 +40,7 @@ std::vector<Intersection> NonhierSphere::findIntersections(const Ray& ray) {
       normal.normalize();
       //std::cout << "INTERSECTION for ray " << ray << " with params " << t << ", " << p << std::endl;
       intersections.push_back(Intersection(
-        t, normal, NULL
+        p, normal, NULL
       ));
     }
   }
@@ -96,10 +96,10 @@ std::vector<Intersection> NonhierBox::findIntersections(const Ray& ray) {
   }
 
   if (tNear > EPSILON) {
-    intersections.push_back(Intersection(tNear, nearNormal, NULL));
+    intersections.push_back(Intersection(ray.pos + tNear*ray.dir, nearNormal, NULL));
   }
   if (tFar > EPSILON) {
-    intersections.push_back(Intersection(tFar, farNormal, NULL));
+    intersections.push_back(Intersection(ray.pos + tFar*ray.dir, farNormal, NULL));
   }
   return intersections;
 }

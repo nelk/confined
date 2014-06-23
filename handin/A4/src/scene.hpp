@@ -44,6 +44,7 @@ public:
   virtual bool is_joint() const;
 
   virtual std::vector<Intersection> findIntersections(const Ray& ray);
+  virtual void transformIntersectionsUp(std::vector<Intersection>& intersections);
 
 protected:
 

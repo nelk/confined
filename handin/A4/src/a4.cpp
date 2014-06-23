@@ -3,6 +3,7 @@
 #include "matrices.hpp"
 #include "algebra.hpp"
 #include <algorithm>
+#include <limits>
 #include <iostream>
 
 #define SHADOWS true
@@ -15,20 +16,8 @@ void a4_render(
   const Vector3D& up, double fov, // Viewing parameters
   const Colour& ambient, const std::list<Light*>& lights // Lighting parameters
 ) {
-  /*
-  std::cerr << "Stub: a4_render(" << root << ",\n     "
-            << filename << ", " << width << ", " << height << ",\n     "
-            << eye << ", " << view << ", " << up << ", " << fov << ",\n     "
-            << ambient << ",\n     {";
 
-  for (std::list<Light*>::const_iterator I = lights.begin(); I != lights.end(); ++I) {
-    if (I != lights.begin()) std::cerr << ", ";
-    std::cerr << **I;
-  }
-  std::cerr << "});" << std::endl;
-  */
-
-  ViewParams viewParams(eye, view, up, fov);
+  ViewParams viewParams(eye, view, up, fov * M_PI / 180.0);
   Lighting lighting(ambient, lights);
 
   Image img(width, height, 3);
@@ -86,7 +75,7 @@ Colour raytrace_pixel(SceneNode* node,
 
   //Matrix4x4 translatePixelToOrigin = translation(Vector3D(-width/2, -height/d, d));
   Matrix4x4 translatePixelToOrigin = translation(Vector3D(-width/2, -height/2, 0));
-  Matrix4x4 scalePixel = scaling(Vector3D(-virtualW/width, virtualH/height, 1.0));
+  Matrix4x4 scalePixel = scaling(Vector3D(virtualW/width, -virtualH/height, 1.0));
 
   Vector3D w = view.view;
   //Vector3D u = view.up.cross(w);
@@ -113,9 +102,7 @@ Colour raytrace_pixel(SceneNode* node,
   //Vector3D rayDir = pixel - view.eye;
   rayDir.normalize();
 
-  //Ray ray(view.eye, rayDir);
-  // TODO: Why are things not at the right distance?
-  Ray ray(view.eye + Vector3D(0, 0, 60), rayDir);
+  Ray ray(view.eye, rayDir);
   return raytrace_visible(node, ray, lighting);
 }
 
@@ -128,23 +115,27 @@ Colour raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lightin
   // TODO: add/subtract volumes?
   //std::sort(intersections.begin(), intersections.end());
   Intersection* closestIntersection = NULL;
+  double closestDistance = std::numeric_limits<double>::max();
   for (std::vector<Intersection>::iterator it = intersections.begin(); it != intersections.end(); it++) {
+    double distance = (it->point - ray.pos).length();
     if (closestIntersection == NULL
-        || it->rayParam < closestIntersection->rayParam) {
+        || distance < closestDistance) {
       closestIntersection = &(*it);
+      closestDistance = distance;
     }
   }
 
-  Point3D intersectionPoint = ray.pos + closestIntersection->rayParam * ray.dir;
+  // Normalize intersection normal.
+  closestIntersection->normal.normalize();
 
   // Start with ambient light.
-  Colour finalColour = lighting.ambient * closestIntersection->material->ambientColour();
+  Colour finalColour = lighting.ambient;
 
   // Add intensity from each light source.
   for (std::list<Light*>::const_iterator it = lighting.lights.begin(); it != lighting.lights.end(); it++) {
     Light* light = *it;
     Colour lightColour = light->colour;
-    Vector3D incident = light->position - intersectionPoint;
+    Vector3D incident = light->position - closestIntersection->point;
 
     double dist = incident.length();
     incident = 1.0/dist * incident; // Normalize;
@@ -154,13 +145,14 @@ Colour raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lightin
     // Check for shadow.
     Colour shadowMultiplier(1.0);
     if (SHADOWS) {
-      Ray shadowRay(intersectionPoint, incident);
+      Ray shadowRay(closestIntersection->point, incident);
       shadowMultiplier = raytrace_shadow(node, shadowRay, lighting);
     }
 
     Vector3D viewerDirection = -1 * ray.dir;
     viewerDirection.normalize();
-    finalColour = finalColour + shadowMultiplier * closestIntersection->material->calculateLighting(incident, closestIntersection->normal, viewerDirection, lightColour);
+    Colour rayLightColour = closestIntersection->material->calculateLighting(incident, closestIntersection->normal, viewerDirection, lightColour);
+    finalColour = finalColour + shadowMultiplier * rayLightColour;
   }
 
   return finalColour;

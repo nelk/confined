@@ -36,7 +36,14 @@ std::vector<Intersection> SceneNode::findIntersections(const Ray& ray) {
     std::vector<Intersection> childIntersections = (*it)->findIntersections(transformedRay);
     intersections.insert(intersections.end(), childIntersections.begin(), childIntersections.end());
   }
+  transformIntersectionsUp(intersections);
   return intersections;
+}
+
+void SceneNode::transformIntersectionsUp(std::vector<Intersection>& intersections) {
+  for(std::vector<Intersection>::iterator it = intersections.begin(); it != intersections.end(); it++) {
+    it->transform(get_transform());
+  }
 }
 
 JointNode::JointNode(const std::string& name)
@@ -75,6 +82,7 @@ std::vector<Intersection> GeometryNode::findIntersections(const Ray& ray) {
   for (std::vector<Intersection>::iterator it = intersections.begin(); it != intersections.end(); it++) {
     it->material = m_material;
   }
+  transformIntersectionsUp(intersections);
 
   std::vector<Intersection> childIntersections = SceneNode::findIntersections(ray);
   intersections.insert(intersections.end(), childIntersections.begin(), childIntersections.end());

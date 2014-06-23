@@ -32,7 +32,7 @@ std::vector<Intersection> Mesh::findIntersections(const Ray& ray) {
   std::vector<Intersection> intersections;
   // TODO: Bounding box check.
 
-  // Convext angle tests.
+  // Convex angle tests.
   // TODO: Ray casting algorithm if we have convex faces.
   /*
   const double EPSILON = 0.0;
@@ -107,7 +107,7 @@ std::vector<Intersection> Mesh::findIntersections(const Ray& ray) {
         anglesum += acos(p1.dot(p2) / (m1*m2));
       }
       if (anglesum >= M_PI*2 - EPSILON && anglesum <= M_PI*2 + EPSILON) {
-        intersections.push_back(Intersection(t, normal, NULL));
+        intersections.push_back(Intersection(q, normal, NULL));
         //std::cout << "INTERSECTION " << t << std::endl;
       }
     }

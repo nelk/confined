@@ -42,23 +42,30 @@ struct Lighting {
     : ambient(ambient), lights(lights) {}
 };
 
+// Warning: Normal is not always normalized.
 struct Intersection {
-  double rayParam; // intersection_point = ray.pos + rayParam * ray.dir;
+  Point3D point;
   Vector3D normal;
   Material* material;
 
-  Intersection(double rayParam, const Vector3D& normal, Material* material)
-    : rayParam(rayParam), normal(normal), material(material) {}
+  Intersection(const Point3D& intersection, const Vector3D& normal, Material* material)
+    : point(intersection), normal(normal), material(material) {}
+
+  void transform(const Matrix4x4& mat) {
+    point = mat * point;
+    normal = mat.invert().transpose() * normal;
+  }
 };
 
 struct ViewParams {
   Point3D eye;
   Vector3D view;
   Vector3D up;
-  double fov;
+  double fov; // In radians.
 
   ViewParams(const Point3D& eye, const Vector3D& view, const Vector3D& up, double fov)
     : eye(eye), view(view), up(up), fov(fov) {}
+
 };
 
 #endif
