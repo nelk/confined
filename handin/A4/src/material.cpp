@@ -15,6 +15,10 @@ void PhongMaterial::apply_gl() const {
   // Perform OpenGL calls necessary to set up this material.
 }
 
+Colour PhongMaterial::ambientColour() const {
+  return m_kd;
+}
+
 Colour PhongMaterial::calculateLighting(Vector3D incident, Vector3D normal, Vector3D viewer, Colour intensity) {
   double incidentDotNormal = incident.dot(normal);
   Colour diffuse = m_kd * (incidentDotNormal) * intensity;

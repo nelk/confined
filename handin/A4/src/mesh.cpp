@@ -30,6 +30,7 @@ std::ostream& operator<<(std::ostream& out, const Mesh& mesh) {
 
 std::vector<Intersection> Mesh::findIntersections(const Ray& ray) {
   std::vector<Intersection> intersections;
+  // TODO: Bounding box check.
 
   // Convext angle tests.
   // TODO: Ray casting algorithm if we have convex faces.

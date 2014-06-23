@@ -5,26 +5,6 @@
 // TODO
 #include <iostream>
 
-Primitive::~Primitive() {
-}
-
-Sphere::~Sphere() {
-}
-
-std::vector<Intersection> Sphere::findIntersections(const Ray& ray) {
-  return std::vector<Intersection>();
-}
-
-Cube::~Cube() {
-}
-
-std::vector<Intersection> Cube::findIntersections(const Ray& ray) {
-  return std::vector<Intersection>();
-}
-
-NonhierSphere::~NonhierSphere() {
-}
-
 std::vector<Intersection> NonhierSphere::findIntersections(const Ray& ray) {
 
   // Will use quadratic solver.
@@ -66,9 +46,6 @@ std::vector<Intersection> NonhierSphere::findIntersections(const Ray& ray) {
   }
 
   return intersections;
-}
-
-NonhierBox::~NonhierBox() {
 }
 
 std::vector<Intersection> NonhierBox::findIntersections(const Ray& ray) {

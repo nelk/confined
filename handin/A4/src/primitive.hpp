@@ -7,23 +7,9 @@
 
 class Primitive {
 public:
-  virtual ~Primitive();
+  virtual ~Primitive() {}
 
   virtual std::vector<Intersection> findIntersections(const Ray& ray) = 0;
-};
-
-class Sphere : public Primitive {
-public:
-  virtual ~Sphere();
-
-  virtual std::vector<Intersection> findIntersections(const Ray& ray);
-};
-
-class Cube : public Primitive {
-public:
-  virtual ~Cube();
-
-  virtual std::vector<Intersection> findIntersections(const Ray& ray);
 };
 
 class NonhierSphere : public Primitive {
@@ -31,7 +17,7 @@ public:
   NonhierSphere(const Point3D& pos, double radius)
     : m_pos(pos), m_radius(radius) {
   }
-  virtual ~NonhierSphere();
+  virtual ~NonhierSphere() {}
 
   virtual std::vector<Intersection> findIntersections(const Ray& ray);
 
@@ -46,7 +32,7 @@ public:
     : m_pos(pos), m_size(size) {
   }
 
-  virtual ~NonhierBox();
+  virtual ~NonhierBox() {}
 
   virtual std::vector<Intersection> findIntersections(const Ray& ray);
 
@@ -54,5 +40,18 @@ private:
   Point3D m_pos;
   double m_size;
 };
+
+class Sphere : public NonhierSphere {
+public:
+  Sphere(): NonhierSphere(Point3D(), 1.0) {}
+  virtual ~Sphere() {}
+};
+
+class Cube : public NonhierBox {
+public:
+  Cube(): NonhierBox(Point3D(-0.5, -0.5, -0.5), 1.0) {}
+  virtual ~Cube() {}
+};
+
 
 #endif

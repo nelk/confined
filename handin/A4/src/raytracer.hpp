@@ -22,11 +22,17 @@ struct Ray {
 
   Ray(const Point3D& pos, const Vector3D& dir)
     : pos(pos), dir(dir) {}
+
+  Ray transform(const Matrix4x4& mat) const {
+    Point3D newPos = mat * this->pos;
+    return Ray(newPos, mat * (this->pos + this->dir) - newPos);
+  }
 };
 
 inline std::ostream& operator <<(std::ostream& os, const Ray& ray) {
   return os << "ray<" << ray.pos << " + t* " << ray.dir << ">";
 }
+
 
 struct Lighting {
   Colour ambient;

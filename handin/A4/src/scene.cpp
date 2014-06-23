@@ -30,9 +30,10 @@ bool SceneNode::is_joint() const {
 }
 
 std::vector<Intersection> SceneNode::findIntersections(const Ray& ray) {
+  Ray transformedRay = ray.transform(get_inverse());
   std::vector<Intersection> intersections;
   for(std::list<SceneNode*>::const_iterator it = m_children.begin(); it != m_children.end(); it++) {
-    std::vector<Intersection> childIntersections = (*it)->findIntersections(ray);
+    std::vector<Intersection> childIntersections = (*it)->findIntersections(transformedRay);
     intersections.insert(intersections.end(), childIntersections.begin(), childIntersections.end());
   }
   return intersections;
@@ -69,15 +70,15 @@ GeometryNode::~GeometryNode() {
 }
 
 std::vector<Intersection> GeometryNode::findIntersections(const Ray& ray) {
-  /*
-  m_primitive->findIntersections(Ray(Point3D(0, 0, 0), Vector3D(0, 0, -1)));
-  exit(0);
-  */
-
-  std::vector<Intersection> intersections = m_primitive->findIntersections(ray);
+  Ray transformedRay = ray.transform(get_inverse());
+  std::vector<Intersection> intersections = m_primitive->findIntersections(transformedRay);
   for (std::vector<Intersection>::iterator it = intersections.begin(); it != intersections.end(); it++) {
     it->material = m_material;
   }
+
+  std::vector<Intersection> childIntersections = SceneNode::findIntersections(ray);
+  intersections.insert(intersections.end(), childIntersections.begin(), childIntersections.end());
+
   return intersections;
 }
 

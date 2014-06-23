@@ -4,6 +4,12 @@ mat1 = gr.material({0.7, 1.0, 0.7}, {0.8, 0.8, 0.8}, 30)
 
 scene_root = gr.node('root')
 
+s = gr.sphere('s')
+s:translate(0, 0, -80)
+s:scale(6, 6, 6)
+scene_root:add_child(s)
+s:set_material(mat1)
+
 --s1 = gr.nh_sphere('s1', {0, 0, -80}, 6)
 --scene_root:add_child(s1)
 --s1:set_material(mat1)
@@ -16,10 +22,10 @@ scene_root = gr.node('root')
 --scene_root:add_child(b1)
 --b1:set_material(mat1)
 
-require('smstdodeca')
-
-steldodec:set_material(mat1)
-scene_root:add_child(steldodec)
+--require('smstdodeca')
+--steldodec:set_material(mat1)
+--steldodec:translate(100, 10, 10)
+--scene_root:add_child(steldodec)
 
 --triangle = gr.mesh('triangle', {
   --{ 0, 0, -15},
@@ -46,16 +52,16 @@ scene_root:add_child(steldodec)
 white_light = gr.light({-10, 0, -2}, {0.5, 0.5, 0.5}, {1, 0.0000000001, 0.0000001})
 
 -- Straight-on raw dodec
-gr.render(scene_root, 'sample.png', 1024, 768,
-  {-140, 200, 600}, {0, 0, -1}, {0, 1, 0}, 50,
-  {0.1, 0.1, 0.1}, {white_light})
+--gr.render(scene_root, 'sample.png', 512, 512,
+  --{-140, 200, 600}, {0, 0, -1}, {0, 1, 0}, 50,
+  --{0.1, 0.1, 0.1}, {white_light})
 
 -- Side view raw dodec
 --gr.render(scene_root, 'sample.png', 256, 256,
   --{200, -200, 200}, {-1.1, 1.1, -1}, {0, 1, 0}, 50,
   --{0.1, 0.1, 0.1}, {white_light})
 
---gr.render(scene_root, 'sample.png', 1024, 768,
-  --{-15, 10, 0}, {0.2, -0.08, -1}, {0, 1, 0}, 50,
-  --{0.1, 0.1, 0.1}, {white_light})
+gr.render(scene_root, 'sample.png', 1024, 768,
+  {0, 0, 0}, {0, 0, -1}, {0, 1, 0}, 50,
+  {0.1, 0.1, 0.1}, {white_light})
 

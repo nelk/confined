@@ -113,8 +113,9 @@ Colour raytrace_pixel(SceneNode* node,
   //Vector3D rayDir = pixel - view.eye;
   rayDir.normalize();
 
-  Ray ray(view.eye, rayDir);
-  //std::cout << ray << std::endl;
+  //Ray ray(view.eye, rayDir);
+  // TODO: Why are things not at the right distance?
+  Ray ray(view.eye + Vector3D(0, 0, 60), rayDir);
   return raytrace_visible(node, ray, lighting);
 }
 
@@ -137,7 +138,7 @@ Colour raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lightin
   Point3D intersectionPoint = ray.pos + closestIntersection->rayParam * ray.dir;
 
   // Start with ambient light.
-  Colour finalColour = lighting.ambient;
+  Colour finalColour = lighting.ambient * closestIntersection->material->ambientColour();
 
   // Add intensity from each light source.
   for (std::list<Light*>::const_iterator it = lighting.lights.begin(); it != lighting.lights.end(); it++) {
