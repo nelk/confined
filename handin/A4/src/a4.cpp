@@ -129,7 +129,7 @@ Colour raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lightin
   closestIntersection->normal.normalize();
 
   // Start with ambient light.
-  Colour finalColour = lighting.ambient;
+  Colour finalColour = lighting.ambient * closestIntersection->material->ambientColour();
 
   // Add intensity from each light source.
   for (std::list<Light*>::const_iterator it = lighting.lights.begin(); it != lighting.lights.end(); it++) {

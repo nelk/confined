@@ -1,5 +1,7 @@
 #include "material.hpp"
 
+//#define BLINN_PHONG
+
 Material::~Material()
 {
 }
@@ -23,14 +25,18 @@ Colour PhongMaterial::calculateLighting(Vector3D incident, Vector3D normal, Vect
   double incidentDotNormal = std::max(0.0, incident.dot(normal));
 
   Colour diffuse = m_kd * incidentDotNormal * intensity;
-  // Phong.
-  //Vector3D reflected = incident - 2 * incident.dot(normal) * normal;
-  //Colour specular = m_ks * pow(reflected.dot(viewer), m_shininess) * intensity;
 
+#ifdef BLINN_PHONG
   // Blinn-Phong.
   Vector3D h = viewer + incident;
   h.normalize();
   Colour specular = m_ks * pow(std::max(0.0, h.dot(normal)), m_shininess) * intensity;
+#else
+  // Phong.
+  Vector3D reflected = -incident + 2 * incident.dot(normal) * normal;
+  Colour specular = m_ks * pow(reflected.dot(viewer), m_shininess) * intensity;
+#endif
+
   return diffuse + specular;
 }
 
