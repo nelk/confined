@@ -12,9 +12,13 @@ s2 = gr.nh_sphere('s2', {5, 5, -100}, 6)
 scene_root:add_child(s2)
 s2:set_material(mat1)
 
---white_light = gr.light({-100.0, 150.0, 400.0}, {0.5, 0.5, 0.5}, {1, 0, 0})
-white_light = gr.light({-30, 0, -20}, {0.5, 0.5, 0.5}, {1, 0.0000000001, 0.0000001})
+b1 = gr.nh_box('b1', {-4, 3, -60}, 3)
+scene_root:add_child(b1)
+b1:set_material(mat1)
 
-gr.render(scene_root, 'sample.png', 256, 256,
-  {0, 0, 0}, {0, 0, -1}, {0, 1, 0}, 50,
+--white_light = gr.light({-100.0, 150.0, 400.0}, {0.5, 0.5, 0.5}, {1, 0, 0})
+white_light = gr.light({-10, 0, -2}, {0.5, 0.5, 0.5}, {1, 0.0000000001, 0.0000001})
+
+gr.render(scene_root, 'sample.png', 1024, 768,
+  {-15, 10, 0}, {0.2, -0.08, -1}, {0, 1, 0}, 50,
   {0.1, 0.1, 0.1}, {white_light})

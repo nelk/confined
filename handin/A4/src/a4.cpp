@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <iostream>
 
+#define SHADOWS true
+
 void a4_render(
   SceneNode* root, // What to render
   const std::string& filename, // Where to output the image
@@ -149,8 +151,11 @@ Colour raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lightin
     lightColour = 1.0/attenuation * lightColour;
 
     // Check for shadow.
-    Ray shadowRay(intersectionPoint, incident);
-    Colour shadowMultiplier = raytrace_shadow(node, shadowRay, lighting);
+    Colour shadowMultiplier(1.0);
+    if (SHADOWS) {
+      Ray shadowRay(intersectionPoint, incident);
+      shadowMultiplier = raytrace_shadow(node, shadowRay, lighting);
+    }
 
     Vector3D viewerDirection = -1 * ray.dir;
     viewerDirection.normalize();
@@ -168,6 +173,18 @@ Colour raytrace_shadow(SceneNode* node, const Ray& ray, const Lighting& lighting
   } else {
     return Colour(0.0);
   }
+
+  /*
+  //const double EPSILON = 0.00001;
+  const double EPSILON = 0.0;
+
+  for (std::vector<Intersection>::const_iterator it = intersections.begin(); it != intersections.end(); it++) {
+    if (it->rayParam > EPSILON) {
+      return Colour(0.0);
+    }
+  }
+  return Colour(1.0);
+  */
 }
 
 
