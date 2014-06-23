@@ -7,6 +7,9 @@
 #include <iostream>
 
 #define SHADOWS true
+#define REFLECTIONS true
+#define MAX_REFLECTION_DEPTH 3
+#define REFLECTANCE_MIN 0.05
 
 void a4_render(
   SceneNode* root, // What to render
@@ -24,7 +27,7 @@ void a4_render(
 
   int totalRays = width * height;
   int completedRays = 0;
-  int nextDecile = 1;
+  int nextPercent = 1;
 
   std::cout << "Raytracing " << totalRays << " rays." << std::endl;
 
@@ -37,9 +40,13 @@ void a4_render(
       img(x, y, 2) = colour.B();
 
       completedRays++;
-      if (((double)completedRays)/totalRays * 10.0 >= nextDecile) {
-        std::cout << "Completed " << nextDecile << "0%" << std::endl;
-        nextDecile++;
+      while (((double)completedRays)/totalRays * 100.0 >= nextPercent) {
+        if (nextPercent % 10 == 0) {
+          std::cout << nextPercent << "%" << std::endl;
+        } else {
+          std::cout << "." << std::flush;
+        }
+        nextPercent++;
       }
     }
   }
@@ -101,7 +108,7 @@ Colour raytrace_pixel(SceneNode* node,
   }
 }
 
-RayResult raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lighting) {
+RayResult raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lighting, int depth) {
   std::vector<Intersection> intersections = node->findIntersections(ray);
   if (intersections.empty()) {
     return RayResult();
@@ -146,7 +153,24 @@ RayResult raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& ligh
 
     Vector3D viewerDirection = -1 * ray.dir;
     viewerDirection.normalize();
+
     Colour rayLightColour = closestIntersection->material->calculateLighting(incident, closestIntersection->normal, viewerDirection, lightColour);
+
+    // Reflection.
+    // TODO: NonhierBox doesn't look like it reflects properly.
+    if (REFLECTIONS && depth < MAX_REFLECTION_DEPTH) {
+      Vector3D reflected = -incident + 2 * incident.dot(closestIntersection->normal) * closestIntersection->normal;
+      RayResult reflectedResult = raytrace_visible(node, Ray(closestIntersection->point, reflected), lighting, depth+1);
+      Colour reflectedRayColour = lighting.ambient;
+      if (reflectedResult.hit) {
+        reflectedRayColour  = reflectedResult.colour;
+      }
+      double reflectance = closestIntersection->material->reflectance();
+      if (reflectance >= REFLECTANCE_MIN) {
+        rayLightColour = rayLightColour * (1.0 - reflectance) + reflectedRayColour * reflectance;
+      }
+    }
+
     finalColour = finalColour + shadowMultiplier * rayLightColour;
   }
 

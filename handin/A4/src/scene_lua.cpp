@@ -370,19 +370,24 @@ extern "C"
 int gr_material_cmd(lua_State* L)
 {
   GRLUA_DEBUG_CALL;
-  
+
   gr_material_ud* data = (gr_material_ud*)lua_newuserdata(L, sizeof(gr_material_ud));
   data->material = 0;
-  
+
   double kd[3], ks[3];
   get_tuple(L, 1, kd, 3);
   get_tuple(L, 2, ks, 3);
 
   double shininess = luaL_checknumber(L, 3);
-  
+
+  double reflectance = 0.0;
+  if (lua_gettop(L) >= 5) {
+    reflectance = luaL_checknumber(L, 4);
+  }
+
   data->material = new PhongMaterial(Colour(kd[0], kd[1], kd[2]),
                                      Colour(ks[0], ks[1], ks[2]),
-                                     shininess);
+                                     shininess, reflectance);
 
   luaL_newmetatable(L, "gr.material");
   lua_setmetatable(L, -2);
