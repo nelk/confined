@@ -129,6 +129,7 @@ Colour raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lightin
   closestIntersection->normal.normalize();
 
   // Start with ambient light.
+  // TODO: This makes it too bright...
   Colour finalColour = lighting.ambient * closestIntersection->material->ambientColour();
 
   // Add intensity from each light source.

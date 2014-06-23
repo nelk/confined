@@ -1,6 +1,6 @@
 #include "material.hpp"
 
-//#define BLINN_PHONG
+#define BLINN_PHONG
 
 Material::~Material()
 {
