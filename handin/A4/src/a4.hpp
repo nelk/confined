@@ -27,8 +27,11 @@ Colour raytrace_pixel(SceneNode* node,
   const ViewParams& viewParams,
   const Lighting& lighting);
 
-Colour raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lighting);
+RayResult raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lighting);
 Colour raytrace_shadow(SceneNode* node, const Ray& ray, const Lighting& lighting);
+
+// 0 <= x <= 1, 0 <= y <= 1.
+Colour genBackground(double x, double y);
 
 
 #endif

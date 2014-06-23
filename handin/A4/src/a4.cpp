@@ -41,16 +41,6 @@ void a4_render(
         std::cout << "Completed " << nextDecile << "0%" << std::endl;
         nextDecile++;
       }
-
-      /*
-      // Red: increasing from top to bottom
-      img(x, y, 0) = (double)y / height;
-      // Green: increasing from left to right
-      img(x, y, 1) = (double)x / width;
-      // Blue: in lower-left and upper-right corners
-      img(x, y, 2) = ((y < height/2 && x < height/2)
-                      || (y >= height/2 && x >= height/2)) ? 1.0 : 0.0;
-      */
     }
   }
   std::cout << "Done! Saving image..." << std::endl;
@@ -103,14 +93,18 @@ Colour raytrace_pixel(SceneNode* node,
   rayDir.normalize();
 
   Ray ray(view.eye, rayDir);
-  return raytrace_visible(node, ray, lighting);
+  RayResult result = raytrace_visible(node, ray, lighting);
+  if (result.hit) {
+    return result.colour;
+  } else {
+    return genBackground(((double)x)/width, ((double)y)/height);
+  }
 }
 
-Colour raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lighting) {
+RayResult raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lighting) {
   std::vector<Intersection> intersections = node->findIntersections(ray);
   if (intersections.empty()) {
-    // TODO: Background.
-    return Colour(0.3);
+    return RayResult();
   }
   // TODO: add/subtract volumes?
   //std::sort(intersections.begin(), intersections.end());
@@ -156,7 +150,7 @@ Colour raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lightin
     finalColour = finalColour + shadowMultiplier * rayLightColour;
   }
 
-  return finalColour;
+  return RayResult(finalColour);
 }
 
 Colour raytrace_shadow(SceneNode* node, const Ray& ray, const Lighting& lighting) {
@@ -179,6 +173,28 @@ Colour raytrace_shadow(SceneNode* node, const Ray& ray, const Lighting& lighting
   }
   return Colour(1.0);
   */
+}
+
+Colour genBackground(double x, double y) {
+  // Provided background.
+  /*
+  return Colour(
+    y, // Red: increasing from top to bottom
+    x, // Green: increasing from left to right
+    ((y < 0.5 && x < 0.5) || (y >= 0.5 && x >= 0.5)) ? 1.0 : 0.0 // Blue: in lower-left and upper-right corners
+  );
+  */
+
+  // Arbitrary sinusoids.
+  //return Colour(sin(x)*10.0, sin(1/(y*x))/2.0, sin(x));
+  //return Colour(sin(x)/x, sin(1.0/(y*x))/y, tan(x*y/5.0)*2.0) * Colour(0.5);
+  return Colour(sin(1.0/(y*x))/y) * Colour(1.0, 0.2, 0.2);
+  //return Colour(sin(x*50.0), sin(y*50.0), sin(1.0/(y*x))) * Colour(0.7);
+  //return Colour(
+    //sqrt((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5) - 0.1),
+    //sqrt((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5) - 0.05),
+    //sqrt((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5) - 0.2)
+  //);
 }
 
 

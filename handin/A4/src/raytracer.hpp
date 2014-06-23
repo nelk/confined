@@ -68,5 +68,13 @@ struct ViewParams {
 
 };
 
+struct RayResult {
+  bool hit;
+  Colour colour;
+
+  RayResult(): hit(false), colour(0.0) {}
+  RayResult(Colour colour): hit(true), colour(colour) {}
+};
+
 #endif
 
