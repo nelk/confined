@@ -3,7 +3,35 @@
 
 Mesh::Mesh(const std::vector<Point3D>& verts,
            const std::vector< std::vector<int> >& faces)
-  : m_verts(verts), m_faces(faces) {
+  : m_verts(verts), m_faces(faces), m_bound(NULL) {
+
+  if (m_verts.empty() || m_faces.size() < 6) {
+    return;
+  }
+  Point3D min = m_verts[0];
+  Point3D max = m_verts[0];
+  for (std::vector<Point3D>::const_iterator it = m_verts.begin(); it != m_verts.end(); it++) {
+    min[X] = std::min(min[X], (*it)[X]);
+    max[X] = std::max(max[X], (*it)[X]);
+    min[Y] = std::min(min[Y], (*it)[Y]);
+    max[Y] = std::max(max[Y], (*it)[Y]);
+    min[Z] = std::min(min[Z], (*it)[Z]);
+    max[Z] = std::max(max[Z], (*it)[Z]);
+  }
+  m_bound = new GeometryNode("some_bounding_box", new Cube());
+  Vector3D size = max - min;
+  m_bound->translate(min - Point3D() + 0.5*size);
+  size[X] = std::max(0.001, size[X]);
+  size[Y] = std::max(0.001, size[Y]);
+  size[Z] = std::max(0.001, size[Z]);
+  m_bound->scale(size);
+}
+
+Mesh::~Mesh() {
+  if (m_bound != NULL) {
+    delete m_bound;
+    m_bound = NULL;
+  }
 }
 
 std::ostream& operator<<(std::ostream& out, const Mesh& mesh) {
@@ -29,8 +57,14 @@ std::ostream& operator<<(std::ostream& out, const Mesh& mesh) {
 
 
 std::vector<Intersection> Mesh::findIntersections(const Ray& ray) {
+  if (m_bound != NULL) {
+    std::vector<Intersection> boundIntersections = m_bound->findIntersections(ray);
+    if (boundIntersections.empty() || DRAW_BOUNDING_BOXES) {
+      return boundIntersections;
+    }
+  }
+
   std::vector<Intersection> intersections;
-  // TODO: Bounding box check.
 
   // Convex angle tests.
   // TODO: Ray casting algorithm if we have convex faces.
@@ -86,10 +120,8 @@ std::vector<Intersection> Mesh::findIntersections(const Ray& ray) {
     Vector3D normal = v2.cross(v1);
     normal.normalize();
 
-    //double t = (ray.pos[X] + ray.pos[Y] + ray.pos[Z])/(normal[X]*ray.dir[X] + normal[Y]*ray.dir[Y] + normal[Z]*ray.dir[Z]);
     double t = -(ray.pos - m_verts[face[0]]).dot(normal) / ray.dir.dot(normal);
     if (t < EPSILON) {
-      //std::cout << "Jump ship! t=" << t << std::endl;
       continue; // Pointing away from face.
     }
     Point3D q = ray.pos + t*ray.dir;
