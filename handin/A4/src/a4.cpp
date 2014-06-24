@@ -1,15 +1,22 @@
 #include "a4.hpp"
-#include "image.hpp"
-#include "matrices.hpp"
-#include "algebra.hpp"
 #include <algorithm>
 #include <limits>
 #include <iostream>
+#include "matrices.hpp"
+#include "algebra.hpp"
 
 #define SHADOWS true
 #define REFLECTIONS true
 #define MAX_REFLECTION_DEPTH 3
 #define REFLECTANCE_MIN 0.05
+
+#ifndef NUM_THREADS
+#define NUM_THREADS 8
+#endif
+
+#ifndef BATCHES_PER_THREAD
+#define BATCHES_PER_THREAD 10
+#endif
 
 void a4_render(
   SceneNode* root, // What to render
@@ -25,12 +32,41 @@ void a4_render(
 
   Image img(width, height, 3);
 
-  int totalRays = width * height;
-  int completedRays = 0;
-  int nextPercent = 1;
+  WorkBundle bundle;
+  bundle.image = &img;
+  bundle.lighting = &lighting;
+  bundle.viewParams = &viewParams;
+  bundle.width = width;
+  bundle.height = height;
+  bundle.scene = root;
 
+  const int totalRays = width * height;
   std::cout << "Raytracing " << totalRays << " rays." << std::endl;
 
+#ifdef MULTITHREADED
+  std::cout << "Running multithreaded with " << NUM_THREADS << " pthreads and " << BATCHES_PER_THREAD << " batches/thread." << std::endl;
+
+  WorkManager manager(totalRays, NUM_THREADS*BATCHES_PER_THREAD);
+  bundle.manager = &manager;
+  pthread_t threads[NUM_THREADS];
+  for (int i = 0; i < NUM_THREADS; i++) {
+    int success = pthread_create(&(threads[i]), NULL, &do_raytrace, (void*) &bundle);
+    if (success != 0) {
+      std::cerr << "pthread_create gave return code " << success << "!" << std::endl;
+      exit(1);
+    }
+  }
+  for (int i = 0; i < NUM_THREADS; i++) {
+    pthread_join(threads[i], NULL);
+  }
+#else
+  std::cout << "Running singlethreaded." << std::endl;
+  WorkManager manager(totalRays, 10);
+  bundle.manager = &manager;
+  do_raytrace((void*) &bundle);
+#endif
+
+  /*
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
       Colour colour = raytrace_pixel(root, x, y, width, height, viewParams, lighting);
@@ -50,12 +86,36 @@ void a4_render(
       }
     }
   }
+  */
+
   std::cout << "Done! Saving image..." << std::endl;
   img.savePng(filename);
   std::cout << "Saved" << std::endl;
-
 }
 
+void *do_raytrace(void* param) {
+  WorkBundle* bundle = (WorkBundle*) param;
+  Image& image = *(bundle->image);
+
+  while (true) {
+    bool done;
+    int start, end;
+    bundle->manager->getWork(done, start, end);
+    if (done) {
+      break;
+    }
+    for (int i = start; i < end; i++) {
+      int x = i % bundle->width;
+      int y = std::floor(i / bundle->width);
+      //std::cout << x << "," << y << std::endl;
+      Colour colour = raytrace_pixel(bundle->scene, x, y, bundle->width, bundle->height, *(bundle->viewParams), *(bundle->lighting));
+      image(x, y, 0) = colour.R();
+      image(x, y, 1) = colour.G();
+      image(x, y, 2) = colour.B();
+    }
+  }
+  return NULL;
+}
 
 Colour raytrace_pixel(SceneNode* node,
   int x, int y,
