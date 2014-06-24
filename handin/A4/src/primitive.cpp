@@ -8,20 +8,11 @@
 std::vector<Intersection> NonhierSphere::findIntersections(const Ray& ray) {
 
   // Will use quadratic solver.
-  double A = ray.dir[X]*ray.dir[X]
-           + ray.dir[Y]*ray.dir[Y]
-           + ray.dir[Z]*ray.dir[Z];
+  double A = ray.dir.length2();
 
-  double B = 2 * (
-      ray.dir[X] * (ray.pos[X] - m_pos[X])
-    + ray.dir[Y] * (ray.pos[Y] - m_pos[Y])
-    + ray.dir[Z] * (ray.pos[Z] - m_pos[Z])
-  );
+  double B = 2 * ray.dir.dot(ray.pos - m_pos);
 
-  double C = (ray.pos[X] - m_pos[X])*(ray.pos[X] - m_pos[X])
-           + (ray.pos[Y] - m_pos[Y])*(ray.pos[Y] - m_pos[Y])
-           + (ray.pos[Z] - m_pos[Z])*(ray.pos[Z] - m_pos[Z])
-           - m_radius*m_radius;
+  double C = (ray.pos - m_pos).length2() - m_radius*m_radius;
 
   double roots[2];
   size_t num_roots = quadraticRoots(A, B, C, roots);
