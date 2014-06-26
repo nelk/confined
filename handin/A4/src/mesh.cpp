@@ -108,11 +108,11 @@ RayResult* Mesh::findIntersections(const Ray& ray) {
     RayResult* boundResult = m_bound->findIntersections(ray);
 
     result->stats.bounding_box_checks++;
-    if (boundResult->hit) {
+    if (boundResult->isHit()) {
       result->stats.bounding_box_hits++;
     }
 
-    if (!boundResult->hit || DRAW_BOUNDING_BOXES) {
+    if (!boundResult->isHit() || DRAW_BOUNDING_BOXES) {
       result->merge(*boundResult);
       delete boundResult;
       return result;
@@ -127,45 +127,6 @@ RayResult* Mesh::findIntersections(const Ray& ray) {
     delete descendentResult;
     return result;
   }
-
-  // Convex angle tests.
-  // TODO: Ray casting algorithm if we have convex faces.
-  /*
-  const double EPSILON = 0.0;
-  for (std::vector<Face>::const_iterator it = m_faces.begin(); it != m_faces.end(); it++) {
-    const Face& face = *it;
-    if (face.size() < 3) continue;
-    Vector3D normal;
-    Vector3D lastV = m_verts[face[face.size() - 1]] - m_verts[face[0]];
-    Vector3D currentV = m_verts[face[0]] - m_verts[face[1]];
-    normal = (-1 * lastV).cross(currentV);
-    normal.normalize();
-
-    double t = -(ray.pos[X] + ray.pos[Y] + ray.pos[Z])/(normal[X]*ray.dir[X] + normal[Y]*ray.dir[Y] + normal[Z]*ray.dir[Z]);
-    if (t < EPSILON) {
-      //break; // TODO
-      continue; // Pointing away from face.
-    }
-    Point3D p = ray.pos + t*ray.dir;
-
-    for (unsigned int i = 0; i < face.size(); i++) {
-      if (i > 0) {
-        currentV = m_verts[face[i]] - m_verts[face[i == face.size() - 1 ? 0 : i + 1]];
-      }
-
-      double thedot = lastV.dot(p - m_verts[face[i]]);
-      if (lastV.dot(currentV) < thedot) {
-        //break; // TODO
-        continue; // Point outside.
-      }
-
-      lastV = currentV;
-    }
-
-    intersections.push_back(Intersection(t, normal, NULL));
-    //break; // TODO
-  }
-  */
 
   // Reinier van Vliet and Remco Lam angle sums algorithm.
   const double EPSILON = 0.0000001;

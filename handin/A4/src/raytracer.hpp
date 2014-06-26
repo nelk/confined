@@ -91,21 +91,23 @@ inline std::ostream& operator <<(std::ostream& os, const RayTraceStats& stats) {
 
 
 struct RayResult {
-  bool hit;
   Colour colour;
   std::vector<Intersection> intersections;
   RayTraceStats stats;
 
-  RayResult(): hit(false), colour(0.0) {}
-  RayResult(const std::vector<Intersection> is, long n): hit(!is.empty()), colour(0.0), intersections(is) {
+  RayResult(): colour(0.0) {}
+  RayResult(const std::vector<Intersection> is, long n): colour(0.0), intersections(is) {
     stats.intersection_checks = n;
   }
 
   void merge(const RayResult& other) {
-    hit |= other.hit;
     intersections.insert(intersections.end(), other.intersections.begin(), other.intersections.end());
     stats.merge(other.stats);
     colour = other.colour;
+  }
+
+  bool isHit() {
+    return !intersections.empty();
   }
 };
 

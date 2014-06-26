@@ -145,7 +145,7 @@ RayResult* raytrace_pixel(SceneNode* node,
   Ray ray(view.eye, rayDir);
   RayResult* result = raytrace_visible(node, ray, lighting);
 
-  if (!result->hit) {
+  if (!result->isHit()) {
     result->colour = genBackground(ray, ((double)x)/width, ((double)y)/height);
   }
   return result;
@@ -153,7 +153,7 @@ RayResult* raytrace_pixel(SceneNode* node,
 
 RayResult* raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lighting, int depth) {
   RayResult* result = node->findIntersections(ray);
-  if (!result->hit) {
+  if (!result->isHit()) {
     return result;
   }
   // TODO: add/subtract volumes?
@@ -207,12 +207,12 @@ RayResult* raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lig
 
     // Reflection.
     // TODO: NonhierBox doesn't look like it reflects properly.
-    if (REFLECTIONS && depth < MAX_REFLECTION_DEPTH) {
+    if (REFLECTIONS && depth < MAX_REFLECTION_DEPTH && !(shadowMultiplier.R() == 0.0 && shadowMultiplier.G() == 0.0 && shadowMultiplier.B() == 0.0)) {
       Vector3D reflected = -incident + 2 * incident.dot(closestIntersection->normal) * closestIntersection->normal;
       RayResult* reflectedResult = raytrace_visible(node, Ray(closestIntersection->point, reflected), lighting, depth+1);
       result->stats.merge(reflectedResult->stats);
       Colour reflectedRayColour = lighting.ambient;
-      if (reflectedResult->hit) {
+      if (reflectedResult->isHit()) {
         reflectedRayColour  = reflectedResult->colour;
       }
       double reflectance = closestIntersection->material->reflectance();
@@ -232,7 +232,7 @@ RayResult* raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lig
 RayResult* raytrace_shadow(SceneNode* node, const Ray& ray, const Lighting& lighting) {
   RayResult* result = node->findIntersections(ray);
 
-  if (result->hit) {
+  if (result->isHit()) {
     result->colour = Colour(0.0);
   } else {
     result->colour = Colour(1.0);
