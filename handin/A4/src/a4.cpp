@@ -182,18 +182,18 @@ RayResult* raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lig
   for (std::list<Light*>::const_iterator it = lighting.lights.begin(); it != lighting.lights.end(); it++) {
     Light* light = *it;
     Colour lightColour = light->colour;
-    Vector3D incident = light->position - closestIntersection->point;
-    //std::cout << "incident = " << incident << " = " << light->position << " - " << closestIntersection->point << std::endl;
+    Vector3D lightIncident = light->position - closestIntersection->point;
+    //std::cout << "lightIncident = " << lightIncident << " = " << light->position << " - " << closestIntersection->point << std::endl;
 
-    double dist = incident.length();
-    incident = 1.0/dist * incident; // Normalize;
+    double dist = lightIncident.length();
+    lightIncident = 1.0/dist * lightIncident; // Normalize;
     double attenuation = light->falloff[0] + light->falloff[1] * dist + light->falloff[2] * dist * dist;
     lightColour = 1.0/attenuation * lightColour;
 
     // Check for shadow.
     Colour shadowMultiplier(1.0);
     if (SHADOWS) {
-      Ray shadowRay(closestIntersection->point, incident);
+      Ray shadowRay(closestIntersection->point, lightIncident);
       RayResult* shadowResult = raytrace_shadow(node, shadowRay, lighting);
       result->stats.merge(shadowResult->stats);
       shadowMultiplier = shadowResult->colour;
@@ -203,18 +203,20 @@ RayResult* raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lig
     Vector3D viewerDirection = -1 * ray.dir;
     viewerDirection.normalize();
 
-    Colour rayLightColour = closestIntersection->material->calculateLighting(incident, closestIntersection->normal, viewerDirection, lightColour);
+    Colour rayLightColour = closestIntersection->material->calculateLighting(lightIncident, closestIntersection->normal, viewerDirection, lightColour);
 
     // Reflection.
     // TODO: NonhierBox doesn't look like it reflects properly.
     if (REFLECTIONS && depth < MAX_REFLECTION_DEPTH && !(shadowMultiplier.R() == 0.0 && shadowMultiplier.G() == 0.0 && shadowMultiplier.B() == 0.0)) {
-      Vector3D reflected = -incident + 2 * incident.dot(closestIntersection->normal) * closestIntersection->normal;
-      RayResult* reflectedResult = raytrace_visible(node, Ray(closestIntersection->point, reflected), lighting, depth+1);
+      Vector3D reflected = ray.dir - 2 * ray.dir.dot(closestIntersection->normal) * closestIntersection->normal;
+      Ray reflectedRay(closestIntersection->point, reflected); // TODO
+      RayResult* reflectedResult = raytrace_visible(node, reflectedRay, lighting, depth+1);
       result->stats.merge(reflectedResult->stats);
       Colour reflectedRayColour = lighting.ambient;
       if (reflectedResult->isHit()) {
-        reflectedRayColour  = reflectedResult->colour;
+        reflectedRayColour = reflectedResult->colour;
       }
+      // TODO: Do reflectance min check before tracing reflection.
       double reflectance = closestIntersection->material->reflectance();
       if (reflectance >= REFLECTANCE_MIN) {
         rayLightColour = rayLightColour * (1.0 - reflectance) + reflectedRayColour * reflectance;
