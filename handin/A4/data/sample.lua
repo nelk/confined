@@ -1,31 +1,41 @@
 
-mat1 = gr.material({0.7, 1.0, 0.7}, {0.8, 0.8, 0.8}, 30, 0.5)
+mat1 = gr.material({0.7, 1.0, 0.7}, {0.8, 0.8, 0.8}, 25, 0.5)
+--mat1 = gr.material({0.7, 1.0, 0.7}, {0.8, 0.8, 0.8}, 30, 0.5)
+mat2 = gr.material({1.0, 0.0, 0.0}, {0.8, 0.8, 0.8}, 25, 0.0)
 
 --whitemat = gr.material({1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}, 10)
 
 scene_root = gr.node('root')
 
---s = gr.sphere('s')
---s:translate(0, 0, -80)
---s:scale(6, 6, 6)
---s:rotate('Y', 180)
---scene_root:add_child(s)
---s:set_material(mat1)
+s = gr.sphere('s')
+s:translate(10, -10, -20)
+s:scale(6, 6, 6)
+s:rotate('Y', 180)
+scene_root:add_child(s)
+s:set_material(mat2)
 
-s1 = gr.nh_sphere('s1', {0, 0, -80}, 6, 0.5)
-scene_root:add_child(s1)
-s1:set_material(mat1)
+--s1 = gr.nh_sphere('s1', {0, 0, -80}, 6, 0.5)
+--scene_root:add_child(s1)
+--s1:set_material(mat1)
 
-s2 = gr.nh_sphere('s2', {5, 5, -100}, 6)
-scene_root:add_child(s2)
-s2:set_material(mat1)
+--s2 = gr.nh_sphere('s2', {5, 5, -100}, 6)
+--scene_root:add_child(s2)
+--s2:set_material(mat1)
 
-s3 = gr.nh_sphere('s3', {3, 5, -45}, 2)
-scene_root:add_child(s3)
-s3:set_material(mat1)
+--s3 = gr.nh_sphere('s3', {3, 5, -45}, 2)
+--scene_root:add_child(s3)
+--s3:set_material(mat1)
 
-b1 = gr.nh_box('b1', {-4, 3, -60}, 5)
+--b1 = gr.nh_box('b1', {-4, 3, -60}, 5)
+--scene_root:add_child(b1)
+--b1:set_material(mat1)
+
+b1 = gr.cube('b1')
 scene_root:add_child(b1)
+b1:translate(0, 0, -60)
+b1:rotate('Y', 20)
+b1:rotate('X', 10)
+b1:scale(50, 20, 20)
 b1:set_material(mat1)
 
 --require('smstdodeca')
@@ -111,7 +121,8 @@ b1:set_material(mat1)
 --end
 -- End arch test ---------------------
 
-white_light = gr.light({-100.0, 150.0, 400.0}, {0.5, 0.5, 0.5}, {1, 0, 0})
+--white_light = gr.light({-100.0, 150.0, 400.0}, {0.5, 0.5, 0.5}, {1, 0, 0})
+white_light = gr.light({0.0, 0.0, 300.0}, {0.8, 0.8, 0.8}, {1, 0, 0})
 
 -- Straight-on raw dodec
 --gr.render(scene_root, 'sample.png', 256, 256, --512, 512,
@@ -127,10 +138,10 @@ white_light = gr.light({-100.0, 150.0, 400.0}, {0.5, 0.5, 0.5}, {1, 0, 0})
   --{0, 0, 0}, {0, 0, -1}, {0, 1, 0}, 50,
   --{0.3, 0.3, 0.3}, {white_light})
 
-gr.render(scene_root, 'sample.png', 1024, 768,
+gr.render(scene_root, 'sample.png', 256, 256, --1024, 768,
   --{20, 0, -30}, {-0.2, 0, -1}, {0, 1, 0}, 50,
-  {0, 0, -30}, {0, 0, -1}, {0, 1, 0}, 50,
-  {0.3, 0.3, 0.3}, {white_light, 
-    gr.light({100.0, 150.0, 400.0}, {0.5, 0.5, 0.5}, {1, 0, 0})
+  {0, 0, 0}, {0, 0, -1}, {0, 1, 0}, 50,
+  {0.3, 0.3, 0.3}, {white_light
+    --gr.light({100.0, 150.0, 400.0}, {0.5, 0.5, 0.5}, {1, 0, 0})
 })
 

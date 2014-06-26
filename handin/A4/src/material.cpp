@@ -41,6 +41,8 @@ Colour PhongMaterial::calculateLighting(Vector3D incident, Vector3D normal, Vect
   Colour specular = m_ks * pow(reflected.dot(viewer), m_shininess) * intensity;
 #endif
 
+  //std::cout << "incident " << incident << ", normal " << normal << ", viewer " << viewer << ", intensity " << intensity << ", result=" << diffuse+specular << std::endl;
+
   return diffuse + specular;
 }
 

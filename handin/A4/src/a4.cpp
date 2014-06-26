@@ -172,6 +172,8 @@ RayResult* raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lig
   // Normalize intersection normal.
   closestIntersection->normal.normalize();
 
+  //std::cout << "normal " << closestIntersection->normal << std::endl;
+
   // Start with ambient light.
   // TODO: This makes it too bright...
   Colour finalColour = lighting.ambient * closestIntersection->material->ambientColour();
@@ -181,6 +183,7 @@ RayResult* raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lig
     Light* light = *it;
     Colour lightColour = light->colour;
     Vector3D incident = light->position - closestIntersection->point;
+    //std::cout << "incident = " << incident << " = " << light->position << " - " << closestIntersection->point << std::endl;
 
     double dist = incident.length();
     incident = 1.0/dist * incident; // Normalize;
@@ -263,7 +266,11 @@ Colour genBackground(const Ray& ray, double x, double y) {
   // Arbitrary sinusoids.
   //return Colour(sin(x)*10.0, sin(1/(y*x))/2.0, sin(x));
   //return Colour(sin(x)/x, sin(1.0/(y*x))/y, tan(x*y/5.0)*2.0) * Colour(0.5);
+
+  return Colour(0.1);
+  // This one
   return Colour(sin(1.0/(y*x))/y) * Colour(1.0, 0.2, 0.2);
+
   //return Colour(sin(x*50.0), sin(y*50.0), sin(1.0/(y*x))) * Colour(0.7);
   //return Colour(
     //sqrt((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5) - 0.1),

@@ -84,8 +84,7 @@ struct RayTraceStats {
 };
 
 inline std::ostream& operator <<(std::ostream& os, const RayTraceStats& stats) {
-  return os << "Stats:" << std::endl
-    << "Total Intersection Checks: " << stats.intersection_checks << std::endl
+  return os << "Total Intersection Checks: " << stats.intersection_checks << std::endl
     << "Bounding Box Checks: " << stats.bounding_box_checks << std::endl
     << "Bounding Box Hits: " << stats.bounding_box_hits << std::endl;
 }

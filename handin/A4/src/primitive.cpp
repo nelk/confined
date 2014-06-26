@@ -1,6 +1,7 @@
 #include "primitive.hpp"
 #include "polyroots.hpp"
 #include <limits>
+#include <vector>
 
 // TODO
 #include <iostream>
@@ -46,12 +47,15 @@ RayResult* NonhierBox::findIntersections(const Ray& ray) {
   // Derived from Kay and Kayjia's slab method for ray-box intersection.
   double tFar = std::numeric_limits<double>::max(); // Inf.
   double tNear = -tFar; // -Inf.
-  Vector3D nearNormal, farNormal;
+  Vector3D nearNormal;
+  //std::cout << ray << std::endl;
+  //TODO: Fix a few shadow rays colliding with same box? Might be fixed after lighting normals fix.
   for (int axis = 0; axis <= Z; axis++) {
     const double low = m_pos[axis];
     const double high = m_pos[axis] + m_size;
     int nearAxisSign = ray.pos[axis] < m_pos[axis] ? -1 : 1;
     //int nearAxisSign = -1;
+    //std::cout << "nearAxisSign = " << nearAxisSign << " = " << ray.pos[axis] << " - " << m_pos[axis] << std::endl;
     if (ray.dir[axis] == 0.0) {
       if (ray.pos[axis] < low || ray.pos[axis] > high) {
         return new RayResult(intersections, 6);
@@ -63,9 +67,10 @@ RayResult* NonhierBox::findIntersections(const Ray& ray) {
         double temp = t1;
         t1 = t2;
         t2 = temp;
-        nearAxisSign *= -1;
+        //nearAxisSign *= -1;
       }
       if (t1 > tNear) {
+        //std::cout << "t1:" << t1 << ", nearAxisSign:" << nearAxisSign << ", axis:" << axis << std::endl;
         tNear = t1;
         nearNormal = Vector3D(
           axis == X ? nearAxisSign : 0,
@@ -75,11 +80,6 @@ RayResult* NonhierBox::findIntersections(const Ray& ray) {
       }
       if (t2 < tFar) {
         tFar = t2;
-        farNormal = Vector3D(
-          axis == X ? -nearAxisSign : 0,
-          axis == Y ? -nearAxisSign : 0,
-          axis == Z ? -nearAxisSign : 0
-        );
       }
       if (tNear > tFar || tFar < 0) {
         return new RayResult(intersections, 6);
@@ -88,10 +88,11 @@ RayResult* NonhierBox::findIntersections(const Ray& ray) {
   }
 
   if (tNear > EPSILON) {
+    //std::cout << "N!! " << nearNormal << std::endl;
     intersections.push_back(Intersection(ray.pos + tNear*ray.dir, nearNormal, NULL));
   }
   if (tFar > EPSILON) {
-    intersections.push_back(Intersection(ray.pos + tFar*ray.dir, farNormal, NULL));
+    intersections.push_back(Intersection(ray.pos + tFar*ray.dir, -nearNormal, NULL));
   }
   return new RayResult(intersections, 6);
 }
