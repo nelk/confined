@@ -3,7 +3,7 @@
 #include <iostream>
 
 void WorkManager::getWork(bool& done, int& start, int& end) {
-  pthread_mutex_lock(&mutex);
+  pthread_mutex_lock(&work_mutex);
   if (on_batch >= num_batches) {
     done = true;
   } else {
@@ -15,6 +15,13 @@ void WorkManager::getWork(bool& done, int& start, int& end) {
 
     std::cout << "Giving work [" << start << "," << end << ")" << std::endl;
   }
-  pthread_mutex_unlock(&mutex);
+  pthread_mutex_unlock(&work_mutex);
+}
+
+
+void WorkManager::reportStats(const RayTraceStats& stats) {
+  pthread_mutex_lock(&stats_mutex);
+  this->stats.merge(stats);
+  pthread_mutex_unlock(&stats_mutex);
 }
 

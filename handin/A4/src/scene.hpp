@@ -43,7 +43,7 @@ public:
   // Returns true if and only if this node is a JointNode
   virtual bool is_joint() const;
 
-  virtual std::vector<Intersection> findIntersections(const Ray& ray);
+  virtual RayResult* findIntersections(const Ray& ray);
   virtual void transformIntersectionsUp(std::vector<Intersection>& intersections);
 
 protected:
@@ -94,7 +94,7 @@ public:
     m_material = material;
   }
 
-  virtual std::vector<Intersection> findIntersections(const Ray& ray);
+  virtual RayResult* findIntersections(const Ray& ray);
 
 protected:
   Material* m_material;

@@ -1,13 +1,54 @@
 #include "mesh.hpp"
 #include <iostream>
+#include <algorithm>
+#include <list>
+
+//#define MESH_TREE_OPTIMIZATION
+#define MESH_TREE_MAX_DEPTH 1
+#define MESH_MAX_FACES 20
+
 
 Mesh::Mesh(const std::vector<Point3D>& verts,
-           const std::vector< std::vector<int> >& faces)
-  : m_verts(verts), m_faces(faces), m_bound(NULL) {
+           const std::vector< std::vector<int> >& faces,
+           int depth)
+  : m_verts(verts), m_faces(faces), m_bound(NULL), m_descendents(NULL) {
+
+  std::cout << "Constructing Mesh with " << m_verts.size() << " verts and " << m_faces.size() << " faces." << std::endl;
 
   if (m_verts.empty() || m_faces.size() < 6) {
     return;
   }
+
+  bool clearData = false;
+
+#ifdef MESH_TREE_OPTIMIZATION
+  // Divide space.
+  if (depth < MESH_TREE_MAX_DEPTH && m_faces.size() > MESH_MAX_FACES) {
+    std::list<std::vector<Face> > faceChunks;
+    faceChunks.push_back(m_faces);
+
+    for (int axis = X; axis <= Z; axis++) {
+      const int size = faceChunks.size();
+      for (int chunk = 0; chunk < size; chunk++) {
+        FaceComparator faceCmp((Axis) axis, this);
+        std::vector<Face> faces = faceChunks.front();
+        faceChunks.pop_front();
+        std::sort(faces.begin(), faces.end(), faceCmp);
+        int half = faces.size() / 2;
+        faceChunks.push_back(std::vector<Face>(faces.begin(), faces.begin() + half));
+        faceChunks.push_back(std::vector<Face>(faces.begin() + half, faces.end()));
+      }
+    }
+
+    std::cout << "Dividing into " << faceChunks.size() << " descendents" << std::endl;
+    m_descendents = new SceneNode("mesh_internal");
+    for (std::list<std::vector<Face> >::iterator faceIt = faceChunks.begin(); faceIt != faceChunks.end(); faceIt++) {
+      m_descendents->add_child(new GeometryNode("mesh_internal_geom", new Mesh(m_verts, *faceIt, depth+1)));
+    }
+    clearData = true;
+  }
+#endif
+
   Point3D min = m_verts[0];
   Point3D max = m_verts[0];
   for (std::vector<Point3D>::const_iterator it = m_verts.begin(); it != m_verts.end(); it++) {
@@ -25,6 +66,11 @@ Mesh::Mesh(const std::vector<Point3D>& verts,
   size[Y] = std::max(0.001, size[Y]);
   size[Z] = std::max(0.001, size[Z]);
   m_bound->scale(size);
+
+  if (clearData) {
+    m_verts.clear();
+    m_faces.clear();
+  }
 }
 
 Mesh::~Mesh() {
@@ -56,15 +102,31 @@ std::ostream& operator<<(std::ostream& out, const Mesh& mesh) {
 }
 
 
-std::vector<Intersection> Mesh::findIntersections(const Ray& ray) {
+RayResult* Mesh::findIntersections(const Ray& ray) {
+  RayResult* result = new RayResult(std::vector<Intersection>(), m_faces.size());
   if (m_bound != NULL) {
-    std::vector<Intersection> boundIntersections = m_bound->findIntersections(ray);
-    if (boundIntersections.empty() || DRAW_BOUNDING_BOXES) {
-      return boundIntersections;
-    }
-  }
+    RayResult* boundResult = m_bound->findIntersections(ray);
 
-  std::vector<Intersection> intersections;
+    result->stats.bounding_box_checks++;
+    if (boundResult->hit) {
+      result->stats.bounding_box_hits++;
+    }
+
+    if (!boundResult->hit || DRAW_BOUNDING_BOXES) {
+      result->merge(*boundResult);
+      delete boundResult;
+      return result;
+    }
+
+    result->stats.merge(boundResult->stats);
+    delete boundResult;
+  }
+  if (m_descendents != NULL) {
+    RayResult* descendentResult = m_descendents->findIntersections(ray);
+    result->merge(*descendentResult);
+    delete descendentResult;
+    return result;
+  }
 
   // Convex angle tests.
   // TODO: Ray casting algorithm if we have convex faces.
@@ -139,13 +201,13 @@ std::vector<Intersection> Mesh::findIntersections(const Ray& ray) {
         anglesum += acos(p1.dot(p2) / (m1*m2));
       }
       if (anglesum >= M_PI*2 - EPSILON && anglesum <= M_PI*2 + EPSILON) {
-        intersections.push_back(Intersection(q, normal, NULL));
+        result->intersections.push_back(Intersection(q, normal, NULL));
         //std::cout << "INTERSECTION " << t << std::endl;
       }
     }
     //std::cout << "Exitted with anglesum=" << anglesum << std::endl;
   }
 
-  return intersections;
+  return result;
 }
 

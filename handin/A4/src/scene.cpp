@@ -29,15 +29,16 @@ bool SceneNode::is_joint() const {
   return false;
 }
 
-std::vector<Intersection> SceneNode::findIntersections(const Ray& ray) {
+RayResult* SceneNode::findIntersections(const Ray& ray) {
   Ray transformedRay = ray.transform(get_inverse());
-  std::vector<Intersection> intersections;
+  RayResult* result = new RayResult(std::vector<Intersection>(), 0);
   for(std::list<SceneNode*>::const_iterator it = m_children.begin(); it != m_children.end(); it++) {
-    std::vector<Intersection> childIntersections = (*it)->findIntersections(transformedRay);
-    intersections.insert(intersections.end(), childIntersections.begin(), childIntersections.end());
+    RayResult* childResult = (*it)->findIntersections(transformedRay);
+    result->merge(*childResult);
+    delete childResult;
   }
-  transformIntersectionsUp(intersections);
-  return intersections;
+  transformIntersectionsUp(result->intersections);
+  return result;
 }
 
 void SceneNode::transformIntersectionsUp(std::vector<Intersection>& intersections) {
@@ -76,17 +77,18 @@ GeometryNode::GeometryNode(const std::string& name, Primitive* primitive)
 GeometryNode::~GeometryNode() {
 }
 
-std::vector<Intersection> GeometryNode::findIntersections(const Ray& ray) {
+RayResult* GeometryNode::findIntersections(const Ray& ray) {
   Ray transformedRay = ray.transform(get_inverse());
-  std::vector<Intersection> intersections = m_primitive->findIntersections(transformedRay);
-  for (std::vector<Intersection>::iterator it = intersections.begin(); it != intersections.end(); it++) {
+  RayResult* result = m_primitive->findIntersections(transformedRay);
+  for (std::vector<Intersection>::iterator it = result->intersections.begin(); it != result->intersections.end(); it++) {
     it->material = m_material;
   }
-  transformIntersectionsUp(intersections);
+  transformIntersectionsUp(result->intersections);
 
-  std::vector<Intersection> childIntersections = SceneNode::findIntersections(ray);
-  intersections.insert(intersections.end(), childIntersections.begin(), childIntersections.end());
+  RayResult* childResult = SceneNode::findIntersections(ray);
+  result->merge(*childResult);
+  delete childResult;
 
-  return intersections;
+  return result;
 }
 

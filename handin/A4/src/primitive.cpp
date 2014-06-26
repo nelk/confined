@@ -5,7 +5,7 @@
 // TODO
 #include <iostream>
 
-std::vector<Intersection> NonhierSphere::findIntersections(const Ray& ray) {
+RayResult* NonhierSphere::findIntersections(const Ray& ray) {
 
   // Will use quadratic solver.
   double A = ray.dir.length2();
@@ -36,10 +36,10 @@ std::vector<Intersection> NonhierSphere::findIntersections(const Ray& ray) {
     }
   }
 
-  return intersections;
+  return new RayResult(intersections, 1);
 }
 
-std::vector<Intersection> NonhierBox::findIntersections(const Ray& ray) {
+RayResult* NonhierBox::findIntersections(const Ray& ray) {
   std::vector<Intersection> intersections;
   const double EPSILON = 0.01;
 
@@ -50,10 +50,11 @@ std::vector<Intersection> NonhierBox::findIntersections(const Ray& ray) {
   for (int axis = 0; axis <= Z; axis++) {
     const double low = m_pos[axis];
     const double high = m_pos[axis] + m_size;
-    int nearAxisSign = -1;
+    int nearAxisSign = ray.pos[axis] < m_pos[axis] ? -1 : 1;
+    //int nearAxisSign = -1;
     if (ray.dir[axis] == 0.0) {
       if (ray.pos[axis] < low || ray.pos[axis] > high) {
-        return intersections;
+        return new RayResult(intersections, 6);
       }
     } else {
       double t1 = (low - ray.pos[axis]) / ray.dir[axis];
@@ -67,21 +68,21 @@ std::vector<Intersection> NonhierBox::findIntersections(const Ray& ray) {
       if (t1 > tNear) {
         tNear = t1;
         nearNormal = Vector3D(
-          axis == 0 ? nearAxisSign : 0,
-          axis == 1 ? nearAxisSign : 0,
-          axis == 2 ? nearAxisSign : 0
+          axis == X ? nearAxisSign : 0,
+          axis == Y ? nearAxisSign : 0,
+          axis == Z ? nearAxisSign : 0
         );
       }
       if (t2 < tFar) {
         tFar = t2;
         farNormal = Vector3D(
-          axis == 0 ? -nearAxisSign : 0,
-          axis == 1 ? -nearAxisSign : 0,
-          axis == 2 ? -nearAxisSign : 0
+          axis == X ? -nearAxisSign : 0,
+          axis == Y ? -nearAxisSign : 0,
+          axis == Z ? -nearAxisSign : 0
         );
       }
       if (tNear > tFar || tFar < 0) {
-        return intersections;
+        return new RayResult(intersections, 6);
       }
     }
   }
@@ -92,6 +93,6 @@ std::vector<Intersection> NonhierBox::findIntersections(const Ray& ray) {
   if (tFar > EPSILON) {
     intersections.push_back(Intersection(ray.pos + tFar*ray.dir, farNormal, NULL));
   }
-  return intersections;
+  return new RayResult(intersections, 6);
 }
 

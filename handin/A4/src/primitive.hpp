@@ -9,7 +9,7 @@ class Primitive {
 public:
   virtual ~Primitive() {}
 
-  virtual std::vector<Intersection> findIntersections(const Ray& ray) = 0;
+  virtual RayResult* findIntersections(const Ray& ray) = 0;
 };
 
 class NonhierSphere : public Primitive {
@@ -19,7 +19,7 @@ public:
   }
   virtual ~NonhierSphere() {}
 
-  virtual std::vector<Intersection> findIntersections(const Ray& ray);
+  virtual RayResult* findIntersections(const Ray& ray);
 
 private:
   Point3D m_pos;
@@ -34,7 +34,7 @@ public:
 
   virtual ~NonhierBox() {}
 
-  virtual std::vector<Intersection> findIntersections(const Ray& ray);
+  virtual RayResult* findIntersections(const Ray& ray);
 
 private:
   Point3D m_pos;

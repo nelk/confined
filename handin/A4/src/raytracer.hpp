@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <list>
+#include <vector>
 #include "algebra.hpp"
 #include "material.hpp"
 #include "light.hpp"
@@ -68,12 +69,45 @@ struct ViewParams {
 
 };
 
+struct RayTraceStats {
+  long intersection_checks;
+  long bounding_box_checks;
+  long bounding_box_hits;
+
+  RayTraceStats(): intersection_checks(0), bounding_box_checks(0), bounding_box_hits(0) {}
+
+  void merge(const RayTraceStats& other) {
+    intersection_checks += other.intersection_checks;
+    bounding_box_checks += other.bounding_box_checks;
+    bounding_box_hits += other.bounding_box_hits;
+  }
+};
+
+inline std::ostream& operator <<(std::ostream& os, const RayTraceStats& stats) {
+  return os << "Stats:" << std::endl
+    << "Total Intersection Checks: " << stats.intersection_checks << std::endl
+    << "Bounding Box Checks: " << stats.bounding_box_checks << std::endl
+    << "Bounding Box Hits: " << stats.bounding_box_hits << std::endl;
+}
+
+
 struct RayResult {
   bool hit;
   Colour colour;
+  std::vector<Intersection> intersections;
+  RayTraceStats stats;
 
   RayResult(): hit(false), colour(0.0) {}
-  RayResult(Colour colour): hit(true), colour(colour) {}
+  RayResult(const std::vector<Intersection> is, long n): hit(!is.empty()), colour(0.0), intersections(is) {
+    stats.intersection_checks = n;
+  }
+
+  void merge(const RayResult& other) {
+    hit |= other.hit;
+    intersections.insert(intersections.end(), other.intersections.begin(), other.intersections.end());
+    stats.merge(other.stats);
+    colour = other.colour;
+  }
 };
 
 #endif
