@@ -1,0 +1,53 @@
+Name: Alex Klen
+Student Number: 20372654
+User-id: ayklen
+Assignment: 4
+
+
+Compiling
+-----------
+Run "make" to build the executable rt.
+The executable was compiled on gl01.
+There are a few flags you can modify in the Makefile - such as number of threads to use,
+whether to use anti-aliasing, and whether to draw only bounding volumes.
+
+
+Running
+--------
+Run the rt executable with an of the lua file to render.
+Note that you need to run rt while in the data directory because the lua scripts load files from the current working directory.
+../rt sample.lua
+
+Extra Features and Optimizations
+---------------------------------
+- Reflections – I implemented reflections by recursivly ray tracing after
+  reflecting about the normal of intersection faces.
+- I made my ray tracer run workers in parallel so that multi-core CPUs can
+  render a scene much faster. Each ray is independent (all sharing a common
+scene graph) and computationally expensivce to compute, so parallelization is a
+logical optimization. You can set the number of threads it should use in the
+Makefile – I have provided compiled versions for 1, 8, and 40 threads (“rt”
+uses 8 threads). A comparison on “macho-cows.lua” shows that my ray tracer
+takes 1:25.54 with a single thread, and 22.642 using 8 threads (on my own
+quad-core i7). 
+- I implemented simple anti-aliasing by averaging the results of 4 ray traces
+  for each pixel. This smooths the image a little bit and decreases jagged
+edges of shadows and edges. I have provided “data/sample_no_anti_aliasing.png”
+for comparison with “data/sample.png”, which uses anti-aliasing. It is on by
+default, but a compiler flag will turn it off (see Makefile).
+
+Scene
+------
+My scene contains a rotated 3d array of spheres with mirror surfaces, two
+instances of the provided small stellated dodecahedron meshes, and a scaled
+cube for the base (somewhat reflective). There are red, green, and blue lights
+positioned so that each shines on a different visible face of the array of
+spheres. You can see specular highlights on each sphere (up to 3 each from the
+lights), and also some specular highlights on the box surface at the very
+bottom. The meshes at the top appear illuminated by white light (they have a
+yellow-ish material) because they are being hit by all three lights (each being
+a different full colour channel). At the far end of the reflective box surface,
+you can see an interesting pattern of colours resulting from shadows/occlusions
+of each light by the spheres. You can see the main parts reflected on the box
+surface and also the spheres reflecting each other.
+
