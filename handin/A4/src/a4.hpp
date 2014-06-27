@@ -46,6 +46,7 @@ RayResult* raytrace_shadow(SceneNode* node, const Ray& ray, const Lighting& ligh
 
 // 0 <= x <= 1, 0 <= y <= 1.
 Colour genBackground(const Ray& ray, double x, double y);
+Colour genBackground(const Ray& ray);
 
 
 #endif

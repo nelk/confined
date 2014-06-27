@@ -9,6 +9,7 @@
 #define REFLECTIONS true
 #define MAX_REFLECTION_DEPTH 3
 #define REFLECTANCE_MIN 0.05
+#define REFLECT_BACKGROUND false
 
 #ifndef NUM_THREADS
 #define NUM_THREADS 8
@@ -156,8 +157,6 @@ RayResult* raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lig
   if (!result->isHit()) {
     return result;
   }
-  // TODO: add/subtract volumes?
-  //std::sort(intersections.begin(), intersections.end());
   Intersection* closestIntersection = NULL;
   double closestDistance = std::numeric_limits<double>::max();
   for (std::vector<Intersection>::iterator it = result->intersections.begin(); it != result->intersections.end(); it++) {
@@ -209,19 +208,20 @@ RayResult* raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lig
   }
 
   // Reflection.
-  if (REFLECTIONS && depth < MAX_REFLECTION_DEPTH) {
+  double reflectance = closestIntersection->material->reflectance();
+  if (REFLECTIONS && depth < MAX_REFLECTION_DEPTH && reflectance >= REFLECTANCE_MIN) {
     Ray reflectedRay(closestIntersection->point, reflected);
     RayResult* reflectedResult = raytrace_visible(node, reflectedRay, lighting, depth+1);
     result->stats.merge(reflectedResult->stats);
+
     Colour reflectedRayColour = lighting.ambient;
+    if (REFLECT_BACKGROUND) {
+     reflectedRayColour = genBackground(reflectedRay);
+    }
     if (reflectedResult->isHit()) {
       reflectedRayColour = reflectedResult->colour;
     }
-    // TODO: Do reflectance min check before tracing reflection.
-    double reflectance = closestIntersection->material->reflectance();
-    if (reflectance >= REFLECTANCE_MIN) {
-      finalColour = finalColour * (1.0 - reflectance) + reflectedRayColour * reflectance;
-    }
+    finalColour = finalColour * (1.0 - reflectance) + reflectedRayColour * reflectance;
     delete reflectedResult;
   }
 
@@ -253,7 +253,18 @@ RayResult* raytrace_shadow(SceneNode* node, const Ray& ray, const Lighting& ligh
   */
 }
 
+Colour genBackground(const Ray& ray) {
+  Vector3D dir = ray.dir;
+  dir.normalize();
+  //return Colour(0.0, 0.0, sin(dir[Y]*20.0)/4.0 + 0.75);
+
+  // Wicked sick!
+  return Colour(sin(1.0/(dir[Y]*dir[X]))/dir[Y]) * Colour(1.0, 0.2, 0.2);
+}
+
 Colour genBackground(const Ray& ray, double x, double y) {
+  return genBackground(ray);
+
   // Provided background.
   /*
   return Colour(
@@ -267,9 +278,8 @@ Colour genBackground(const Ray& ray, double x, double y) {
   //return Colour(sin(x)*10.0, sin(1/(y*x))/2.0, sin(x));
   //return Colour(sin(x)/x, sin(1.0/(y*x))/y, tan(x*y/5.0)*2.0) * Colour(0.5);
 
-  return Colour(0.1);
   // This one
-  return Colour(sin(1.0/(y*x))/y) * Colour(1.0, 0.2, 0.2);
+  //return Colour(sin(1.0/(y*x))/y) * Colour(1.0, 0.2, 0.2);
 
   //return Colour(sin(x*50.0), sin(y*50.0), sin(1.0/(y*x))) * Colour(0.7);
   //return Colour(
@@ -277,6 +287,7 @@ Colour genBackground(const Ray& ray, double x, double y) {
     //sqrt((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5) - 0.05),
     //sqrt((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5) - 0.2)
   //);
+
 }
 
 
