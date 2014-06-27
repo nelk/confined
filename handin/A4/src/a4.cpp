@@ -10,7 +10,10 @@
 #define MAX_REFLECTION_DEPTH 8
 #define REFLECTANCE_MIN 0.05
 #define REFLECT_BACKGROUND false
+
+#ifndef ANTI_ALIASING
 #define ANTI_ALIASING true
+#endif
 
 #ifndef NUM_THREADS
 #define NUM_THREADS 8
