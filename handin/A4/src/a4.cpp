@@ -10,6 +10,7 @@
 #define MAX_REFLECTION_DEPTH 3
 #define REFLECTANCE_MIN 0.05
 #define REFLECT_BACKGROUND false
+#define ANTI_ALIASING true
 
 #ifndef NUM_THREADS
 #define NUM_THREADS 8
@@ -89,10 +90,25 @@ void *do_raytrace(void* param) {
     for (int i = start; i < end; i++) {
       int x = i % bundle->width;
       int y = std::floor(i / bundle->width);
-      RayResult* result = raytrace_pixel(bundle->scene, x, y, bundle->width, bundle->height, *(bundle->viewParams), *(bundle->lighting));
-      image(x, y, 0) = result->colour.R();
-      image(x, y, 1) = result->colour.G();
-      image(x, y, 2) = result->colour.B();
+
+      Colour colour(0.0);
+      RayResult* result = NULL;
+      if (ANTI_ALIASING) {
+        for (int dx = 0; dx < 2; dx++) {
+          for (int dy = 0; dy < 2; dy++) {
+            result = raytrace_pixel(bundle->scene, x + (((double)dx) - 0.5) , y + (((double)dy) - 0.5), bundle->width, bundle->height, *(bundle->viewParams), *(bundle->lighting));
+            colour = colour + 0.25*result->colour;
+          }
+        }
+      } else {
+        result = raytrace_pixel(bundle->scene, x, y, bundle->width, bundle->height, *(bundle->viewParams), *(bundle->lighting));
+        colour = result->colour;
+      }
+
+
+      image(x, y, 0) = colour.R();
+      image(x, y, 1) = colour.G();
+      image(x, y, 2) = colour.B();
       stats.merge(result->stats);
       delete result;
     }
@@ -256,10 +272,10 @@ RayResult* raytrace_shadow(SceneNode* node, const Ray& ray, const Lighting& ligh
 Colour genBackground(const Ray& ray) {
   Vector3D dir = ray.dir;
   dir.normalize();
-  //return Colour(0.0, 0.0, sin(dir[Y]*20.0)/4.0 + 0.75);
+  return Colour(0.0, 0.0, sin(dir[Y]*20.0)/4.0 + 0.75);
 
   // Wicked sick!
-  return Colour(sin(1.0/(dir[Y]*dir[X]))/dir[Y]) * Colour(1.0, 0.2, 0.2);
+  //return Colour(sin(1.0/(dir[Y]*dir[X]))/dir[Y]) * Colour(1.0, 0.2, 0.2);
 }
 
 Colour genBackground(const Ray& ray, double x, double y) {

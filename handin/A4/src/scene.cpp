@@ -2,6 +2,8 @@
 #include <iostream>
 #include "matrices.hpp"
 
+PhongMaterial GeometryNode::defaultMaterial(Colour(0.2, 0.2, 0.2), Colour(0.0), 0);
+
 SceneNode::SceneNode(const std::string& name)
   : m_name(name) {
 }
@@ -71,7 +73,7 @@ void JointNode::set_joint_y(double min, double init, double max) {
 }
 
 GeometryNode::GeometryNode(const std::string& name, Primitive* primitive)
-  : SceneNode(name), m_primitive(primitive) {
+  : SceneNode(name), m_material(&GeometryNode::defaultMaterial), m_primitive(primitive) {
 }
 
 GeometryNode::~GeometryNode() {

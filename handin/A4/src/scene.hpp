@@ -99,6 +99,8 @@ public:
 protected:
   Material* m_material;
   Primitive* m_primitive;
+  static PhongMaterial defaultMaterial;
 };
+
 
 #endif

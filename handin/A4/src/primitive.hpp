@@ -49,7 +49,7 @@ public:
 
 class Cube : public NonhierBox {
 public:
-  Cube(): NonhierBox(Point3D(-0.5, -0.5, -0.5), 1.0) {}
+  Cube(): NonhierBox(Point3D(0, 0, 0), 1.0) {}
   virtual ~Cube() {}
 };
 

@@ -61,7 +61,7 @@ Mesh::Mesh(const std::vector<Point3D>& verts,
   }
   m_bound = new GeometryNode("some_bounding_box", new Cube());
   Vector3D size = max - min;
-  m_bound->translate(min - Point3D() + 0.5*size);
+  m_bound->translate(min - Point3D());
   size[X] = std::max(0.001, size[X]);
   size[Y] = std::max(0.001, size[Y]);
   size[Z] = std::max(0.001, size[Z]);
