@@ -172,10 +172,10 @@ RayResult* raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lig
   // Normalize intersection normal.
   closestIntersection->normal.normalize();
 
-  //std::cout << "normal " << closestIntersection->normal << std::endl;
+  Vector3D reflected = ray.dir - 2 * ray.dir.dot(closestIntersection->normal) * closestIntersection->normal;
+  reflected.normalize();
 
   // Start with ambient light.
-  // TODO: This makes it too bright...
   Colour finalColour = lighting.ambient * closestIntersection->material->ambientColour();
 
   // Add intensity from each light source.
@@ -203,28 +203,26 @@ RayResult* raytrace_visible(SceneNode* node, const Ray& ray, const Lighting& lig
     Vector3D viewerDirection = -1 * ray.dir;
     viewerDirection.normalize();
 
-    Colour rayLightColour = closestIntersection->material->calculateLighting(lightIncident, closestIntersection->normal, viewerDirection, lightColour);
-
-    // Reflection.
-    // TODO: NonhierBox doesn't look like it reflects properly.
-    if (REFLECTIONS && depth < MAX_REFLECTION_DEPTH && !(shadowMultiplier.R() == 0.0 && shadowMultiplier.G() == 0.0 && shadowMultiplier.B() == 0.0)) {
-      Vector3D reflected = ray.dir - 2 * ray.dir.dot(closestIntersection->normal) * closestIntersection->normal;
-      Ray reflectedRay(closestIntersection->point, reflected); // TODO
-      RayResult* reflectedResult = raytrace_visible(node, reflectedRay, lighting, depth+1);
-      result->stats.merge(reflectedResult->stats);
-      Colour reflectedRayColour = lighting.ambient;
-      if (reflectedResult->isHit()) {
-        reflectedRayColour = reflectedResult->colour;
-      }
-      // TODO: Do reflectance min check before tracing reflection.
-      double reflectance = closestIntersection->material->reflectance();
-      if (reflectance >= REFLECTANCE_MIN) {
-        rayLightColour = rayLightColour * (1.0 - reflectance) + reflectedRayColour * reflectance;
-      }
-      delete reflectedResult;
-    }
+    Colour rayLightColour = closestIntersection->material->calculateLighting(lightIncident, closestIntersection->normal, reflected, viewerDirection, lightColour);
 
     finalColour = finalColour + shadowMultiplier * rayLightColour;
+  }
+
+  // Reflection.
+  if (REFLECTIONS && depth < MAX_REFLECTION_DEPTH) {
+    Ray reflectedRay(closestIntersection->point, reflected);
+    RayResult* reflectedResult = raytrace_visible(node, reflectedRay, lighting, depth+1);
+    result->stats.merge(reflectedResult->stats);
+    Colour reflectedRayColour = lighting.ambient;
+    if (reflectedResult->isHit()) {
+      reflectedRayColour = reflectedResult->colour;
+    }
+    // TODO: Do reflectance min check before tracing reflection.
+    double reflectance = closestIntersection->material->reflectance();
+    if (reflectance >= REFLECTANCE_MIN) {
+      finalColour = finalColour * (1.0 - reflectance) + reflectedRayColour * reflectance;
+    }
+    delete reflectedResult;
   }
 
   result->colour = finalColour;

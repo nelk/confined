@@ -10,7 +10,7 @@ public:
 
   virtual double reflectance() const = 0;
   virtual Colour ambientColour() const = 0;
-  virtual Colour calculateLighting(Vector3D incident, Vector3D normal, Vector3D viewer, Colour intensity) = 0;
+  virtual Colour calculateLighting(const Vector3D& incident, const Vector3D& normal, const Vector3D& reflected, const Vector3D& viewer, const Colour& intensity) const = 0;
 
 protected:
   Material() {
@@ -26,7 +26,7 @@ public:
 
   virtual double reflectance() const;
   virtual Colour ambientColour() const;
-  virtual Colour calculateLighting(Vector3D incident, Vector3D normal, Vector3D viewer, Colour intensity);
+  virtual Colour calculateLighting(const Vector3D& incident, const Vector3D& normal, const Vector3D& reflected, const Vector3D& viewer, const Colour& intensity) const;
 
 private:
   Colour m_kd;

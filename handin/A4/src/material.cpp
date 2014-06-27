@@ -25,7 +25,7 @@ double PhongMaterial::reflectance() const {
   return m_reflectance;
 }
 
-Colour PhongMaterial::calculateLighting(Vector3D incident, Vector3D normal, Vector3D viewer, Colour intensity) {
+Colour PhongMaterial::calculateLighting(const Vector3D& incident, const Vector3D& normal, const Vector3D& reflected, const Vector3D& viewer, const Colour& intensity) const {
   double incidentDotNormal = std::max(0.0, incident.dot(normal));
 
   Colour diffuse = m_kd * incidentDotNormal * intensity;
@@ -37,7 +37,6 @@ Colour PhongMaterial::calculateLighting(Vector3D incident, Vector3D normal, Vect
   Colour specular = m_ks * pow(std::max(0.0, h.dot(normal)), m_shininess) * intensity;
 #else
   // Phong.
-  Vector3D reflected = -incident + 2 * incident.dot(normal) * normal;
   Colour specular = m_ks * pow(reflected.dot(viewer), m_shininess) * intensity;
 #endif
 
