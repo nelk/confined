@@ -3,7 +3,7 @@ OBJECTS = $(SOURCES:.cpp=.o)
 DEPENDS = $(SOURCES:.cpp=.d)
 LDFLAGS = $(shell pkg-config --libs lua5.1) -llua5.1 -lpng -pthread
 CPPFLAGS = $(shell pkg-config --cflags lua5.1)
-CXXFLAGS = $(CPPFLAGS) -W -Wall -g -O3 -DMULTITHREADED -DNUM_THREADS=8 -DDRAW_BOUNDING_BOXES=false
+CXXFLAGS = $(CPPFLAGS) -W -Wall -g -O3 -DMULTITHREADED -DNUM_THREADS=8 -DDRAW_BOUNDING_BOXES=false -DANTI_ALIASING=true
 CXX = g++
 MAIN = rt
 
