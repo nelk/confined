@@ -20,7 +20,6 @@ d2 = gr.node('dodec2')
 d2:add_child(steldodec)
 scene:add_child(d2)
 d2:translate(150, 150, -400)
-d2:rotate('Z', 30)
 
 
 s_node = gr.node('the_spheres')
