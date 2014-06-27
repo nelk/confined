@@ -11,10 +11,14 @@ void WorkManager::getWork(bool& done, int& start, int& end) {
   } else {
     done = false;
     start = on_batch * batch_size;
-    end = std::min(start + batch_size, work_amount+1);
+    if (on_batch == num_batches - 1) {
+      end = work_amount;
+    } else {
+      end = start + batch_size;
+    }
 #ifdef WORK_MANAGER_LOG
     std::cout << "Done " << std::floor((double) on_batch / num_batches * 100.0) << "%  "
-      << "Giving work [" << start << "," << end << ")" << std::endl;
+      << "Taking work [" << start << "," << end << ")" << std::endl;
 #endif
     on_batch++;
   }

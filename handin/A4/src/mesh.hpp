@@ -8,7 +8,9 @@
 #include "raytracer.hpp"
 #include "scene.hpp"
 
+#ifndef DRAW_BOUNDING_BOXES
 #define DRAW_BOUNDING_BOXES false
+#endif
 
 // A polygonal mesh.
 class Mesh : public Primitive {

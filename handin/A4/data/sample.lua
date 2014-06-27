@@ -1,6 +1,6 @@
 
-mat1 = gr.material({0.7, 1.0, 0.7}, {0.8, 0.8, 0.8}, 25)
-mat2 = gr.material({0.9, 0.6, 0.2}, {0.8, 0.8, 0.8}, 25)
+dodec_mat = gr.material({0.9, 0.6, 0.3}, {0.5, 0.5, 0.5}, 15, 0.1)
+ground = gr.material({0.4, 0.4, 0.4}, {0.8, 0.8, 0.8}, 25, 0.3)
 mirror = gr.material({1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}, 40, 0.5)
 
 --whitemat = gr.material({1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}, 10)
@@ -8,7 +8,7 @@ mirror = gr.material({1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}, 40, 0.5)
 scene = gr.node('root')
 
 --require('mickey')
---mickey:set_material(mat2)
+--mickey:set_material(mat1)
 --m1 = gr.node('m1')
 --scene:add_child(m1)
 --m1:add_child(mickey)
@@ -43,10 +43,20 @@ scene = gr.node('root')
   --s_number = s_number + 1
 --end
 
---require('smstdodeca')
---steldodec:set_material(mat1)
---steldodec:translate(100, 10, 10)
---scene:add_child(steldodec)
+require('smstdodeca')
+steldodec:set_material(dodec_mat)
+steldodec:translate(150, -150, -100)
+--steldodec:scale(0.4, 0.4, 0.4)
+
+d1 = gr.node('dodec1')
+d1:add_child(steldodec)
+scene:add_child(d1)
+d1:translate(-150, 150, -400)
+
+d2 = gr.node('dodec2')
+d2:add_child(steldodec)
+scene:add_child(d2)
+d2:translate(150, 150, -400)
 
 
 s_node = gr.node('the_spheres')
@@ -72,13 +82,19 @@ for x=-2,2,1 do
   end
 end
 
+platform = gr.cube('platform')
+platform:set_material(ground)
+scene:add_child(platform)
+platform:translate(-10, -4.5, -20)
+platform:scale(20, 1, 20)
+
 white_light = gr.light({-100.0, 150.0, 400.0}, {0.5, 0.5, 0.5}, {1, 0, 0})
 red_light = gr.light({-20, -20, -5}, {1.0, 0.0, 0.0}, {1, 0, 0})
 green_light = gr.light({20, -20, -5}, {0.0, 1.0, 0.0}, {1, 0, 0})
 blue_light = gr.light({0, 10, -5}, {0.0, 0.0, 1.0}, {1, 0, 0})
 
 gr.render(scene, 'sample.png', 1920, 1080,
-  {0, 0, 0}, {0, 0, -1}, {0, 1, 0}, 50,
+  {0, 0, 6}, {0, 0, -1}, {0, 1, 0}, 50,
   {0.3, 0.3, 0.3}, {red_light, green_light, blue_light}
 )
 

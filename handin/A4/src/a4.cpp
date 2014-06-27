@@ -7,7 +7,7 @@
 
 #define SHADOWS true
 #define REFLECTIONS true
-#define MAX_REFLECTION_DEPTH 3
+#define MAX_REFLECTION_DEPTH 8
 #define REFLECTANCE_MIN 0.05
 #define REFLECT_BACKGROUND false
 #define ANTI_ALIASING true
