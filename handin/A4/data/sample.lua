@@ -89,11 +89,12 @@ platform:translate(-10, -4.5, -20)
 platform:scale(20, 1, 20)
 
 white_light = gr.light({-100.0, 150.0, 400.0}, {0.5, 0.5, 0.5}, {1, 0, 0})
-red_light = gr.light({-20, -20, -5}, {1.0, 0.0, 0.0}, {1, 0, 0})
-green_light = gr.light({20, -20, -5}, {0.0, 1.0, 0.0}, {1, 0, 0})
-blue_light = gr.light({0, 10, -5}, {0.0, 0.0, 1.0}, {1, 0, 0})
+red_light = gr.light({-5, -1, -5}, {1.0, 0.0, 0.0}, {1, 0, 0})
+green_light = gr.light({5, -1, -5}, {0.0, 1.0, 0.0}, {1, 0, 0})
+--blue_light = gr.light({0, 10, -5}, {0.0, 0.0, 1.0}, {1, 0, 0})
+blue_light = gr.light({0, 2, -5}, {0.0, 0.0, 1.0}, {1, 0, 0})
 
-gr.render(scene, 'sample.png', 1920, 1080,
+gr.render(scene, 'sample.png', 256, 256, --1920, 1080,
   {0, 0, 6}, {0, 0, -1}, {0, 1, 0}, 50,
   {0.3, 0.3, 0.3}, {red_light, green_light, blue_light}
 )
