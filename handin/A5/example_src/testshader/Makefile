@@ -5,7 +5,7 @@ LDFLAGS = -lglut -lGLEW
 CXXFLAGS = -g -W -Wall
 CXXFLAGS += $(DEBUGFLAGS)
 CXX = g++
-MAIN = test 
+MAIN = test
 
 all: $(MAIN)
 
