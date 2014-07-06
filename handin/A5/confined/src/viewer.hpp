@@ -34,10 +34,7 @@ public:
     return controller;
   }
 
-  void updateSize(int width, int height) {
-    this->width = width;
-    this->height = height;
-  }
+  void updateSize(int width, int height);
 
 private:
   int width, height;
@@ -49,12 +46,19 @@ private:
   GLuint depthProgramId;
   GLuint quad_programId;
 
+  // Deferred Shading objects.
+  GLuint geomTexturesProgramId;
+  GLuint deferredShadingProgramId;
+  GLuint deferredDiffuseTexture;
+  GLuint deferredNormalTexture;
+  GLuint deferredDepthTexture;
+
   GLuint vertexArrayId;
   GLuint framebuffer;
   GLuint quad_vertexbuffer;
 
   //GLuint texture;
-  GLuint depthTexture;
+  GLuint shadowmapDepthTexture;
 };
 
 #endif
