@@ -18,6 +18,6 @@ void main(){
 
   // Output render targets.
   outDiffuse = material_kd;
-  outNormal = normalize(normalCameraspace);
+  outNormal = (normalize(normalCameraspace) + 1.0) / 2.0; // Shift normal to be positive.
   gl_FragDepth = gl_FragCoord.z;
 }

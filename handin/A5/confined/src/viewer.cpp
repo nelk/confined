@@ -14,7 +14,7 @@ using namespace glm;
 #include "controller.hpp"
 
 #define MIN_REQUIRED_COLOUR_ATTACHMENTS 2
-#define RENDER_DEBUG_IMAGES false
+#define RENDER_DEBUG_IMAGES true
 
 void window_size_callback(GLFWwindow* window, int width, int height) {
   Viewer* viewer = (Viewer*)glfwGetWindowUserPointer(window);
@@ -73,7 +73,7 @@ void Viewer::updateSize(int width, int height) {
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_FLOAT, 0);
 
   glBindTexture(GL_TEXTURE_2D, deferredNormalTexture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_FLOAT, 0);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, width, height, 0, GL_RGB, GL_FLOAT, 0);
 
   glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
@@ -145,7 +145,7 @@ bool Viewer::initGL() {
   glBindTexture(GL_TEXTURE_2D, deferredNormalTexture);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_FLOAT, 0);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, width, height, 0, GL_RGB, GL_FLOAT, 0);
 
   glGenTextures(1, &deferredDepthTexture);
   glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
@@ -232,6 +232,7 @@ void Viewer::run() {
 
   GLuint deferredViewMatrixId = glGetUniformLocation(deferredShadingProgramId, "V");
   GLuint deferredModelMatrixId = glGetUniformLocation(deferredShadingProgramId, "M");
+  GLuint deferredProjectionInverseMatrixId = glGetUniformLocation(deferredShadingProgramId, "P_inverse");
   GLuint lightPosId = glGetUniformLocation(deferredShadingProgramId, "lightPositionWorldspace");
   GLuint lightDirId = glGetUniformLocation(deferredShadingProgramId, "lightDirectionWorldspace");
   GLuint depthBiasId = glGetUniformLocation(deferredShadingProgramId, "depthBiasMVP");
@@ -286,15 +287,16 @@ void Viewer::run() {
 
     // Compute the MVP matrix from keyboard and mouse input
     controller->update();
-    const glm::mat4& ProjectionMatrix = controller->getProjectionMatrix();
-    const glm::mat4& ViewMatrix = controller->getViewMatrix();
+    const glm::mat4& projectionMatrix = controller->getProjectionMatrix();
+    const glm::mat4 projectionInverseMatrix = glm::inverse(projectionMatrix);
+    const glm::mat4& viewMatrix = controller->getViewMatrix();
     glm::mat4 ModelMatrix = glm::mat4(1.0);
-    glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
+    glm::mat4 MVP = projectionMatrix * viewMatrix * ModelMatrix;
 
     // Send MVP transformations to currently bound shader.
     glUniformMatrix4fv(matrixId, 1, GL_FALSE, &MVP[0][0]);
     glUniformMatrix4fv(geomModelMatrixId, 1, GL_FALSE, &ModelMatrix[0][0]);
-    glUniformMatrix4fv(geomViewMatrixId, 1, GL_FALSE, &ViewMatrix[0][0]);
+    glUniformMatrix4fv(geomViewMatrixId, 1, GL_FALSE, &viewMatrix[0][0]);
 
     for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
       Material* material = (*it)->getMaterial();
@@ -360,7 +362,8 @@ void Viewer::run() {
     glm::mat4 depthBiasMVP = biasMatrix * depthMVP;
 
     glUniformMatrix4fv(deferredModelMatrixId, 1, GL_FALSE, &ModelMatrix[0][0]);
-    glUniformMatrix4fv(deferredViewMatrixId, 1, GL_FALSE, &ViewMatrix[0][0]);
+    glUniformMatrix4fv(deferredViewMatrixId, 1, GL_FALSE, &viewMatrix[0][0]);
+    glUniformMatrix4fv(deferredProjectionInverseMatrixId, 1, GL_FALSE, &projectionInverseMatrix[0][0]);
     glUniformMatrix4fv(depthBiasId, 1, GL_FALSE, &depthBiasMVP[0][0]);
     glUniform3f(lightDirId, lightDir.x, lightDir.y, lightDir.z);
     glUniform3f(lightPosId, 0, 0, 0); // TODO.

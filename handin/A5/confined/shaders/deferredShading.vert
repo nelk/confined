@@ -8,6 +8,6 @@ out vec2 texUV;
 
 void main(){
   gl_Position = vec4(quadPositionModelspace, 1);
-  texUV = (quadPositionModelspace.xy + vec2(1, 1)) / 2.0;
+  texUV = (quadPositionModelspace.xy + 1.0) / 2.0;
 }
 

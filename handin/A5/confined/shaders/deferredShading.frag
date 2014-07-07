@@ -13,7 +13,7 @@ uniform sampler2D depthTexture;
 uniform sampler2DShadow shadowMap;
 uniform vec3 lightPositionWorldspace;
 uniform vec3 lightDirectionWorldspace;
-//uniform mat4 P_inverse;
+uniform mat4 P_inverse;
 uniform mat4 V;
 uniform mat4 M;
 uniform mat4 depthBiasMVP;
@@ -62,17 +62,20 @@ void main(){
   // TODO: Texture diffuse.
   vec3 material_kd = texture2D(diffuseTexture, texUV).rgb;
 
+  // Don't write pixels that weren't actually drawn onto this texture.
   if (material_kd == vec3(0, 0, 0))
     discard;
 
   vec3 material_ka = vec3(0.2,0.2,0.2) * material_kd;
-  vec3 material_ks = vec3(0.8,0.8,0.8);
-  float material_shininess = 2;
+  vec3 material_ks = vec3(0.5,0.5,0.5);
+  float material_shininess = 96.0;
 
+  float x = texUV.x * 2.0 - 1.0;
+  float y = (1.0 - texUV.y) * 2.0 - 1.0;
   float z = texture2D(depthTexture, texUV).r;
-
-  // TODO: Inverse projection to get world-space position.
-  //vec4 vertexPositionCameraspace = vec4(texUV.x, texUV.y, z, 1.0);
+  vec4 vertexPositionScreenspace = vec4(x, y, z, 1.0);
+  vec4 vertexPositionCameraspace = vertexPositionScreenspace * P_inverse;
+  vertexPositionCameraspace = vertexPositionCameraspace / vertexPositionCameraspace.w;
 
   //vec4 shadowCoord = depthBiasMVP * vec4(vertexPositionModelspace, 1);
 
@@ -80,7 +83,7 @@ void main(){
 
   // Vector that goes from the vertex to the camera, in camera space.
   //vec3 eyeDirectionCameraspace = vec3(0,0,0) - (V * M * vec4(vertexPositionModelspace,1)).xyz;
-  vec3 eyeDirectionCameraspace = -vec3(texUV.x, texUV.y, z);
+  vec3 eyeDirectionCameraspace = -vertexPositionCameraspace.xyz;
 
   // Vector that goes from the vertex to the light, in camera space
   vec3 lightDirectionCameraspace = (V * vec4(lightDirectionWorldspace, 0)).xyz;
@@ -90,7 +93,7 @@ void main(){
   //float distance = length(lightPositionWorldspace - positionWorldspace);
 
   // Normal of the computed fragment, in camera space.
-  vec3 n = texture2D(normalTexture, texUV).rgb;
+  vec3 n = texture2D(normalTexture, texUV).rgb * 2.0 - 1.0;
   // Direction of the light (from the fragment to the light)
   vec3 l = normalize(lightDirectionCameraspace);
 
@@ -101,7 +104,7 @@ void main(){
   // Eye vector (towards the camera)
   vec3 E = normalize(eyeDirectionCameraspace);
   // Direction in which the triangle reflects the light
-  //vec3 R = reflect(-l, n);
+  //vec3 R = reflect(l, n);
 
   // Clamped cosine of the angle between the Eye vector and the Reflect vector.
   //float cosAlpha = clamp(dot(E, R), 0, 1); // Phong.
@@ -146,7 +149,6 @@ void main(){
 
   // TODO: SSAO.
 
-  // Phong shading.
   color = material_ka
     + visibility * material_kd * lightColor * lightPower * cosTheta // Diffuse.
     + visibility * material_ks * lightColor * lightPower * pow(cosAlpha, material_shininess); // Specular.
