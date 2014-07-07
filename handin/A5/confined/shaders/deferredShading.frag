@@ -10,13 +10,16 @@ layout(location = 0) out vec3 color;
 uniform sampler2D diffuseTexture;
 uniform sampler2D normalTexture; // TODO - check shadow, normal samplers?
 uniform sampler2D depthTexture;
-uniform sampler2DShadow shadowMap;
+//uniform sampler2DShadow shadowMap;
+uniform sampler2D shadowMap;
+
 uniform vec3 lightPositionWorldspace;
 uniform vec3 lightDirectionWorldspace;
-uniform mat4 P_inverse;
+uniform vec3 cameraPositionWorldspace;
+uniform mat4 P;
 uniform mat4 V;
 uniform mat4 M;
-uniform mat4 depthBiasMVP;
+uniform mat4 depthBiasVP;
 
 //uniform vec3 material_ka;
 //uniform vec3 material_kd;
@@ -47,7 +50,7 @@ vec2 poissonDisk[16] = vec2[](
 
 // Returns a random number based on a vec3 and an int.
 float random(vec3 seed, int i){
-  vec4 seed4 = vec4(seed,i);
+  vec4 seed4 = vec4(seed, i);
   float dot_product = dot(seed4, vec4(12.9898, 78.233, 45.164,94.673));
   return fract(sin(dot_product) * 43758.5453);
 }
@@ -66,31 +69,33 @@ void main(){
   if (material_kd == vec3(0, 0, 0))
     discard;
 
-  vec3 material_ka = vec3(0.2,0.2,0.2) * material_kd;
-  vec3 material_ks = vec3(0.5,0.5,0.5);
+  vec3 material_ka = vec3(0.2, 0.2, 0.2) * material_kd;
+  vec3 material_ks = vec3(0.5, 0.5, 0.5);
   float material_shininess = 96.0;
 
-  float x = texUV.x * 2.0 - 1.0;
-  float y = (1.0 - texUV.y) * 2.0 - 1.0;
+  float x = texUV.x;// * 2.0 - 1.0;
+  float y = texUV.y;// * 2.0 - 1.0;
+  //float y = -(1.0 - texUV.y) * 2.0 - 1.0;
   float z = texture2D(depthTexture, texUV).r;
-  vec4 vertexPositionScreenspace = vec4(x, y, z, 1.0);
-  vec4 vertexPositionCameraspace = vertexPositionScreenspace * P_inverse;
-  vertexPositionCameraspace = vertexPositionCameraspace / vertexPositionCameraspace.w;
 
-  //vec4 shadowCoord = depthBiasMVP * vec4(vertexPositionModelspace, 1);
+  //vec4 vertexPositionScreenspace = vec4(x, y, z, 1.0);
+  vec4 vertexPositionScreenspace = vec4(vec3(x, y, z) * 2.0 - 1.0, 1); // Clip space.
+  vec4 vertexPositionCameraspace = inverse(P) * vertexPositionScreenspace;
+  //vertexPositionCameraspace = vertexPositionCameraspace / vertexPositionCameraspace.w;
 
-  //vec3 positionWorldspace = (M * vec4(vertexPositionModelspace, 1)).xyz;
+  vec4 vertexPositionWorldspace = inverse(V) * vertexPositionCameraspace;
+  vertexPositionWorldspace = vertexPositionWorldspace / vertexPositionWorldspace.w;
+
+  vec4 shadowCoord = depthBiasVP * vertexPositionWorldspace;
 
   // Vector that goes from the vertex to the camera, in camera space.
-  //vec3 eyeDirectionCameraspace = vec3(0,0,0) - (V * M * vec4(vertexPositionModelspace,1)).xyz;
-  vec3 eyeDirectionCameraspace = -vertexPositionCameraspace.xyz;
+  vec3 eyeDirectionCameraspace = -vertexPositionCameraspace.xyz / vertexPositionCameraspace.w;
 
   // Vector that goes from the vertex to the light, in camera space
   vec3 lightDirectionCameraspace = (V * vec4(lightDirectionWorldspace, 0)).xyz;
 
-
   // Distance to the light
-  //float distance = length(lightPositionWorldspace - positionWorldspace);
+  //float distance = length(lightPositionWorldspace - vertexPositionWorldspace);
 
   // Normal of the computed fragment, in camera space.
   vec3 n = texture2D(normalTexture, texUV).rgb * 2.0 - 1.0;
@@ -118,30 +123,31 @@ void main(){
   //float bias = 0.005;
 
   // Variable bias (based off of gradient).
-  float bias = 0.005*tan(acos(cosTheta));
-  bias = clamp(bias, 0,0.01);
+  float bias = 0.005 * tan(acos(cosTheta));
+  bias = clamp(bias, 0, 0.01);
 
   // Sample the shadow map n times.
-/*
   int num_samples = 4;
   float max_shadow_coverage = 1.0;
   float sample_shadow_coverage = max_shadow_coverage/num_samples;
-  for (int i=0;i<num_samples;i++){
+  for (int i = 0; i < num_samples; i++){
     // use either :
     //  - Always the same samples.
     //    Gives a fixed pattern in the shadow, but no noise
     int index = i;
     //  - A random sample, based on the pixel's screen location.
     //    No banding, but the shadow moves with the camera, which looks weird.
-    // int index = int(16.0*random(gl_FragCoord.xyy, i))%16;
+    //int index = int(16.0 * random(gl_FragCoord.xyy, i)) % 16;
     //  - A random sample, based on the pixel's position in world space.
     //    The position is rounded to the millimeter to avoid too much aliasing
-    //int index = int(16.0*random(floor(positionWorldspace.xyz*1000.0), i))%16;
+    //int index = int(16.0 * random(floor(vertexPositionWorldspace.xyz * 1000.0), i)) % 16;
 
     // Lose visibility for each sample that is hidden in shadow.
-    visibility -= sample_shadow_coverage*(1.0 - texture(shadowMap, vec3(shadowCoord.xy + poissonDisk[index]/700.0, (shadowCoord.z-bias)/shadowCoord.w) ));
+    //visibility -= sample_shadow_coverage * (1.0 - texture(shadowMap, vec3(shadowCoord.xy + poissonDisk[index] / 700.0, (shadowCoord.z - bias) / shadowCoord.w)));
+    bool isShadowed = texture2D(shadowMap, shadowCoord.xy + poissonDisk[index] / 700.0).r > (shadowCoord.z - bias) / shadowCoord.w;
+    visibility -= sample_shadow_coverage * (1.0 - float(isShadowed));
   }
-*/
+
 
   // TODO: Spot lights.
   // if (texture(shadowMap, (shadowCoord.xy/shadowCoord.w)).z < (shadowCoord.z-bias)/shadowCoord.w)

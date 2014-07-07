@@ -15,9 +15,10 @@ public:
 
   glm::mat4 getViewMatrix();
   glm::mat4 getProjectionMatrix();
+  void setPosition(glm::vec3& p);
+  glm::vec3 getPosition();
   void reset();
   void update();
-  void setPosition(glm::vec3& p);
   void setHorizontalAngle(float a);
   void setVerticalAngle(float a);
 

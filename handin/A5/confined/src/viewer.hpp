@@ -56,7 +56,8 @@ private:
   GLuint deferredDepthTexture;
 
   GLuint vertexArrayId;
-  GLuint framebuffer;
+  GLuint deferredShadingFramebuffer;
+  GLuint shadowMapFramebuffer;
   GLuint quadVertexBuffer;
 
   //GLuint texture;

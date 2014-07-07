@@ -18,6 +18,10 @@ void Controller::setPosition(glm::vec3& p) {
   position = p;
 }
 
+glm::vec3 Controller::getPosition() {
+  return position;
+}
+
 void Controller::setHorizontalAngle(float a) {
   horizontalAngle = a;
 }
