@@ -358,7 +358,6 @@ void Viewer::run() {
 
     // ======= Deferred rendering stage 2: Deferred rendering using textures. ===========
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
     glUseProgram(deferredShadingProgramId);
 
     glViewport(0, 0, width, height);
@@ -385,6 +384,14 @@ void Viewer::run() {
     glActiveTexture(GL_TEXTURE0 + 3);
     glBindTexture(GL_TEXTURE_2D, shadowmapDepthTexture);
     glUniform1i(shadowmapId, 3);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    //glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE, GL_INTENSITY);
 
     glm::mat4 biasMatrix(
       0.5, 0.0, 0.0, 0.0,
@@ -445,10 +452,10 @@ void Viewer::run() {
     // Swap buffers
     glfwSwapBuffers(window);
 
-    timespec ts;
-    ts.tv_sec = 0;
-    ts.tv_nsec = 30*1000;
-    nanosleep(&ts, NULL);
+    //timespec ts;
+    //ts.tv_sec = 0;
+    //ts.tv_nsec = 30*1000;
+    //nanosleep(&ts, NULL);
 
     checkGLErrors();
 

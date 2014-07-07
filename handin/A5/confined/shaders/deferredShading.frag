@@ -10,8 +10,7 @@ layout(location = 0) out vec3 color;
 uniform sampler2D diffuseTexture;
 uniform sampler2D normalTexture; // TODO - check shadow, normal samplers?
 uniform sampler2D depthTexture;
-//uniform sampler2DShadow shadowMap;
-uniform sampler2D shadowMap;
+uniform sampler2DShadow shadowMap;
 
 uniform vec3 lightPositionWorldspace;
 uniform vec3 lightDirectionWorldspace;
@@ -48,10 +47,17 @@ vec2 poissonDisk[16] = vec2[](
    vec2(0.14383161, -0.14100790)
 );
 
+vec2 offsetTable[4] = vec2[](
+  vec2(-1.5, 0.5),
+  vec2(0.5, 0.5),
+  vec2(-1.5, -1.5),
+  vec2(0.5, -1.5)
+);
+
 // Returns a random number based on a vec3 and an int.
 float random(vec3 seed, int i){
   vec4 seed4 = vec4(seed, i);
-  float dot_product = dot(seed4, vec4(12.9898, 78.233, 45.164,94.673));
+  float dot_product = dot(seed4, vec4(12.9898, 78.233, 45.164, 94.673));
   return fract(sin(dot_product) * 43758.5453);
 }
 
@@ -117,7 +123,7 @@ void main(){
   vec3 H = normalize(E + l); // Half-angle.
   float cosAlpha = clamp(dot(H, n), 0, 1); // Blinn-Phong.
 
-  float visibility = 1.0;
+  float shadowCoefficient = 0.0;
 
   // Fixed bias.
   //float bias = 0.005;
@@ -126,10 +132,14 @@ void main(){
   float bias = 0.005 * tan(acos(cosTheta));
   bias = clamp(bias, 0, 0.01);
 
+  /*vec2 offset = vec2(fract(texUV.x * 0.5) > 0.25,*/
+                     /*fract(texUV.y * 0.5) > 0.25);  // mod*/
+  /*offset.y += offset.x;  // y ^= x in floating point*/
+  /*if (offset.y > 1.1)*/
+    /*offset.y = 0;*/
+
   // Sample the shadow map n times.
-  int num_samples = 4;
-  float max_shadow_coverage = 1.0;
-  float sample_shadow_coverage = max_shadow_coverage/num_samples;
+  int num_samples = 16;
   for (int i = 0; i < num_samples; i++){
     // use either :
     //  - Always the same samples.
@@ -144,9 +154,25 @@ void main(){
 
     // Lose visibility for each sample that is hidden in shadow.
     //visibility -= sample_shadow_coverage * (1.0 - texture(shadowMap, vec3(shadowCoord.xy + poissonDisk[index] / 700.0, (shadowCoord.z - bias) / shadowCoord.w)));
-    bool isShadowed = texture2D(shadowMap, shadowCoord.xy + poissonDisk[index] / 700.0).r > (shadowCoord.z - bias) / shadowCoord.w;
-    visibility -= sample_shadow_coverage * (1.0 - float(isShadowed));
+
+
+  //vec2 windowOffset = vec2(i%4*3-1.5, i/4*3-1.5);
+  //shadowCoefficient += texture(shadowMap, vec3(shadowCoord.xy + (offset + windowOffset) / 2048.0, (shadowCoord.z - bias)/shadowCoord.w));
+  //shadowCoefficient += texture(shadowMap, vec3(shadowCoord.xy + (offset + offsetTable[index]) / 700.0, (shadowCoord.z - bias)/shadowCoord.w));
+  shadowCoefficient += texture(shadowMap, vec3(shadowCoord.xy + poissonDisk[index] / 700.0, (shadowCoord.z - bias)/shadowCoord.w));
+
+    //visibility -= sample_shadow_coverage * (1.0 - texture(shadowMap, vec3(shadowCoord.xy + poissonDisk[index] / 700.0, (shadowCoord.z - bias) / shadowCoord.w))); // Best
+
+    //visibility -= sample_shadow_coverage * (1.0 - shadowCoord.z/shadowCoord.w * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w)));
+    //visibility -= sample_shadow_coverage * (1.0 - textureProj(shadowMap, shadowCoord));
+
+    /*float indexAngle = i*3.14/num_samples;*/
+    /*vec2 sampleOffset = vec2(cos(indexAngle), sin(indexAngle));*/
+    /*bool isShadowed = texture2D(shadowMap, shadowCoord.xy + sampleOffset / 400.0).r > (shadowCoord.z - bias) / shadowCoord.w;*/
+    /*visibility -= sample_shadow_coverage * (1.0 - float(isShadowed));*/
   }
+
+  float visibility = shadowCoefficient / num_samples;
 
 
   // TODO: Spot lights.
