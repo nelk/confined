@@ -35,6 +35,8 @@ public:
   }
 
   void updateSize(int width, int height);
+  void drawTextureWithQuadProgram(GLuint tex);
+  void drawQuad();
 
 private:
   int width, height;
@@ -44,7 +46,7 @@ private:
 
   GLuint programId;
   GLuint depthProgramId;
-  GLuint quad_programId;
+  GLuint quadProgramId;
 
   // Deferred Shading objects.
   GLuint geomTexturesProgramId;
@@ -55,7 +57,7 @@ private:
 
   GLuint vertexArrayId;
   GLuint framebuffer;
-  GLuint quad_vertexbuffer;
+  GLuint quadVertexBuffer;
 
   //GLuint texture;
   GLuint shadowmapDepthTexture;

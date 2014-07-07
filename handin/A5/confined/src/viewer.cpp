@@ -14,6 +14,7 @@ using namespace glm;
 #include "controller.hpp"
 
 #define MIN_REQUIRED_COLOUR_ATTACHMENTS 2
+#define RENDER_DEBUG_IMAGES false
 
 void window_size_callback(GLFWwindow* window, int width, int height) {
   Viewer* viewer = (Viewer*)glfwGetWindowUserPointer(window);
@@ -97,7 +98,6 @@ bool Viewer::initGL() {
     std::cerr << "Only " << maxAttachments << " supported FBO Colour Attachments, but this program requires " << MIN_REQUIRED_COLOUR_ATTACHMENTS << std::endl;
   }
 
-  glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
   glEnable(GL_DEPTH_TEST);
   // Accept fragment if it closer to the camera than the former one.
   glDepthFunc(GL_LESS);
@@ -168,8 +168,8 @@ bool Viewer::initGL() {
     return false;
   }
 
-  // Quad's FBO for debugging visualization.
-  static const GLfloat debugQuadVBuffer[] = {
+  // Quad for drawing textures.
+  static const GLfloat quadVBuffer[] = {
     -1.0f, -1.0f, 0.0f,
     1.0f, -1.0f, 0.0f,
     -1.0f,  1.0f, 0.0f,
@@ -178,27 +178,44 @@ bool Viewer::initGL() {
     1.0f,  1.0f, 0.0f,
   };
 
-  glGenBuffers(1, &quad_vertexbuffer);
-  glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(debugQuadVBuffer), debugQuadVBuffer, GL_STATIC_DRAW);
+  glGenBuffers(1, &quadVertexBuffer);
+  glBindBuffer(GL_ARRAY_BUFFER, quadVertexBuffer);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(quadVBuffer), quadVBuffer, GL_STATIC_DRAW);
 
   // Compile our GLSL programs.
-  quad_programId = loadShaders( "shaders/passthrough.vert", "shaders/justTexture.frag" );
+  quadProgramId = loadShaders( "shaders/passthrough.vert", "shaders/justTexture.frag" );
 
   depthProgramId = loadShaders("shaders/depthShadow.vert", "shaders/depthShadow.frag" );
 
   programId = loadShaders( "shaders/shader.vert", "shaders/shader.frag" );
 
   geomTexturesProgramId = loadShaders("shaders/geomTextures.vert", "shaders/geomTextures.frag");
-  deferredShadingProgramId = 1; // TODO.
-  //deferredShadingProgramId = loadShaders("shaders/deferredShading.vert", "shaders/deferredShading.frag");
+  deferredShadingProgramId = loadShaders("shaders/deferredShading.vert", "shaders/deferredShading.frag");
 
-  if (quad_programId == 0 || depthProgramId == 0 || programId == 0 || geomTexturesProgramId == 0 || deferredShadingProgramId == 0) {
+  if (quadProgramId == 0 || depthProgramId == 0 || programId == 0 || geomTexturesProgramId == 0 || deferredShadingProgramId == 0) {
     return false;
   }
 
   return true;
 }
+
+
+void Viewer::drawQuad() {
+  glEnableVertexAttribArray(0);
+  glBindBuffer(GL_ARRAY_BUFFER, quadVertexBuffer);
+  glVertexAttribPointer(
+    0,                  // attribute 0.
+    3,                  // size
+    GL_FLOAT,           // type
+    GL_FALSE,           // normalized?
+    0,                  // stride
+    (void*)0            // array buffer offset
+  );
+
+  glDrawArrays(GL_TRIANGLES, 0, 2*3);
+  glDisableVertexAttribArray(0);
+}
+
 
 void Viewer::run() {
   // Handle for MVP uniform (shadow depth pass).
@@ -206,14 +223,24 @@ void Viewer::run() {
 
   // Texture sampler handlers.
   //GLuint textureId  = glGetUniformLocation(programId, "thetexture");
-  GLuint texId = glGetUniformLocation(quad_programId, "texture");
+  GLuint texId = glGetUniformLocation(quadProgramId, "texture");
 
   // Handles for MVP matrix uniforms (render pass).
   GLuint matrixId = glGetUniformLocation(geomTexturesProgramId, "MVP");
-  GLuint viewMatrixId = glGetUniformLocation(geomTexturesProgramId, "V");
-  GLuint modelMatrixId = glGetUniformLocation(geomTexturesProgramId, "M");
-  //GLuint depthBiasId = glGetUniformLocation(geomTexturesProgramId, "depthBiasMVP");
+  GLuint geomViewMatrixId = glGetUniformLocation(geomTexturesProgramId, "V");
+  GLuint geomModelMatrixId = glGetUniformLocation(geomTexturesProgramId, "M");
+
+  GLuint deferredViewMatrixId = glGetUniformLocation(deferredShadingProgramId, "V");
+  GLuint deferredModelMatrixId = glGetUniformLocation(deferredShadingProgramId, "M");
+  GLuint lightPosId = glGetUniformLocation(deferredShadingProgramId, "lightPositionWorldspace");
+  GLuint lightDirId = glGetUniformLocation(deferredShadingProgramId, "lightDirectionWorldspace");
+  GLuint depthBiasId = glGetUniformLocation(deferredShadingProgramId, "depthBiasMVP");
   //GLuint shadowMapId = glGetUniformLocation(programId, "shadowMap");
+
+  // Deferred shading textures.
+  GLuint deferredDiffuseTextureId = glGetUniformLocation(deferredShadingProgramId, "diffuseTexture");
+  GLuint deferredNormalTextureId = glGetUniformLocation(deferredShadingProgramId, "normalTexture");
+  GLuint deferredDepthTextureId = glGetUniformLocation(deferredShadingProgramId, "depthTexture");
 
   // Handles for material properties (render pass).
   //GLuint material_ka = glGetUniformLocation(programId, "material_ka");
@@ -234,21 +261,28 @@ void Viewer::run() {
 
     // ======= Deferred rendering stage 1: Render geometry into textures. ===========
 
+    glUseProgram(geomTexturesProgramId);
+
     // Render to framebuffer.
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glViewport(0, 0, width, height);
+    glEnable(GL_DEPTH_TEST);
 
     // Bind textures to fbo as multiple render target.
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, deferredDepthTexture, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, deferredDiffuseTexture, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, deferredNormalTexture, 0);
 
+    // Set to render both colour attachments.
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    GLenum drawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+    glDrawBuffers(2, drawBuffers);
+
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glUseProgram(geomTexturesProgramId);
 
     // Compute the MVP matrix from keyboard and mouse input
     controller->update();
@@ -257,28 +291,10 @@ void Viewer::run() {
     glm::mat4 ModelMatrix = glm::mat4(1.0);
     glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
 
-    //glm::mat4 biasMatrix(
-      //0.5, 0.0, 0.0, 0.0,
-      //0.0, 0.5, 0.0, 0.0,
-      //0.0, 0.0, 0.5, 0.0,
-      //0.5, 0.5, 0.5, 1.0
-    //);
-
-    // TODO: Bind in deferred pass.
-    //glm::mat4 depthBiasMVP = biasMatrix*depthMVP;
-
     // Send MVP transformations to currently bound shader.
     glUniformMatrix4fv(matrixId, 1, GL_FALSE, &MVP[0][0]);
-    glUniformMatrix4fv(modelMatrixId, 1, GL_FALSE, &ModelMatrix[0][0]);
-    glUniformMatrix4fv(viewMatrixId, 1, GL_FALSE, &ViewMatrix[0][0]);
-    //glUniformMatrix4fv(depthBiasId, 1, GL_FALSE, &depthBiasMVP[0][0]);
-
-    //glUniform3f(lightDirId, lightDir.x, lightDir.y, lightDir.z);
-
-    // Set to render both colour attachments.
-    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-    GLenum drawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
-    glDrawBuffers(2, drawBuffers);
+    glUniformMatrix4fv(geomModelMatrixId, 1, GL_FALSE, &ModelMatrix[0][0]);
+    glUniformMatrix4fv(geomViewMatrixId, 1, GL_FALSE, &ViewMatrix[0][0]);
 
     for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
       Material* material = (*it)->getMaterial();
@@ -301,79 +317,89 @@ void Viewer::run() {
     //glBindTexture(GL_TEXTURE_2D, shadowmapDepthTexture);
 
 
-    // ============ Debug Rendering =============
-    // Render to the screen
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glUseProgram(quad_programId);
+    // ======= Deferred rendering stage 2: Deferred rendering using textures. ===========
+
+    glUseProgram(deferredShadingProgramId);
+
+    glViewport(0, 0, width, height);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); // Render to screen.
     glDrawBuffer(GL_FRONT_LEFT);
-    // TODO: Temp
+
+    glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // 1st attribute buffer - vertices.
-    glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer);
-    glVertexAttribPointer(
-      0,                  // attribute 0.
-      3,                  // size
-      GL_FLOAT,           // type
-      GL_FALSE,           // normalized?
-      0,                  // stride
-      (void*)0            // array buffer offset
-    );
-
-    // Must be disabled to draw overtop.
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-    glActiveTexture(GL_TEXTURE0);
-    glUniform1i(texId, 0); // 0 - base image, 2 - normal map, 4 - shadow map.
 
-    // Draw diffuse ----------------
-    glViewport(0, height/2, width/2, height/2);
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, deferredDiffuseTexture);
-    glDrawArrays(GL_TRIANGLES, 0, 2*3);
+    glUniform1i(deferredDiffuseTextureId, 0);
 
-    // Draw normals ----------------
-    glViewport(width/2, height/2, width/2, height/2);
+    glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, deferredNormalTexture);
-    glDrawArrays(GL_TRIANGLES, 0, 2*3);
+    glUniform1i(deferredNormalTextureId, 1);
 
-    // Draw depth ----------------
-    glViewport(0, 0, width/2, height/2);
+    glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
-    glDrawArrays(GL_TRIANGLES, 0, 2*3);
+    glUniform1i(deferredDepthTextureId, 2);
 
-    glDisableVertexAttribArray(0);
+    lightTime += 0.02;
+    lightDir.y = std::sin(lightTime);
+    lightDir.z = std::cos(lightTime);
 
-    // =========== End Debug =================
-
-    /*
-    // ---- Render the shadowmap for debugging. -----
-    // Render on a corner of the window.
-    glViewport(0, 0, height/4, height/4);
-    glUseProgram(quad_programId);
-
-    // Bind texture in Texture Unit 0.
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, shadowmapDepthTexture);
-    glUniform1i(texId, 0);
-
-    // 1st attribute buffer - vertices.
-    glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer);
-    glVertexAttribPointer(
-      0,                  // attribute 0.
-      3,                  // size
-      GL_FLOAT,           // type
-      GL_FALSE,           // normalized?
-      0,                  // stride
-      (void*)0            // array buffer offset
+    // Compute the MVP matrix from the light's point of view.
+    glm::mat4 depthProjectionMatrix = glm::ortho<float>(-10,10,-10,10,-10,20);
+    glm::mat4 depthViewMatrix = glm::lookAt(lightDir, glm::vec3(0,0,0), glm::vec3(0,1,0));
+    glm::mat4 depthModelMatrix = glm::mat4(1.0);
+    glm::mat4 depthMVP = depthProjectionMatrix * depthViewMatrix * depthModelMatrix;
+    glm::mat4 biasMatrix(
+      0.5, 0.0, 0.0, 0.0,
+      0.0, 0.5, 0.0, 0.0,
+      0.0, 0.0, 0.5, 0.0,
+      0.5, 0.5, 0.5, 1.0
     );
+    glm::mat4 depthBiasMVP = biasMatrix * depthMVP;
 
-    // Must be disabled to draw overtop.
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-    // Draw the triangles.
-    glDrawArrays(GL_TRIANGLES, 0, 2*3);
-    glDisableVertexAttribArray(0);
-    */
+    glUniformMatrix4fv(deferredModelMatrixId, 1, GL_FALSE, &ModelMatrix[0][0]);
+    glUniformMatrix4fv(deferredViewMatrixId, 1, GL_FALSE, &ViewMatrix[0][0]);
+    glUniformMatrix4fv(depthBiasId, 1, GL_FALSE, &depthBiasMVP[0][0]);
+    glUniform3f(lightDirId, lightDir.x, lightDir.y, lightDir.z);
+    glUniform3f(lightPosId, 0, 0, 0); // TODO.
+    //glUniformMatrix4fv(depthMatrixId, 1, GL_FALSE, &depthMVP[0][0]);
+
+    drawQuad();
+
+
+    // ============ Debug Rendering =============
+    if (RENDER_DEBUG_IMAGES) {
+
+      glUseProgram(quadProgramId);
+
+      // Render to the screen
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+      glDrawBuffer(GL_FRONT_LEFT);
+
+      // Must be disabled to draw overtop.
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+      glDisable(GL_DEPTH_TEST);
+      glActiveTexture(GL_TEXTURE0);
+      glUniform1i(texId, 0); // 0 - base image, 2 - normal map, 4 - shadow map.
+
+      // Draw diffuse ----------------
+      glViewport(0, 0, height/4, height/4);
+      glBindTexture(GL_TEXTURE_2D, deferredDiffuseTexture);
+      drawQuad();
+
+      // Draw normals ----------------
+      glViewport(height/4, 0, height/4, height/4);
+      glBindTexture(GL_TEXTURE_2D, deferredNormalTexture);
+      drawQuad();
+
+      // Draw depth ----------------
+      glViewport(height/2, 0, height/4, height/4);
+      glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
+      drawQuad();
+    }
+    // =========== End Debug =================
 
     // Swap buffers
     glfwSwapBuffers(window);
@@ -398,7 +424,7 @@ Viewer::~Viewer() {
   // Cleanup VBO and shader
   glDeleteProgram(programId);
   glDeleteProgram(depthProgramId);
-  glDeleteProgram(quad_programId);
+  glDeleteProgram(quadProgramId);
   glDeleteProgram(geomTexturesProgramId);
   glDeleteProgram(deferredShadingProgramId);
   //glDeleteTextures(1, &texture);
@@ -408,7 +434,7 @@ Viewer::~Viewer() {
   glDeleteTextures(1, &deferredDiffuseTexture);
   glDeleteTextures(1, &deferredNormalTexture);
   glDeleteTextures(1, &deferredDepthTexture);
-  glDeleteBuffers(1, &quad_vertexbuffer);
+  glDeleteBuffers(1, &quadVertexBuffer);
   glDeleteVertexArrays(1, &vertexArrayId);
 
   for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
