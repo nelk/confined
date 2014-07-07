@@ -14,6 +14,10 @@ uniform sampler2DShadow shadowMap;
 
 uniform vec3 lightPositionWorldspace;
 uniform vec3 lightDirectionWorldspace;
+uniform vec3 lightColour;
+uniform vec3 lightAmbience;
+uniform vec3 lightFalloff;
+
 uniform vec3 cameraPositionWorldspace;
 uniform mat4 P;
 uniform mat4 V;
@@ -63,10 +67,6 @@ float random(vec3 seed, int i){
 
 void main(){
 
-  // Light properties.
-  vec3 lightColor = vec3(1, 1, 1);
-  float lightPower = 1.0f;
-
   // Material properties
   // TODO: Texture diffuse.
   vec3 material_kd = texture2D(diffuseTexture, texUV).rgb;
@@ -75,16 +75,14 @@ void main(){
   if (material_kd == vec3(0, 0, 0))
     discard;
 
-  vec3 material_ka = vec3(0.2, 0.2, 0.2) * material_kd;
+  vec3 material_ka = lightAmbience * material_kd;
   vec3 material_ks = vec3(0.5, 0.5, 0.5);
   float material_shininess = 96.0;
 
-  float x = texUV.x;// * 2.0 - 1.0;
-  float y = texUV.y;// * 2.0 - 1.0;
-  //float y = -(1.0 - texUV.y) * 2.0 - 1.0;
+  float x = texUV.x;
+  float y = texUV.y;
   float z = texture2D(depthTexture, texUV).r;
 
-  //vec4 vertexPositionScreenspace = vec4(x, y, z, 1.0);
   vec4 vertexPositionScreenspace = vec4(vec3(x, y, z) * 2.0 - 1.0, 1); // Clip space.
   vec4 vertexPositionCameraspace = inverse(P) * vertexPositionScreenspace;
   //vertexPositionCameraspace = vertexPositionCameraspace / vertexPositionCameraspace.w;
@@ -101,7 +99,8 @@ void main(){
   vec3 lightDirectionCameraspace = (V * vec4(lightDirectionWorldspace, 0)).xyz;
 
   // Distance to the light
-  //float distance = length(lightPositionWorldspace - vertexPositionWorldspace);
+  float lightDist = length(lightPositionWorldspace - vertexPositionWorldspace.xyz);
+  float attenuation = 1.0/dot(lightFalloff, vec3(1, lightDist, lightDist*lightDist));
 
   // Normal of the computed fragment, in camera space.
   vec3 n = texture2D(normalTexture, texUV).rgb * 2.0 - 1.0;
@@ -182,6 +181,9 @@ void main(){
   // TODO: SSAO.
 
   color = material_ka
-    + visibility * material_kd * lightColor * lightPower * cosTheta // Diffuse.
-    + visibility * material_ks * lightColor * lightPower * pow(cosAlpha, material_shininess); // Specular.
+    + visibility * lightColour * attenuation
+    * (
+      material_kd * cosTheta // Diffuse.
+    + material_ks * pow(cosAlpha, material_shininess) // Specular.
+    );
 }

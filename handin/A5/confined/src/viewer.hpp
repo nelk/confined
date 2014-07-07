@@ -7,6 +7,7 @@
 #include <vector>
 #include "controller.hpp"
 #include "mesh.hpp"
+#include "light.hpp"
 
 #define DEFAULT_WIDTH 1024
 #define DEFAULT_HEIGHT 768
@@ -43,6 +44,7 @@ private:
   GLFWwindow* window;
   Controller* controller;
   std::vector<Mesh*> meshes;
+  std::vector<Light*> lights;
 
   GLuint programId;
   GLuint depthProgramId;
