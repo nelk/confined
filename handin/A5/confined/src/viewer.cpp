@@ -14,7 +14,7 @@ using namespace glm;
 #include "controller.hpp"
 
 #define MIN_REQUIRED_COLOUR_ATTACHMENTS 2
-#define RENDER_DEBUG_IMAGES false
+#define RENDER_DEBUG_IMAGES true
 #define SHADOWMAP_WIDTH 2048
 #define SHADOWMAP_HEIGHT 2048
 
@@ -206,10 +206,16 @@ bool Viewer::initGL() {
 
 
   // Scene-specific setup:
-  lights.push_back(Light::directionalLight(glm::vec3(0.6, 0.6, 0.6), vec3(0.0, 1.0, -0.1)));
+
+  lights.push_back(Light::directionalLight(glm::vec3(0.2, 1.0, 0.2), vec3(0.0, -1.0, 0.1)));
+  lights[0]->getAmbience() = glm::vec3(0.1, 0.1, 0.1);
   lights[0]->getFalloff()[1] = 1.0;
 
   lights.push_back(Light::directionalLight(glm::vec3(1.0, 0.2, 0.2), vec3(0.0, 0.0, 1.0)));
+
+  lights.push_back(Light::spotLight(glm::vec3(0.6, 0.6, 0.6), vec3(0.0, 15.0, 0.0), vec3(0.0, -1.0, 0.01), 5.0));
+
+  lights.push_back(Light::directionalLight(glm::vec3(0.3, 0.3, 0.3), vec3(1.0, -1.0, 1.00)));
 
   return true;
 }
@@ -250,9 +256,11 @@ void Viewer::run() {
   GLuint deferredProjectionMatrixId = glGetUniformLocation(deferredShadingProgramId, "P");
   GLuint lightPosId = glGetUniformLocation(deferredShadingProgramId, "lightPositionWorldspace");
   GLuint lightDirId = glGetUniformLocation(deferredShadingProgramId, "lightDirectionWorldspace");
+  GLuint lightTypeId = glGetUniformLocation(deferredShadingProgramId, "lightType");
   GLuint lightColourId = glGetUniformLocation(deferredShadingProgramId, "lightColour");
   GLuint lightAmbienceId = glGetUniformLocation(deferredShadingProgramId, "lightAmbience");
   GLuint lightFalloffId = glGetUniformLocation(deferredShadingProgramId, "lightFalloff");
+  GLuint lightSpreadDegreesId = glGetUniformLocation(deferredShadingProgramId, "lightSpreadDegrees");
   GLuint cameraPositionId = glGetUniformLocation(deferredShadingProgramId, "cameraPositionWorldspace");
 
   GLuint depthBiasId = glGetUniformLocation(deferredShadingProgramId, "depthBiasVP");
@@ -278,17 +286,12 @@ void Viewer::run() {
   glBindVertexArray(vertexArrayId);
 
   do {
-    // Enable this for render pass.
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE); // TODO: kill?
-
     // ======= Deferred rendering stage 1: Render geometry into textures. ===========
 
     glUseProgram(geomTexturesProgramId);
 
     // Render to framebuffer.
-    glBindFramebuffer(GL_FRAMEBUFFER, deferredShadingFramebuffer); // TODO!!
-  //std::cerr << "kdsjf" << std::endl;
-  //checkGLErrors();
+    glBindFramebuffer(GL_FRAMEBUFFER, deferredShadingFramebuffer);
     glViewport(0, 0, width, height);
     glEnable(GL_DEPTH_TEST);
 
@@ -354,13 +357,15 @@ void Viewer::run() {
     bool firstBlendPass = true;
     lightTime += 0.02;
 
-    // Light operations.
-    lights[0]->getAmbience() = glm::vec3(0.1, 0.1, 0.1);
-    lights[0]->getDirection() = glm::vec3(std::sin(lightTime), 1.0, std::cos(lightTime));
-    lights[1]->getDirection() = glm::vec3(0, std::sin(lightTime), std::cos(lightTime));
+    // Moving lights.
+    lights[0]->getDirection() = glm::vec3(std::cos(lightTime), -1.0, std::sin(lightTime)); // Green.
+    lights[1]->getDirection() = glm::vec3(0, std::sin(lightTime), std::cos(lightTime)); // Red.
+    lights[2]->getDirection()[2] = 0.2*std::sin(1.5*lightTime); // Spot.
 
 
     for (std::vector<Light*>::const_iterator it = lights.begin(); it != lights.end(); it++) {
+      Light* light = *it;
+      if (!light->isEnabled()) continue;
 
       // ======= Shadow mapping =========
       glUseProgram(depthProgramId);
@@ -373,12 +378,25 @@ void Viewer::run() {
       // Bind texture.
       glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadowmapDepthTexture, 0);
 
-      Light* light = *it;
+      glm::vec3 lightPos = light->getPosition();
       glm::vec3 lightDir = light->getDirection();
 
       // Compute the MVP matrix from the light's point of view.
-      glm::mat4 depthProjectionMatrix = glm::ortho<float>(-10, 10, -10, 10, -10, 20);
-      glm::mat4 depthViewMatrix = glm::lookAt(lightDir, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+      glm::mat4 depthProjectionMatrix;
+      glm::mat4 depthViewMatrix;
+      glm::vec3 lightDirectionWorldspace;
+      switch (light->getType()) {
+        case Light::DIRECTIONAL:
+          depthProjectionMatrix = glm::ortho<float>(-10, 10, -10, 10, -10, 20);
+          depthViewMatrix = glm::lookAt(glm::vec3(0, 0, 0), lightDir, glm::vec3(0, 1, 0));
+          break;
+        case Light::SPOT:
+          depthProjectionMatrix = glm::perspective(light->getSpread() + 10.0f, 1.0f, 2.0f, 50.0f);
+          depthViewMatrix = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0, 1, 0));
+          break;
+        case Light::POINT:
+          break;
+      }
       glm::mat4 depthModelMatrix = glm::mat4(1.0);
       glm::mat4 depthVP = depthProjectionMatrix * depthViewMatrix;
       glm::mat4 depthMVP = depthVP * depthModelMatrix;
@@ -450,14 +468,16 @@ void Viewer::run() {
       glUniformMatrix4fv(depthBiasId, 1, GL_FALSE, &depthBiasVP[0][0]);
       glUniform3f(cameraPositionId, cameraPosition.x, cameraPosition.y, cameraPosition.z);
       glUniform3f(lightDirId, lightDir.x, lightDir.y, lightDir.z);
-      glUniform3f(lightPosId, lightDir.x, lightDir.y, lightDir.z); // TODO.
+      glUniform3f(lightPosId, lightPos.x, lightPos.y, lightPos.z);
 
       glm::vec3 lightColour = light->getColour();
       glm::vec3 lightAmbience = light->getAmbience();
       glm::vec3 lightFalloff = light->getFalloff();
+      glUniform1i(lightTypeId, (int) light->getType());
       glUniform3f(lightColourId, lightColour.x, lightColour.y, lightColour.z);
       glUniform3f(lightAmbienceId, lightAmbience.x, lightAmbience.y, lightAmbience.z);
       glUniform3f(lightFalloffId, lightFalloff.x, lightFalloff.y, lightFalloff.z);
+      glUniform1f(lightSpreadDegreesId, light->getSpread());
 
       drawQuad();
 

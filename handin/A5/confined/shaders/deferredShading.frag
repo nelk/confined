@@ -14,9 +14,11 @@ uniform sampler2DShadow shadowMap;
 
 uniform vec3 lightPositionWorldspace;
 uniform vec3 lightDirectionWorldspace;
+uniform int lightType; // 0 = directional, 1 = spot, 2 = point.
 uniform vec3 lightColour;
 uniform vec3 lightAmbience;
 uniform vec3 lightFalloff;
+uniform float lightSpreadDegrees;
 
 uniform vec3 cameraPositionWorldspace;
 uniform mat4 P;
@@ -95,21 +97,30 @@ void main(){
   // Vector that goes from the vertex to the camera, in camera space.
   vec3 eyeDirectionCameraspace = -vertexPositionCameraspace.xyz / vertexPositionCameraspace.w;
 
-  // Vector that goes from the vertex to the light, in camera space
-  vec3 lightDirectionCameraspace = (V * vec4(lightDirectionWorldspace, 0)).xyz;
-
-  // Distance to the light
-  float lightDist = length(lightPositionWorldspace - vertexPositionWorldspace.xyz);
+  vec3 vertexPositionToLightPositionWorldspace = lightPositionWorldspace - vertexPositionWorldspace.xyz;
+  float lightDist = length(vertexPositionToLightPositionWorldspace);
   float attenuation = 1.0/dot(lightFalloff, vec3(1, lightDist, lightDist*lightDist));
 
+  // Vector in the direction light is facing, in camera space
+  vec3 lightDirectionCameraspace = (V * vec4(lightDirectionWorldspace, 0)).xyz;
   // Normal of the computed fragment, in camera space.
   vec3 n = texture2D(normalTexture, texUV).rgb * 2.0 - 1.0;
-  // Direction of the light (from the fragment to the light)
-  vec3 l = normalize(lightDirectionCameraspace);
+  vec3 l = vec3(0, 0, 0); // Direction of the light (from the fragment to the light) in camera space;
+
+  switch (lightType) {
+    case 0:
+      // For directional light just reverse light direction.
+      l = -normalize(lightDirectionCameraspace);
+      break;
+    case 1:
+      // For spot light, use light's direction directly.
+      l = normalize((V * vec4(vertexPositionToLightPositionWorldspace, 1.0)).xyz);
+      break;
+  }
 
 
   // Clamped Cosine of the angle between the normal and the light direction.
-  float cosTheta = clamp(dot(n, l), 0 ,1);
+  float cosTheta = clamp(dot(n, l), 0, 1);
 
   // Eye vector (towards the camera)
   vec3 E = normalize(eyeDirectionCameraspace);
@@ -122,7 +133,7 @@ void main(){
   vec3 H = normalize(E + l); // Half-angle.
   float cosAlpha = clamp(dot(H, n), 0, 1); // Blinn-Phong.
 
-  float shadowCoefficient = 0.0;
+  float visibility = 0.0;
 
   // Fixed bias.
   //float bias = 0.005;
@@ -158,7 +169,18 @@ void main(){
   //vec2 windowOffset = vec2(i%4*3-1.5, i/4*3-1.5);
   //shadowCoefficient += texture(shadowMap, vec3(shadowCoord.xy + (offset + windowOffset) / 2048.0, (shadowCoord.z - bias)/shadowCoord.w));
   //shadowCoefficient += texture(shadowMap, vec3(shadowCoord.xy + (offset + offsetTable[index]) / 700.0, (shadowCoord.z - bias)/shadowCoord.w));
-  shadowCoefficient += texture(shadowMap, vec3(shadowCoord.xy + poissonDisk[index] / 700.0, (shadowCoord.z - bias)/shadowCoord.w));
+
+  switch (lightType) {
+    case 0: // Directional light.
+      visibility += texture(shadowMap, vec3(shadowCoord.xy + poissonDisk[index] / 700.0, (shadowCoord.z - bias)/shadowCoord.w));
+      break;
+    case 1: // Spot light.
+      float coneAngle = acos(dot(-normalize(vertexPositionToLightPositionWorldspace), normalize(lightDirectionWorldspace)));
+      if (coneAngle <= radians(lightSpreadDegrees)) {
+        visibility += texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
+      }
+      break;
+  }
 
     //visibility -= sample_shadow_coverage * (1.0 - texture(shadowMap, vec3(shadowCoord.xy + poissonDisk[index] / 700.0, (shadowCoord.z - bias) / shadowCoord.w))); // Best
 
@@ -171,12 +193,9 @@ void main(){
     /*visibility -= sample_shadow_coverage * (1.0 - float(isShadowed));*/
   }
 
-  float visibility = shadowCoefficient / num_samples;
+  visibility = visibility / num_samples;
 
 
-  // TODO: Spot lights.
-  // if (texture(shadowMap, (shadowCoord.xy/shadowCoord.w)).z < (shadowCoord.z-bias)/shadowCoord.w)
-  // if (textureProj(shadowMap, shadowCoord.xyw).z < (shadowCoord.z-bias)/shadowCoord.w)
 
   // TODO: SSAO.
 
