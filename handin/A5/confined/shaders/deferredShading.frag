@@ -4,13 +4,15 @@
 in vec2 texUV;
 
 // Output.
-layout(location = 0) out vec3 color;
+layout(location = 0) out vec3 colour;
 
 // Constant inputs.
 uniform sampler2D diffuseTexture;
 uniform sampler2D normalTexture; // TODO - check shadow, normal samplers?
 uniform sampler2D depthTexture;
 uniform sampler2DShadow shadowMap;
+uniform samplerCubeShadow shadowMapCube;
+//uniform samplerCube shadowMapCube;
 
 uniform vec3 lightPositionWorldspace;
 uniform vec3 lightDirectionWorldspace;
@@ -87,16 +89,17 @@ void main(){
 
   vec4 vertexPositionScreenspace = vec4(vec3(x, y, z) * 2.0 - 1.0, 1); // Clip space.
   vec4 vertexPositionCameraspace = inverse(P) * vertexPositionScreenspace;
-  //vertexPositionCameraspace = vertexPositionCameraspace / vertexPositionCameraspace.w;
+  vertexPositionCameraspace = vertexPositionCameraspace / vertexPositionCameraspace.w;
 
   vec4 vertexPositionWorldspace = inverse(V) * vertexPositionCameraspace;
-  vertexPositionWorldspace = vertexPositionWorldspace / vertexPositionWorldspace.w;
+  //vertexPositionWorldspace = vertexPositionWorldspace / vertexPositionWorldspace.w;
 
   vec4 shadowCoord = depthBiasVP * vertexPositionWorldspace;
 
   // Vector that goes from the vertex to the camera, in camera space.
   vec3 eyeDirectionCameraspace = -vertexPositionCameraspace.xyz / vertexPositionCameraspace.w;
 
+  vec3 lightPositionCameraspace = (V * vec4(lightPositionWorldspace, 1.0)).xyz;
   vec3 vertexPositionToLightPositionWorldspace = lightPositionWorldspace - vertexPositionWorldspace.xyz;
   float lightDist = length(vertexPositionToLightPositionWorldspace);
   float attenuation = 1.0/dot(lightFalloff, vec3(1, lightDist, lightDist*lightDist));
@@ -113,11 +116,12 @@ void main(){
       l = -normalize(lightDirectionCameraspace);
       break;
     case 1:
-      // For spot light, use light's direction directly.
-      l = normalize((V * vec4(vertexPositionToLightPositionWorldspace, 1.0)).xyz);
+    case 2:
+      // For spot light and point light use point's position.
+      // This is wrong!: l = normalize((V * vec4(vertexPositionToLightPositionWorldspace, 1.0)).xyz);
+      l = normalize((vec4(lightPositionCameraspace, 1.0) - vertexPositionCameraspace).xyz);
       break;
   }
-
 
   // Clamped Cosine of the angle between the normal and the light direction.
   float cosTheta = clamp(dot(n, l), 0, 1);
@@ -149,7 +153,7 @@ void main(){
     /*offset.y = 0;*/
 
   // Sample the shadow map n times.
-  int num_samples = 16;
+  int num_samples = 1; // TODO: Up samples for some light types.
   for (int i = 0; i < num_samples; i++){
     // use either :
     //  - Always the same samples.
@@ -174,11 +178,42 @@ void main(){
     case 0: // Directional light.
       visibility += texture(shadowMap, vec3(shadowCoord.xy + poissonDisk[index] / 700.0, (shadowCoord.z - bias)/shadowCoord.w));
       break;
+
     case 1: // Spot light.
       float coneAngle = acos(dot(-normalize(vertexPositionToLightPositionWorldspace), normalize(lightDirectionWorldspace)));
+/*
       if (coneAngle <= radians(lightSpreadDegrees)) {
         visibility += texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
       }
+*/
+      // Exponential light decay by angle.
+      visibility += (2 - pow(2, coneAngle/radians(lightSpreadDegrees))) * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
+      break;
+
+    case 2: // Point light.
+      //visibility += texture(shadowMapCube, shadowCoord);
+      //visibility += texture(shadowMapCube, shadowCoord - vec4(0, 0, bias, 0));
+      //visibility += texture(shadowMapCube, vec4(vertexPositionToLightPositionWorldspace, 1.0));
+      //visibility += texture(shadowMapCube, vec4(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w, 1.0));
+      //visiblity += texture(shadowCubeMap, vec3(shadowCoord.xy + poissonDisk[index] / 700.0, (shadowCoord.z - bias)/shadowCoord.w));
+
+
+      //visibility += texture(shadowMapCube, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
+      //visibility += texture(shadowMapCube, shadowCoord.xyz);
+
+      // Try turning world space vector to depth value to compare with shadow map ortho depth.
+      //float shadowvec = texture(shadowMapCube, shadowCoord);
+      //float shadowvec = texture(shadowMapCube, vertexPositionToLightPositionWorldspace);
+      vec3 absvec = abs(vertexPositionToLightPositionWorldspace);
+      vec3 v = vertexPositionToLightPositionWorldspace;
+      float lzc = max(abs(v.x), max(abs(v.y), abs(v.z)));
+      float f = 500;
+      float n = 1.0;
+      float nzc = (f+n)/(f-n) - (2*f*n)/(f-n)/lzc;
+      float v2dv = (nzc + 1.0) * 0.5;
+
+      visibility += texture(shadowMapCube, vec4(shadowCoord.xyz/shadowCoord.w, v2dv - bias - 0.002));
+
       break;
   }
 
@@ -199,7 +234,7 @@ void main(){
 
   // TODO: SSAO.
 
-  color = material_ka
+  colour = material_ka
     + visibility * lightColour * attenuation
     * (
       material_kd * cosTheta // Diffuse.

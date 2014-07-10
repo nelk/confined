@@ -38,7 +38,7 @@ glm::mat4 Controller::getProjectionMatrix(){
 
 void Controller::update() {
   double currentTime = glfwGetTime();
-  float deltaTime = float(currentTime - lastTime);
+  float deltaTime = currentTime - lastTime;
 
   GLFWwindow* window = viewer->getWindow();
   int width = viewer->getWidth();
@@ -118,7 +118,7 @@ void Controller::update() {
   // Camera matrix
   viewMatrix = glm::lookAt(
     position,           // Camera position.
-    position+direction, // Lookat position.
+    position + direction, // Lookat position.
     up                  // Up.
   );
 

@@ -13,6 +13,6 @@ Light* Light::spotLight(const glm::vec3& colour, const glm::vec3& position, cons
 }
 
 Light* Light::pointLight(const glm::vec3& colour, const glm::vec3& position) {
-  return new Light(SPOT, colour, position, glm::vec3(0, 0, 0), 0);
+  return new Light(POINT, colour, position, glm::vec3(0, 0, 0), 0);
 }
 

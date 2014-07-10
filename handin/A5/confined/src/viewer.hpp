@@ -64,6 +64,7 @@ private:
 
   //GLuint texture;
   GLuint shadowmapDepthTexture;
+  GLuint shadowmapCubeDepthTexture;
 };
 
 #endif
