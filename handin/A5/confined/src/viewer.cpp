@@ -177,6 +177,9 @@ bool Viewer::initGL() {
   glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadowmapDepthTexture, 0);
 
   // Shadow cube map for point lights.
+  shadowCubeMapFramebuffer = 0;
+  glGenFramebuffers(1, &shadowCubeMapFramebuffer);
+  glBindFramebuffer(GL_FRAMEBUFFER, shadowCubeMapFramebuffer);
 
   glGenTextures(1, &shadowmapCubeDepthTexture);
   glBindTexture(GL_TEXTURE_CUBE_MAP, shadowmapCubeDepthTexture);
@@ -224,16 +227,21 @@ bool Viewer::initGL() {
 
 
   // Scene-specific setup:
-  lights.push_back(Light::spotLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0, 0, 0), glm::vec3(0.0, 0.0, -1.0), 5.0));
+  lights.push_back(Light::spotLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0, 0, 0), glm::vec3(0.0, 0.0, -1.0), 10.0));
+  lights.back()->getFalloff() = glm::vec3(1.0, 0.02, 0.001);
 
   lights.push_back(Light::pointLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0.0, -1.0, 0.1)));
 
 
-  //lights.push_back(Light::pointLight(glm::vec3(0.9, 0.9, 0.9), glm::vec3(-1.0, 6.0, -3.0)));
-  //lights.back()->getFalloff() = glm::vec3(1.0, 0.2, 0.06);
-  //lights.push_back(Light::pointLight(glm::vec3(0.5, 0.5, 0.5), vec3(0.0, 3.0, -1.0)));
+  lights.push_back(Light::pointLight(glm::vec3(0.9, 0.9, 0.9), glm::vec3(-1.0, 6.0, -3.0)));
+  lights.back()->getFalloff() = glm::vec3(1.0, 0.2, 0.06);
 
-  //lights.push_back(Light::directionalLight(glm::vec3(0.2, 1.0, 0.2), glm::vec3(0.0, -1.0, 0.1)));
+  lights.push_back(Light::pointLight(glm::vec3(0.8, 0.8, 0.8), glm::vec3(3.0, 1.0, -3.0)));
+  lights.back()->getFalloff() = glm::vec3(1.0, 0.1, 0.4);
+
+  //lights.push_back(Light::pointLight(glm::vec3(0.5, 0.5, 0.5), glm::vec3(0.0, 3.0, -1.0)));
+
+  lights.push_back(Light::directionalLight(glm::vec3(0.1, 0.4, 0.1), glm::vec3(0.0, -10.0, 1.0)));
   /*
   lights[0]->getAmbience() = glm::vec3(0.1, 0.1, 0.1);
   lights[0]->getFalloff()[1] = 1.0;
@@ -400,6 +408,7 @@ void Viewer::run() {
     lights[0]->getPosition() = cameraPosition;
     // TODO: Why backwards about x?
     lights[0]->getDirection() = glm::vec3(glm::inverse(viewMatrix) * glm::vec4(0, 0, -1, 0));
+    //lights[0]->setEnabled(false);
 
     lights[1]->getPosition() = glm::vec3(std::cos(lightTime), 5.0, std::sin(lightTime)); // Point.
 
@@ -415,7 +424,11 @@ void Viewer::run() {
 
       // ======= Shadow mapping =========
       glUseProgram(depthProgramId);
-      glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFramebuffer);
+      if (light->getType() == Light::POINT) {
+        glBindFramebuffer(GL_FRAMEBUFFER, shadowCubeMapFramebuffer);
+      } else {
+        glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFramebuffer);
+      }
       glDrawBuffer(GL_NONE); // No colour output.
       glViewport(0, 0, SHADOWMAP_WIDTH, SHADOWMAP_HEIGHT);
       glEnable(GL_DEPTH_TEST);
@@ -490,6 +503,7 @@ void Viewer::run() {
       }
 
       // TODO: Debug angles/perspectives of point light - seems a little off for some directions.
+      // TODO: Fix shadow stripes!
       if (light->getType() == Light::POINT) {
         // TODO: Figure out why we need to shift by -1 here.
         depthVP = glm::translate(glm::mat4(1.0), glm::vec3(-lightPos.x - 1, -lightPos.y - 1, -lightPos.z - 1));
@@ -663,6 +677,7 @@ Viewer::~Viewer() {
 
   glDeleteFramebuffers(1, &deferredShadingFramebuffer);
   glDeleteFramebuffers(1, &shadowMapFramebuffer);
+  glDeleteFramebuffers(1, &shadowCubeMapFramebuffer);
 
   glDeleteTextures(1, &shadowmapDepthTexture);
   glDeleteTextures(1, &deferredDiffuseTexture);
