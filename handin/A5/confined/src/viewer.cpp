@@ -311,8 +311,6 @@ void Viewer::run() {
   // Handle for MVP uniform (shadow depth pass).
   GLuint depthMatrixId = glGetUniformLocation(depthProgramId, "depthMVP");
 
-  // TODO: Texture sampler handlers.
-  //GLuint textureId  = glGetUniformLocation(deferredShadingProgramId, "thetexture");
   GLuint texId = glGetUniformLocation(quadProgramId, "texture");
 
   // Handles for MVP matrix uniforms (render pass).
@@ -351,6 +349,8 @@ void Viewer::run() {
   GLuint material_kd = glGetUniformLocation(geomTexturesProgramId, "material_kd");
   //GLuint material_ks = glGetUniformLocation(geomTexturesProgramId, "material_ks");
   //GLuint material_shininess = glGetUniformLocation(geomTexturesProgramId, "material_shininess");
+  GLuint geomMaterialTexId = glGetUniformLocation(geomTexturesProgramId, "materialTex");
+  GLuint geomUseTextureId = glGetUniformLocation(geomTexturesProgramId, "useTexture");
 
   GLuint postProcessTexId = glGetUniformLocation(postProcessProgramId, "texture");
 
@@ -396,8 +396,11 @@ void Viewer::run() {
     double deltaTime = currentTime - lastTime;
     lastTime = currentTime;
 
+    // TODO: Make config class and hook up controller to flip options like this.
     bool useSSAO = true;//(int) std::floor(currentTime) % 2 == 0;
     bool doPostProcessing = useSSAO;
+
+
     // ======= Deferred rendering stage 1: Render geometry into textures. ===========
 
     glUseProgram(geomTexturesProgramId);
@@ -443,6 +446,12 @@ void Viewer::run() {
         glUniform3f(material_kd, material->kd.x, material->kd.y, material->kd.z);
         //glUniform3f(material_ks, material->ks.x, material->ks.y, material->ks.z);
         //glUniform1f(material_shininess, material->shininess);
+
+        // Bind texture if it exists.
+        glUniform1i(geomUseTextureId, material->texture != 0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, material->texture);
+        glUniform1i(geomMaterialTexId, 0);
       }
       (*it)->renderGL();
     }
@@ -488,7 +497,7 @@ void Viewer::run() {
     // Moving lights.
 
     // Flashlight.
-    lights[0]->getPosition() = cameraPosition + glm::vec3(0, -1.3f, 0);
+    lights[0]->getPosition() = cameraPosition + glm::vec3(0, -0.6f, 0);
     // TODO: Why backwards about x?
     lights[0]->getDirection() = glm::vec3(glm::inverse(viewMatrix) * glm::vec4(0, 0, -1, 0));
     //lights[0]->setEnabled(false);

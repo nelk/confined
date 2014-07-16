@@ -1,6 +1,7 @@
 
 #include "mesh.hpp"
 #include <glm/glm.hpp>
+#include <FreeImage.h>
 #include <iostream>
 
 Mesh::Mesh(
@@ -116,8 +117,14 @@ void Mesh::renderGL() {
   glDisableVertexAttribArray(2);
 }
 
+void MessageFunction(FREE_IMAGE_FORMAT fif, const char *msg) {
+  std::cerr << (int)fif << ": " << msg << std::endl;
+}
 
 std::vector<Mesh*> loadScene(const char* fileName) {
+
+  FreeImage_SetOutputMessage(MessageFunction); 
+
   std::vector<Mesh*> meshes;
   Assimp::Importer importer;
   const aiScene* scene = importer.ReadFile(fileName, aiProcess_JoinIdenticalVertices | aiProcess_Triangulate);
@@ -145,6 +152,31 @@ std::vector<Mesh*> loadScene(const char* fileName) {
       glm::vec3(kd.r, kd.g, kd.b),
       glm::vec3(ks.r, ks.g, ks.b),
       shininess);
+
+    int num_textures = m->GetTextureCount(aiTextureType_DIFFUSE);
+    if (num_textures >= 1) {
+      aiString texFileName;
+      if (m->GetTexture(aiTextureType_DIFFUSE, 0, &texFileName) == AI_SUCCESS) {
+        std::string prefixedTexFileName = "models/" + std::string(texFileName.C_Str());
+        FIBITMAP* bitmap = FreeImage_Load(FreeImage_GetFileType(prefixedTexFileName.c_str(), 0), prefixedTexFileName.c_str());
+        FIBITMAP *pImage = FreeImage_ConvertTo32Bits(bitmap);
+
+        const int texWidth = FreeImage_GetWidth(bitmap);
+        const int texHeight = FreeImage_GetHeight(bitmap);
+
+        /*
+        BYTE raw[texWidth*texHeight];
+        FreeImage_ConvertToRawBits(raw, pImage, texWidth*texHeight, 32, 1, 1, 1, false);
+
+        materials[matId]->setTexture(texWidth, texHeight, (void*) raw);
+        */
+
+        materials[matId]->setTexture(texWidth, texHeight, (void*) FreeImage_GetBits(pImage));
+
+        FreeImage_Unload(pImage);
+        FreeImage_Unload(bitmap);
+      }
+    }
   }
 
   // Load meshes.

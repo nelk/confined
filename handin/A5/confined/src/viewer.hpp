@@ -66,7 +66,6 @@ private:
   GLuint quadVertexBuffer;
   GLuint depthRenderBuffer;
 
-  //GLuint texture;
   GLuint shadowmapDepthTexture;
   GLuint shadowmapCubeDepthTexture;
   GLuint ssaoNoiseTexture;

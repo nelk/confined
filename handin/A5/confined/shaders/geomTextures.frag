@@ -9,15 +9,20 @@ layout(location = 0) out vec3 outDiffuse;
 layout(location = 1) out vec3 outNormal;
 layout(location = 2) out float gl_FragDepth;
 
-// TODO: texture colour or material ID.
 uniform vec3 material_kd;
+uniform sampler2D materialTex;
+uniform bool useTexture;
 
+// TODO: Pass through specular and shininess.
 
-void main(){
-  // TODO: Texture diffuse.
+void main() {
+  // Output Diffuse colour.
+  if (useTexture) {
+    outDiffuse = texture2D(materialTex, UV).rgb;
+  } else {
+    outDiffuse = material_kd;
+  }
 
-  // Output render targets.
-  outDiffuse = material_kd;
   outNormal = (normalize(normalCameraspace) + 1.0) / 2.0; // Shift normal to be positive.
   gl_FragDepth = gl_FragCoord.z;
 }
