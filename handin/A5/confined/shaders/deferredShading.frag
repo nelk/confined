@@ -12,7 +12,7 @@ uniform sampler2D normalTexture; // TODO - check shadow, normal samplers?
 uniform sampler2D depthTexture;
 uniform sampler2DShadow shadowMap;
 uniform samplerCubeShadow shadowMapCube;
-//uniform samplerCube shadowMapCube;
+uniform sampler2D ssaoNoiseTexture;
 
 uniform vec3 lightPositionWorldspace;
 uniform vec3 lightDirectionWorldspace;
@@ -33,6 +33,8 @@ uniform mat4 depthBiasVP;
 //uniform vec3 material_ks;
 //uniform float material_shininess;
 
+uniform bool useSSAO = true;
+uniform vec3 ssaoKernel[4];
 
 // Pre-computed poisson disk.
 // opengl-tutorials.org.
@@ -69,6 +71,29 @@ float random(vec3 seed, int i){
   return fract(sin(dot_product) * 43758.5453);
 }
 
+float SSAO(mat3 kernelBasis, vec3 originPos, float cmpDepth, float radius) {
+  float occlusion = 0.0;
+  for (int i = 0; i < 4; i++) {
+    // Get sample position.
+    vec3 samplePos = kernelBasis * ssaoKernel[i];
+    samplePos = samplePos * radius + originPos;
+
+    // Project sample position.
+    vec4 offset = P * vec4(samplePos, 1.0);
+    offset.xy /= offset.w; // Only need xy.
+    offset.xy = offset.xy * 0.5 + 0.5; // Scale/bias to texcoords.
+
+    float sampleDepth = texture(depthTexture, offset.xy).r;
+    float rangeCheck = smoothstep(0.0, 1.0, radius / abs(cmpDepth - sampleDepth));
+
+    occlusion += rangeCheck * step(sampleDepth, cmpDepth);
+  }
+
+  //occlusion = 1.0 - (occlusion / float(4));
+  //return pow(occlusion, uPower);
+  return occlusion / 4.0;
+}
+
 void main(){
 
   // Material properties
@@ -82,7 +107,7 @@ void main(){
   vec3 lightFalloffModified = lightFalloff;
   vec3 material_ka = lightAmbience * material_kd;
   vec3 material_ks = vec3(0.5, 0.5, 0.5);
-  float material_shininess = 96.0;
+  float material_shininess = 10.0; //96.0;
 
   float x = texUV.x;
   float y = texUV.y;
@@ -190,6 +215,7 @@ void main(){
 
       // Quadratic falloff by angle.
       float distFrac = coneAngle/radians(lightSpreadDegrees);
+      // TODO: Use step instead of branching.
       if (distFrac <= 1.0) {
         visibility += (1 - distFrac/1.5) * (1 - distFrac) * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
         //lightFalloffModified.z += distFrac;
@@ -216,8 +242,6 @@ void main(){
         }
       }
 */
-
-
       break;
 
     case 2: // Point light.
@@ -252,9 +276,24 @@ void main(){
   float lightDist = length(vertexPositionToLightPositionWorldspace);
   float attenuation = 1.0 / dot(lightFalloffModified, vec3(1, lightDist, lightDist*lightDist));
 
-  // TODO: SSAO.
 
-  colour = material_ka
+
+  // SSAO.
+  float ambientOcclusion = 0.0;
+  if (useSSAO) {
+    vec2 noiseTexCoords = texUV * vec2(textureSize(depthTexture, 0)) / vec2(4.0, 4.0);
+    // Kernel basis matrix.
+    vec3 rvec = texture(ssaoNoiseTexture, noiseTexCoords).rgb * 2.0 - 1.0;
+
+    // Gram-Schmidt.
+    vec3 tangent = normalize(rvec - n * dot(rvec, n));
+    vec3 bitangent = cross(tangent, n);
+    mat3 kernelBasis = mat3(tangent, bitangent, n);
+
+    ambientOcclusion = SSAO(kernelBasis, vertexPositionCameraspace.xyz, z, 1.5);
+  }
+
+  colour = material_ka * (1.0 - ambientOcclusion)
     + visibility * lightColour * attenuation
     * (
       material_kd * cosTheta // Diffuse.

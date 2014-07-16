@@ -1,4 +1,4 @@
-#include <stdlib.h>
+#include <cstdlib>
 #include <vector>
 #include <iostream>
 #include <ctime>
@@ -18,6 +18,7 @@
 #define SHADOWMAP_HEIGHT 2048
 #define MAX_FPS 60
 #define FPS_SAMPLE_RATE 20
+#define SSAO_NOISE_TEXTURE_WIDTH 4
 
 void window_size_callback(GLFWwindow* window, int width, int height) {
   Viewer* viewer = (Viewer*)glfwGetWindowUserPointer(window);
@@ -32,10 +33,10 @@ void window_focus_callback(GLFWwindow* window, int focussed) {
   }
 }
 
-bool checkGLErrors() {
+bool checkGLErrors(std::string msg) {
   GLenum error = glGetError();
   if (error != GL_NO_ERROR) {
-    std::cerr << "OpenGL error! " << error << " - " << glewGetErrorString(error) << std::endl;
+    std::cerr << "OpenGL error " << msg << ": " << error << " - " << glewGetErrorString(error) << std::endl;
     return false;
   }
   return true;
@@ -91,6 +92,12 @@ void Viewer::updateSize(int width, int height) {
 
   glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+
+  glBindTexture(GL_TEXTURE_2D, accumRenderTexture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, width, height, 0, GL_RGB, GL_FLOAT, 0);
+
+  glBindRenderbuffer(GL_RENDERBUFFER, depthRenderBuffer);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
 }
 
 bool Viewer::initGL() {
@@ -119,8 +126,9 @@ bool Viewer::initGL() {
 
   glGenVertexArrays(1, &vertexArrayId);
 
-  meshes = loadScene("models/test1.obj");
-  glm::vec3 startPosition(0, 0, -10);
+  //meshes = loadScene("models/test1.obj");
+  meshes = loadScene("models/monkeybox.obj");
+  glm::vec3 startPosition(0, 2, -10);
   controller->setHorizontalAngle(0);
 
   controller->setPosition(startPosition);
@@ -151,7 +159,8 @@ bool Viewer::initGL() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+  // This is necessary.
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 
   glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, deferredDepthTexture, 0);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, deferredDiffuseTexture, 0);
@@ -159,6 +168,39 @@ bool Viewer::initGL() {
 
   if (!checkGLFramebuffer()) return false;
 
+  // Framebuffer for accumulating rendering.
+  accumRenderFramebuffer = 0;
+  glGenFramebuffers(1, &accumRenderFramebuffer);
+  glBindFramebuffer(GL_FRAMEBUFFER, accumRenderFramebuffer);
+
+  // Main texture for accumulating deferred shading light passes.
+  glGenTextures(1, &accumRenderTexture);
+  glBindTexture(GL_TEXTURE_2D, accumRenderTexture);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, width, height, 0, GL_RGB, GL_FLOAT, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, accumRenderTexture, 0);
+
+  // Depth render buffer.
+  glGenRenderbuffers(1, &depthRenderBuffer);
+  glBindRenderbuffer(GL_RENDERBUFFER, depthRenderBuffer);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderBuffer);
+
+  if (!checkGLFramebuffer()) return false;
+
+
+  // SSAO Noise texture.
+  glGenTextures(1, &ssaoNoiseTexture);
+  glBindTexture(GL_TEXTURE_2D, ssaoNoiseTexture);
+  //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, SSAO_NOISE_TEXTURE_WIDTH, SSAO_NOISE_TEXTURE_WIDTH, 0, GL_RGB, GL_FLOAT, 0);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
 
   // Shadow mapping setup.
   shadowMapFramebuffer = 0;
@@ -175,6 +217,9 @@ bool Viewer::initGL() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadowmapDepthTexture, 0);
+
+  if (!checkGLFramebuffer()) return false;
+
 
   // Shadow cube map for point lights.
   shadowCubeMapFramebuffer = 0;
@@ -219,9 +264,12 @@ bool Viewer::initGL() {
   depthProgramId = loadShaders("shaders/depthShadow.vert", "shaders/depthShadow.frag" );
 
   geomTexturesProgramId = loadShaders("shaders/geomTextures.vert", "shaders/geomTextures.frag");
+
   deferredShadingProgramId = loadShaders("shaders/deferredShading.vert", "shaders/deferredShading.frag");
 
-  if (quadProgramId == 0 || depthProgramId == 0 || geomTexturesProgramId == 0 || deferredShadingProgramId == 0) {
+  postProcessProgramId = loadShaders("shaders/passthrough.vert", "shaders/postProcess.frag");
+
+  if (quadProgramId == 0 || depthProgramId == 0 || geomTexturesProgramId == 0 || deferredShadingProgramId == 0 || postProcessProgramId == 0) {
     return false;
   }
 
@@ -229,29 +277,14 @@ bool Viewer::initGL() {
   // Scene-specific setup:
   lights.push_back(Light::spotLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0, 0, 0), glm::vec3(0.0, 0.0, -1.0), 10.0));
   lights.back()->getFalloff() = glm::vec3(1.0, 0.02, 0.001);
+  //lights.back()->setEnabled(false);
 
-  lights.push_back(Light::pointLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0.0, -1.0, 0.1)));
+  lights.push_back(Light::pointLight(glm::vec3(0.2, 0.2, 0.2), glm::vec3(0.0, 3.0, 0.0)));
+  lights.back()->getAmbience() = glm::vec3(0.2, 0.2, 0.2);
+  //lights.back()->setEnabled(false); // turn off
 
-
-  lights.push_back(Light::pointLight(glm::vec3(0.9, 0.9, 0.9), glm::vec3(-1.0, 6.0, -3.0)));
+  lights.push_back(Light::pointLight(glm::vec3(0.4, 0.0, 0.0), glm::vec3(-1.0, 3.0, -3.0)));
   lights.back()->getFalloff() = glm::vec3(1.0, 0.2, 0.06);
-
-  lights.push_back(Light::pointLight(glm::vec3(0.8, 0.8, 0.8), glm::vec3(3.0, 1.0, -3.0)));
-  lights.back()->getFalloff() = glm::vec3(1.0, 0.1, 0.4);
-
-  //lights.push_back(Light::pointLight(glm::vec3(0.5, 0.5, 0.5), glm::vec3(0.0, 3.0, -1.0)));
-
-  lights.push_back(Light::directionalLight(glm::vec3(0.1, 0.4, 0.1), glm::vec3(0.0, -10.0, 1.0)));
-  /*
-  lights[0]->getAmbience() = glm::vec3(0.1, 0.1, 0.1);
-  lights[0]->getFalloff()[1] = 1.0;
-
-  lights.push_back(Light::directionalLight(glm::vec3(1.0, 0.2, 0.2), vec3(0.0, 0.0, 1.0)));
-
-  lights.push_back(Light::spotLight(glm::vec3(0.6, 0.6, 0.6), vec3(0.0, 15.0, 0.0), vec3(0.0, -1.0, 0.01), 5.0));
-
-  lights.push_back(Light::directionalLight(glm::vec3(0.3, 0.3, 0.3), vec3(1.0, -1.0, 1.00)));
-  */
 
   return true;
 }
@@ -308,16 +341,48 @@ void Viewer::run() {
   GLuint shadowmapId = glGetUniformLocation(deferredShadingProgramId, "shadowMap");
   GLuint shadowmapCubeId = glGetUniformLocation(deferredShadingProgramId, "shadowMapCube");
 
+  // SSAO.
+  GLuint useSSAOId = glGetUniformLocation(deferredShadingProgramId, "useSSAO");
+  GLuint ssaoKernelId = glGetUniformLocation(deferredShadingProgramId, "ssaoKernel");
+  GLuint ssaoNoiseId = glGetUniformLocation(deferredShadingProgramId, "ssaoNoiseTexture");
+
   // Handles for material properties (render pass).
   //GLuint material_ka = glGetUniformLocation(geomTexturesProgramId, "material_ka");
   GLuint material_kd = glGetUniformLocation(geomTexturesProgramId, "material_kd");
   //GLuint material_ks = glGetUniformLocation(geomTexturesProgramId, "material_ks");
   //GLuint material_shininess = glGetUniformLocation(geomTexturesProgramId, "material_shininess");
 
-  // Direction light is from center. It points towards center.
-  //glm::vec3 lightDir = glm::vec3(0, 1, 0.01);
-  double lightTime = 0.0;
+  GLuint postProcessTexId = glGetUniformLocation(postProcessProgramId, "texture");
 
+  // Set up SSAO data.
+  srand(1);
+  glm::vec3 ssaoKernel[4];
+  for (int i = 0; i < 4; i++) {
+    ssaoKernel[i] = glm::vec3(
+      (float)(rand() / (float)(RAND_MAX) * 2.0f - 1.0f),
+      (float)(rand() / (float)(RAND_MAX) * 2.0f - 1.0f),
+      (float)(rand() / (float)(RAND_MAX)));
+    ssaoKernel[i] = glm::normalize(ssaoKernel[i]);
+
+    float scale = (float) i / 4.0f;
+    ssaoKernel[i] *= 0.9f * scale * scale;
+  }
+  int noiseSize = SSAO_NOISE_TEXTURE_WIDTH * SSAO_NOISE_TEXTURE_WIDTH;
+  glm::vec3 ssaoNoise[noiseSize];
+  for (int i = 0; i < noiseSize; i++) {
+    ssaoNoise[i] = glm::vec3(
+      (float)(rand() / (float)(RAND_MAX)),
+      (float)(rand() / (float)(RAND_MAX)),
+      0.0f);
+    ssaoNoise[i] = glm::normalize(ssaoNoise[i]);
+  }
+  glBindTexture(GL_TEXTURE_2D, ssaoNoiseTexture);
+  // Required or data won't show up!
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, SSAO_NOISE_TEXTURE_WIDTH, SSAO_NOISE_TEXTURE_WIDTH, 0, GL_RGB, GL_FLOAT, ssaoNoise);
+
+  double lightTime = 0.0;
   controller->reset();
 
   glBindVertexArray(vertexArrayId);
@@ -331,6 +396,8 @@ void Viewer::run() {
     double deltaTime = currentTime - lastTime;
     lastTime = currentTime;
 
+    bool useSSAO = true;//(int) std::floor(currentTime) % 2 == 0;
+    bool doPostProcessing = useSSAO;
     // ======= Deferred rendering stage 1: Render geometry into textures. ===========
 
     glUseProgram(geomTexturesProgramId);
@@ -391,13 +458,29 @@ void Viewer::run() {
 
     // ======= Shadow map and blend deferred shading for each light ======================
 
-    // Clear screen first.
+    // Clear target first.
     glViewport(0, 0, width, height);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0); // Render to screen.
-    glDrawBuffer(GL_FRONT_LEFT);
-    glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    if (doPostProcessing) {
+      // Render to texture.
+      glBindFramebuffer(GL_FRAMEBUFFER, accumRenderFramebuffer);
+      glBindTexture(GL_TEXTURE_2D, accumRenderTexture);
+      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, accumRenderTexture, 0);
+      glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderBuffer);
+      glDrawBuffer(GL_COLOR_ATTACHMENT0);
+    } else {
+      // Render to screen.
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+      glDrawBuffer(GL_FRONT_LEFT);
+    }
+
+    if (useSSAO) {
+      glClearColor(0.0f, 0.4f, 0.0f, 0.0f);
+    } else {
+      glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
+    }
     glEnable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     bool firstBlendPass = true;
     lightTime += 3.0 * deltaTime;
@@ -405,12 +488,12 @@ void Viewer::run() {
     // Moving lights.
 
     // Flashlight.
-    lights[0]->getPosition() = cameraPosition;
+    lights[0]->getPosition() = cameraPosition + glm::vec3(0, -1.3f, 0);
     // TODO: Why backwards about x?
     lights[0]->getDirection() = glm::vec3(glm::inverse(viewMatrix) * glm::vec4(0, 0, -1, 0));
     //lights[0]->setEnabled(false);
 
-    lights[1]->getPosition() = glm::vec3(std::cos(lightTime), 5.0, std::sin(lightTime)); // Point.
+    //lights[1]->getPosition() = glm::vec3(std::cos(lightTime), 3.0, std::sin(lightTime)); // Point.
 
 
     //lights[0]->getDirection() = glm::vec3(std::cos(lightTime), -1.0, std::sin(lightTime)); // Green.
@@ -429,6 +512,7 @@ void Viewer::run() {
       } else {
         glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFramebuffer);
       }
+
       glDrawBuffer(GL_NONE); // No colour output.
       glViewport(0, 0, SHADOWMAP_WIDTH, SHADOWMAP_HEIGHT);
       glEnable(GL_DEPTH_TEST);
@@ -514,8 +598,18 @@ void Viewer::run() {
       glUseProgram(deferredShadingProgramId);
 
       glViewport(0, 0, width, height);
-      glBindFramebuffer(GL_FRAMEBUFFER, 0); // Render to screen.
-      glDrawBuffer(GL_FRONT_LEFT);
+      if (doPostProcessing) {
+        // Set output to accumulation texture.
+        glBindFramebuffer(GL_FRAMEBUFFER, accumRenderFramebuffer);
+        glBindTexture(GL_TEXTURE_2D, accumRenderTexture);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, accumRenderTexture, 0);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderBuffer);
+        glDrawBuffer(GL_COLOR_ATTACHMENT0);
+      } else {
+        // Render to screen.
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDrawBuffer(GL_FRONT_LEFT);
+      }
 
       glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
@@ -531,8 +625,6 @@ void Viewer::run() {
       } else {
         glBlendFunc(GL_ONE, GL_ONE);
       }
-
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 
       glActiveTexture(GL_TEXTURE0);
       glBindTexture(GL_TEXTURE_2D, deferredDiffuseTexture);
@@ -550,6 +642,7 @@ void Viewer::run() {
       glBindTexture(GL_TEXTURE_2D, shadowmapDepthTexture);
       glUniform1i(shadowmapId, 3);
 
+      /*
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -558,11 +651,27 @@ void Viewer::run() {
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
       // Don't know if this is necessary - doesn't seem to do anything.
       //glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE, GL_INTENSITY);
+      */
 
       glActiveTexture(GL_TEXTURE0 + 4);
       glBindTexture(GL_TEXTURE_CUBE_MAP, shadowmapCubeDepthTexture);
       glUniform1i(shadowmapCubeId, 4);
 
+      // TODO: Do we need these?
+      /*
+      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+      */
+
+      glActiveTexture(GL_TEXTURE0 + 5);
+      glBindTexture(GL_TEXTURE_2D, ssaoNoiseTexture);
+      glUniform1i(ssaoNoiseId, 5);
+
+      /*
       glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
       glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
       glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -570,6 +679,7 @@ void Viewer::run() {
       glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
       glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
       //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_DEPTH_TEXTURE_MODE, GL_INTENSITY);
+      */
 
       glm::mat4 biasMatrix(
         0.5, 0.0, 0.0, 0.0,
@@ -587,6 +697,9 @@ void Viewer::run() {
       glUniform3f(lightDirId, lightDir.x, lightDir.y, lightDir.z);
       glUniform3f(lightPosId, lightPos.x, lightPos.y, lightPos.z);
 
+      glUniform1i(useSSAOId, useSSAO);
+      glUniform3fv(ssaoKernelId, sizeof(ssaoKernel), (float*)ssaoKernel);
+
       glm::vec3 lightColour = light->getColour();
       glm::vec3 lightAmbience = light->getAmbience();
       glm::vec3 lightFalloff = light->getFalloff();
@@ -602,6 +715,27 @@ void Viewer::run() {
 
     }
 
+    // --------- Final pass - post-processing and rendering to screen ---------------
+
+    if (doPostProcessing) {
+      glUseProgram(postProcessProgramId);
+      //glUseProgram(quadProgramId);
+      // Draw to screen.
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+      glDrawBuffer(GL_FRONT_LEFT);
+      glDisable(GL_DEPTH_TEST);
+
+      glActiveTexture(GL_TEXTURE0);
+      //glUniform1i(postProcessTexId, 0);
+      glUniform1i(texId, 0);
+      glViewport(0, 0, width, height);
+      glBindTexture(GL_TEXTURE_2D, accumRenderTexture);
+      drawQuad();
+    }
+
+
+
     // ============ Debug Rendering =============
     if (RENDER_DEBUG_IMAGES) {
 
@@ -615,7 +749,7 @@ void Viewer::run() {
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
       glDisable(GL_DEPTH_TEST);
       glActiveTexture(GL_TEXTURE0);
-      glUniform1i(texId, 0); // 0 - base image, 2 - normal map, 4 - shadow map.
+      glUniform1i(texId, 0);
 
       // Draw diffuse ----------------
       glViewport(0, 0, height/4, height/4);
@@ -630,6 +764,11 @@ void Viewer::run() {
       // Draw depth ----------------
       glViewport(height/2, 0, height/4, height/4);
       glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
+      drawQuad();
+
+      // Draw noise --------------------
+      glViewport(height * 3 / 4, 0, height/4, height/4);
+      glBindTexture(GL_TEXTURE_2D, ssaoNoiseTexture);
       drawQuad();
 
       // Draw shadowmap ----------------
@@ -658,7 +797,7 @@ void Viewer::run() {
     //ts.tv_nsec = 30*1000;
     //nanosleep(&ts, NULL);
 
-    checkGLErrors();
+    checkGLErrors("loop");
 
     glfwPollEvents();
   } // Check if the ESC key was pressed or the window was closed
@@ -683,10 +822,13 @@ Viewer::~Viewer() {
   glDeleteTextures(1, &deferredDiffuseTexture);
   glDeleteTextures(1, &deferredNormalTexture);
   glDeleteTextures(1, &deferredDepthTexture);
+  glDeleteTextures(1, &ssaoNoiseTexture);
+  glDeleteTextures(1, &accumRenderTexture);
   //glDeleteTextures(1, &texture);
 
   glDeleteBuffers(1, &quadVertexBuffer);
   glDeleteVertexArrays(1, &vertexArrayId);
+  glDeleteRenderbuffers(1, &depthRenderBuffer);
 
   for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
     delete *it;

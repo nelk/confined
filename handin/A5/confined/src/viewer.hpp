@@ -49,6 +49,7 @@ private:
   GLuint programId;
   GLuint depthProgramId;
   GLuint quadProgramId;
+  GLuint postProcessProgramId;
 
   // Deferred Shading objects.
   GLuint geomTexturesProgramId;
@@ -61,11 +62,15 @@ private:
   GLuint deferredShadingFramebuffer;
   GLuint shadowMapFramebuffer;
   GLuint shadowCubeMapFramebuffer;
+  GLuint accumRenderFramebuffer;
   GLuint quadVertexBuffer;
+  GLuint depthRenderBuffer;
 
   //GLuint texture;
   GLuint shadowmapDepthTexture;
   GLuint shadowmapCubeDepthTexture;
+  GLuint ssaoNoiseTexture;
+  GLuint accumRenderTexture;
 };
 
 #endif

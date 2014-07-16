@@ -1,0 +1,37 @@
+# Blender MTL File: 'monkeybox.blend'
+# Material Count: 4
+
+newmtl Material.001
+Ns 96.078431
+Ka 0.000000 0.000000 0.000000
+Kd 0.414976 0.436180 0.499794
+Ks 0.149485 0.149485 0.149485
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl Material.003
+Ns 113.725490
+Ka 0.000000 0.000000 0.000000
+Kd 0.640000 0.416010 0.601307
+Ks 0.737113 0.737113 0.737113
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl None
+Ns 0
+Ka 0.000000 0.000000 0.000000
+Kd 0.8 0.8 0.8
+Ks 0.8 0.8 0.8
+d 1
+illum 2
+
+newmtl None_CandlestickRender1.png
+Ns 0
+Ka 0.000000 0.000000 0.000000
+Kd 0.8 0.8 0.8
+Ks 0.8 0.8 0.8
+d 1
+illum 2
+map_Kd Candlestick/CandlestickRender1.png
