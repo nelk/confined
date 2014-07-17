@@ -61,7 +61,7 @@ Viewer::Viewer(): width(DEFAULT_WIDTH), height(DEFAULT_HEIGHT) {
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
   // Open a window and create its OpenGL context
-  window = glfwCreateWindow(width, height, "Shadow House", NULL, NULL);
+  window = glfwCreateWindow(width, height, "Confined", NULL, NULL);
 
   if( window == NULL ){
     std::cerr << "Failed to open GLFW window. This application requires OpenGL 3.3 support." << std::endl;
@@ -277,14 +277,17 @@ bool Viewer::initGL() {
   // Scene-specific setup:
   lights.push_back(Light::spotLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0, 0, 0), glm::vec3(0.0, 0.0, -1.0), 10.0));
   lights.back()->getFalloff() = glm::vec3(1.0, 0.02, 0.001);
-  //lights.back()->setEnabled(false);
+  lights.back()->setEnabled(false);
 
   lights.push_back(Light::pointLight(glm::vec3(0.2, 0.2, 0.2), glm::vec3(0.0, 3.0, 0.0)));
   lights.back()->getAmbience() = glm::vec3(0.2, 0.2, 0.2);
-  //lights.back()->setEnabled(false); // turn off
+  lights.back()->setEnabled(false); // turn off
 
   lights.push_back(Light::pointLight(glm::vec3(0.4, 0.0, 0.0), glm::vec3(-1.0, 3.0, -3.0)));
   lights.back()->getFalloff() = glm::vec3(1.0, 0.2, 0.06);
+  lights.back()->setEnabled(false);
+
+  lights.push_back(Light::pointLight(glm::vec3(0.5, 0.5, 0.5), glm::vec3(0.0, 3.0, 0.0)));
 
   return true;
 }
@@ -317,6 +320,7 @@ void Viewer::run() {
   GLuint matrixId = glGetUniformLocation(geomTexturesProgramId, "MVP");
   GLuint geomViewMatrixId = glGetUniformLocation(geomTexturesProgramId, "V");
   GLuint geomModelMatrixId = glGetUniformLocation(geomTexturesProgramId, "M");
+  GLuint geomProjectionMatrixId = glGetUniformLocation(geomTexturesProgramId, "P");
 
   GLuint deferredViewMatrixId = glGetUniformLocation(deferredShadingProgramId, "V");
   GLuint deferredModelMatrixId = glGetUniformLocation(deferredShadingProgramId, "M");
@@ -349,8 +353,10 @@ void Viewer::run() {
   GLuint material_kd = glGetUniformLocation(geomTexturesProgramId, "material_kd");
   //GLuint material_ks = glGetUniformLocation(geomTexturesProgramId, "material_ks");
   //GLuint material_shininess = glGetUniformLocation(geomTexturesProgramId, "material_shininess");
-  GLuint geomMaterialTexId = glGetUniformLocation(geomTexturesProgramId, "materialTex");
-  GLuint geomUseTextureId = glGetUniformLocation(geomTexturesProgramId, "useTexture");
+  GLuint geomDiffuseTexId = glGetUniformLocation(geomTexturesProgramId, "diffuseTexture");
+  GLuint geomUseDiffuseTextureId = glGetUniformLocation(geomTexturesProgramId, "useDiffuseTexture");
+  GLuint geomNormalTexId = glGetUniformLocation(geomTexturesProgramId, "normalTexture");
+  GLuint geomUseNormalTextureId = glGetUniformLocation(geomTexturesProgramId, "useNormalTexture");
 
   GLuint postProcessTexId = glGetUniformLocation(postProcessProgramId, "texture");
 
@@ -397,7 +403,7 @@ void Viewer::run() {
     lastTime = currentTime;
 
     // TODO: Make config class and hook up controller to flip options like this.
-    bool useSSAO = true;//(int) std::floor(currentTime) % 2 == 0;
+    bool useSSAO = false;//(int) std::floor(currentTime) % 2 == 0;
     bool doPostProcessing = useSSAO;
 
 
@@ -438,32 +444,31 @@ void Viewer::run() {
     glUniformMatrix4fv(matrixId, 1, GL_FALSE, &MVP[0][0]);
     glUniformMatrix4fv(geomModelMatrixId, 1, GL_FALSE, &modelMatrix[0][0]);
     glUniformMatrix4fv(geomViewMatrixId, 1, GL_FALSE, &viewMatrix[0][0]);
+    glUniformMatrix4fv(geomProjectionMatrixId, 1, GL_FALSE, &projectionMatrix[0][0]);
 
     for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
       Material* material = (*it)->getMaterial();
       if (material != NULL) {
         //glUniform3f(material_ka, material->ka.x, material->ka.y, material->ka.z);
-        glUniform3f(material_kd, material->kd.x, material->kd.y, material->kd.z);
+        glUniform3f(material_kd, material->getDiffuse().x, material->getDiffuse().y, material->getDiffuse().z);
         //glUniform3f(material_ks, material->ks.x, material->ks.y, material->ks.z);
         //glUniform1f(material_shininess, material->shininess);
 
-        // Bind texture if it exists.
-        glUniform1i(geomUseTextureId, material->texture != 0);
+        // Bind diffuse texture if it exists.
+        glUniform1i(geomUseDiffuseTextureId, material->hasDiffuseTexture());
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, material->texture);
-        glUniform1i(geomMaterialTexId, 0);
+        glBindTexture(GL_TEXTURE_2D, material->getDiffuseTexture());
+        glUniform1i(geomDiffuseTexId, 0);
+
+        // Bind normal texture if it exists.
+        glUniform1i(geomUseNormalTextureId, material->hasNormalTexture());
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, material->getNormalTexture());
+        glUniform1i(geomNormalTexId, 1);
       }
       (*it)->renderGL();
     }
 
-    // TODO: Textures.
-    // Bind our texture in Texture Unit 0
-    //glActiveTexture(GL_TEXTURE0);
-    //glBindTexture(GL_TEXTURE_2D, texture);
-    //glUniform1i(textureId, 0);
-
-    //glActiveTexture(GL_TEXTURE1);
-    //glBindTexture(GL_TEXTURE_2D, shadowmapDepthTexture);
 
     // ======= Shadow map and blend deferred shading for each light ======================
 
@@ -728,7 +733,7 @@ void Viewer::run() {
 
     if (doPostProcessing) {
       glUseProgram(postProcessProgramId);
-      //glUseProgram(quadProgramId);
+
       // Draw to screen.
       glBindFramebuffer(GL_FRAMEBUFFER, 0);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
@@ -736,8 +741,7 @@ void Viewer::run() {
       glDisable(GL_DEPTH_TEST);
 
       glActiveTexture(GL_TEXTURE0);
-      //glUniform1i(postProcessTexId, 0);
-      glUniform1i(texId, 0);
+      glUniform1i(postProcessTexId, 0);
       glViewport(0, 0, width, height);
       glBindTexture(GL_TEXTURE_2D, accumRenderTexture);
       drawQuad();

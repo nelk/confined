@@ -18,11 +18,13 @@
 class Mesh {
 public:
   enum BufferIndex {
-    VERTEX_BUF,
-    UV_BUF,
-    NORMAL_BUF,
-    ELEMENT_BUF,
-    NUM_BUFS
+    VERTEX_BUF = 0,
+    UV_BUF = 1,
+    NORMAL_BUF = 2,
+    TANGENT_BUF = 3,
+    BITANGENT_BUF = 3,
+    ELEMENT_BUF = 4,
+    NUM_BUFS = 5
   };
 
   Mesh(std::vector<glm::vec3>& vertices,

@@ -7,8 +7,8 @@ in vec2 texUV;
 layout(location = 0) out vec3 colour;
 
 // Constant inputs.
-uniform sampler2D diffuseTexture;
-uniform sampler2D normalTexture; // TODO - check shadow, normal samplers?
+uniform sampler2D diffuseTexture; // Albedo.
+uniform sampler2D normalTexture;
 uniform sampler2D depthTexture;
 uniform sampler2DShadow shadowMap;
 uniform samplerCubeShadow shadowMapCube;
@@ -107,7 +107,7 @@ void main(){
   vec3 lightFalloffModified = lightFalloff;
   vec3 material_ka = lightAmbience * material_kd;
   vec3 material_ks = vec3(0.5, 0.5, 0.5);
-  float material_shininess = 10.0; //96.0;
+  float material_shininess = 96.0; //10.0; //96.0;
 
   float x = texUV.x;
   float y = texUV.y;

@@ -11,6 +11,10 @@ Mesh::Mesh(
     std::vector<unsigned short>& indices,
     Material* material): material(material) {
 
+  for (int i = 0; i < NUM_BUFS; i++) {
+    buffers[i] = 0;
+  }
+
   // Load scene data into VBOs.
   glGenBuffers(NUM_BUFS, buffers);
 
@@ -22,6 +26,74 @@ Mesh::Mesh(
 
   glBindBuffer(GL_ARRAY_BUFFER, buffers[NORMAL_BUF]);
   glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(glm::vec3), &normals[0], GL_STATIC_DRAW);
+
+  // Construct tangents.
+  std::vector<glm::vec3> tangents(vertices.size(), glm::vec3(0, 0, 0));
+  std::vector<glm::vec3> bitangents(vertices.size(), glm::vec3(0, 0, 0));
+  // Only do tangents if there are enough UVs.
+  std::cerr << "#UVs: " << uvs.size() << ", #Vertices: " << vertices.size() << std::endl;
+  if (uvs.size() >= vertices.size()) {
+    // Go through each triangular face and add tangents.
+    for (unsigned int face = 0; face*3 + 2 < indices.size(); face++) {
+      int p[] = {
+        indices[face*3],
+        indices[face*3+1],
+        indices[face*3+2]
+      };
+
+      // Edges of the triangle - position delta.
+      glm::vec3 deltaPos1 = vertices[p[1]] - vertices[p[0]];
+      glm::vec3 deltaPos2 = vertices[p[2]] - vertices[p[0]];
+
+      // UV delta
+      glm::vec2 deltaUV1 = uvs[p[1]] - uvs[p[0]];
+      glm::vec2 deltaUV2 = uvs[p[2]] - uvs[p[0]];
+
+      /*
+      std::cerr << "indices " << p[0] << ", " << p[1] << ", " << p[2] << std::endl;
+      std::cerr << "position "
+        << "(" << vertices[p[0]][0] << ", " << vertices[p[0]][1] << ", " << vertices[p[0]][2] << "), "
+        << "(" << vertices[p[1]][0] << ", " << vertices[p[1]][1] << ", " << vertices[p[1]][2] << "), "
+        << "(" << vertices[p[2]][0] << ", " << vertices[p[2]][1] << ", " << vertices[p[2]][2] << ")"
+        << std::endl;
+      std::cerr << "deltaPos1 "
+        << "(" << deltaPos1[0] << ", " << deltaPos1[1] << ", " << deltaPos1[2] << ")"
+        << std::endl;
+      std::cerr << "deltaPos2 "
+        << "(" << deltaPos2[0] << ", " << deltaPos2[1] << ", " << deltaPos2[2] << ")"
+        << std::endl;
+      std::cerr << "uvs "
+        << "(" << uvs[p[0]][0] << ", " << uvs[p[0]][1] << "), "
+        << "(" << uvs[p[1]][0] << ", " << uvs[p[1]][1] << "), "
+        << "(" << uvs[p[2]][0] << ", " << uvs[p[2]][1] << ")"
+        << std::endl;
+      std::cerr << "deltaUV1 " << deltaUV1[0] << ", " << deltaUV1[1] << std::endl;
+      std::cerr << "deltaUV2 " << deltaUV2[0] << ", " << deltaUV2[1] << std::endl;
+      */
+
+      float oneOverR = deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x;
+      if (oneOverR == 0) {
+        std::cerr << "Error: NaN tangents computed!" << std::endl;
+        continue;
+      }
+      float r = 1.0f / oneOverR;
+      glm::vec3 tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
+      glm::vec3 bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x) * r;
+      //std::cerr << "tangent " << tangent[0] << ", " << tangent[1] << ", " << tangent[2] << std::endl;
+
+      for (unsigned int v = 0; v < 3; v++) {
+        tangents[p[v]] += tangent;
+        bitangents[p[v]] += bitangent;
+      }
+    }
+
+    glBindBuffer(GL_ARRAY_BUFFER, buffers[TANGENT_BUF]);
+    glBufferData(GL_ARRAY_BUFFER, tangents.size() * sizeof(glm::vec3), &tangents[0], GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ARRAY_BUFFER, buffers[BITANGENT_BUF]);
+    glBufferData(GL_ARRAY_BUFFER, bitangents.size() * sizeof(glm::vec3), &bitangents[0], GL_STATIC_DRAW);
+  }
+
 
   numIndices = indices.size();
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[ELEMENT_BUF]);
@@ -99,10 +171,32 @@ void Mesh::renderGL() {
     (void*)0                          // array buffer offset
   );
 
+  // 4rd attribute buffer - tangents.
+  glEnableVertexAttribArray(3);
+  glBindBuffer(GL_ARRAY_BUFFER, buffers[TANGENT_BUF]);
+  glVertexAttribPointer(
+    3,                                // attribute
+    3,                                // size
+    GL_FLOAT,                         // type
+    GL_FALSE,                         // normalized?
+    0,                                // stride
+    (void*)0                          // array buffer offset
+  );
+
+  // 5th attribute buffer - bitangents.
+  glEnableVertexAttribArray(4);
+  glBindBuffer(GL_ARRAY_BUFFER, buffers[BITANGENT_BUF]);
+  glVertexAttribPointer(
+    4,                                // attribute
+    3,                                // size
+    GL_FLOAT,                         // type
+    GL_FALSE,                         // normalized?
+    0,                                // stride
+    (void*)0                          // array buffer offset
+  );
+
   // Index buffer
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[ELEMENT_BUF]);
-
-  // TODO: Bind material properties.
 
   // Draw the triangles for render pass.
   glDrawElements(
@@ -115,6 +209,44 @@ void Mesh::renderGL() {
   glDisableVertexAttribArray(0);
   glDisableVertexAttribArray(1);
   glDisableVertexAttribArray(2);
+  glDisableVertexAttribArray(3);
+  glDisableVertexAttribArray(4);
+}
+
+
+bool loadTexture(aiTextureType aiType, const aiMaterial* m, Material *material) {
+  int num_textures = m->GetTextureCount(aiType);
+  if (num_textures >= 1) {
+    aiString texFileName;
+    if (m->GetTexture(aiType, 0, &texFileName) == AI_SUCCESS) {
+      std::string prefixedTexFileName = "models/" + std::string(texFileName.C_Str());
+      FIBITMAP* bitmap = FreeImage_Load(FreeImage_GetFileType(prefixedTexFileName.c_str(), 0), prefixedTexFileName.c_str());
+      FIBITMAP *pImage = FreeImage_ConvertTo24Bits(bitmap);
+
+      const int texWidth = FreeImage_GetWidth(bitmap);
+      const int texHeight = FreeImage_GetHeight(bitmap);
+
+      //unsigned char raw[32*texWidth*texHeight];
+      /*
+      BYTE* raw = (BYTE*)malloc(32*texWidth*texHeight*sizeof(BYTE));
+      FreeImage_ConvertToRawBits(raw, pImage, texWidth*texHeight, 32, 1, 1, 1, false);
+
+      material->setDiffuseTexture(texWidth, texHeight, (void*) raw);
+      */
+
+      if (aiType == aiTextureType_DIFFUSE) {
+        material->setDiffuseTexture(texWidth, texHeight, (void*) FreeImage_GetBits(pImage));
+      } else if (aiType == aiTextureType_HEIGHT) {
+        material->setNormalTexture(texWidth, texHeight, (void*) FreeImage_GetBits(pImage));
+      }
+
+      //free(raw);
+      FreeImage_Unload(pImage);
+      FreeImage_Unload(bitmap);
+      return true;
+    }
+  }
+  return false;
 }
 
 void MessageFunction(FREE_IMAGE_FORMAT fif, const char *msg) {
@@ -153,30 +285,9 @@ std::vector<Mesh*> loadScene(const char* fileName) {
       glm::vec3(ks.r, ks.g, ks.b),
       shininess);
 
-    int num_textures = m->GetTextureCount(aiTextureType_DIFFUSE);
-    if (num_textures >= 1) {
-      aiString texFileName;
-      if (m->GetTexture(aiTextureType_DIFFUSE, 0, &texFileName) == AI_SUCCESS) {
-        std::string prefixedTexFileName = "models/" + std::string(texFileName.C_Str());
-        FIBITMAP* bitmap = FreeImage_Load(FreeImage_GetFileType(prefixedTexFileName.c_str(), 0), prefixedTexFileName.c_str());
-        FIBITMAP *pImage = FreeImage_ConvertTo32Bits(bitmap);
-
-        const int texWidth = FreeImage_GetWidth(bitmap);
-        const int texHeight = FreeImage_GetHeight(bitmap);
-
-        /*
-        BYTE raw[texWidth*texHeight];
-        FreeImage_ConvertToRawBits(raw, pImage, texWidth*texHeight, 32, 1, 1, 1, false);
-
-        materials[matId]->setTexture(texWidth, texHeight, (void*) raw);
-        */
-
-        materials[matId]->setTexture(texWidth, texHeight, (void*) FreeImage_GetBits(pImage));
-
-        FreeImage_Unload(pImage);
-        FreeImage_Unload(bitmap);
-      }
-    }
+    loadTexture(aiTextureType_DIFFUSE, m, materials[matId]);
+    loadTexture(aiTextureType_HEIGHT, m, materials[matId]); // Normal Map.
+    // NOTE: Must use "bump" in .mtl file.
   }
 
   // Load meshes.
@@ -222,6 +333,9 @@ std::vector<Mesh*> loadScene(const char* fileName) {
     // Face indices.
     indices.reserve(3*mesh->mNumFaces);
     for (unsigned int i=0; i<mesh->mNumFaces; i++){
+      if (mesh->mFaces[i].mNumIndices != 3) {
+        std::cerr << "Warning! Face found with " << mesh->mFaces[i].mNumIndices << " indices!" << std::endl;
+      }
       // Only supporting triangles here.
       indices.push_back(mesh->mFaces[i].mIndices[0]);
       indices.push_back(mesh->mFaces[i].mIndices[1]);

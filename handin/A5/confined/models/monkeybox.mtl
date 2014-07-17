@@ -1,5 +1,5 @@
 # Blender MTL File: 'monkeybox.blend'
-# Material Count: 4
+# Material Count: 5
 
 newmtl Material.001
 Ns 96.078431
@@ -26,6 +26,16 @@ Kd 0.8 0.8 0.8
 Ks 0.8 0.8 0.8
 d 1
 illum 2
+
+newmtl None_AlternatingBrick-ColorMap.png
+Ns 0
+Ka 0.000000 0.000000 0.000000
+Kd 0.8 0.8 0.8
+Ks 0.8 0.8 0.8
+d 1
+illum 2
+map_Kd bricks/AlternatingBrick-ColorMap.png
+bump bricks/AlternatingBrick-NormalMap.png
 
 newmtl None_CandlestickRender1.png
 Ns 0
