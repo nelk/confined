@@ -1,7 +1,9 @@
 #ifndef CONTROLLER_HPP
 #define CONTROLLER_HPP
 
+#include <map>
 #include <glm/glm.hpp>
+#include "settings.hpp"
 #include "viewer.hpp"
 
 #define SPEED 5.0f
@@ -11,7 +13,7 @@ class Viewer;
 
 class Controller {
 public:
-  Controller(Viewer* viewer);
+  Controller(Viewer* viewer, Settings* settings);
 
   glm::mat4 getViewMatrix();
   glm::mat4 getProjectionMatrix();
@@ -22,8 +24,15 @@ public:
   void setHorizontalAngle(float a);
   void setVerticalAngle(float a);
 
+  bool isFlashlightOn() {
+    return flashlight;
+  }
+
 private:
+  bool checkKeyJustPressed(int k);
+
   Viewer* viewer;
+  Settings* settings;
   double lastTime;
   glm::mat4 viewMatrix;
   glm::mat4 projectionMatrix;
@@ -31,6 +40,8 @@ private:
   float horizontalAngle;
   float verticalAngle;
   int skipMovements;
+  std::map<int, bool> keysPressed;
+  bool flashlight;
 };
 
 #endif

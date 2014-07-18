@@ -31,6 +31,9 @@ uniform mat4 P;
 uniform mat4 V;
 uniform mat4 depthBiasVP;
 
+uniform bool useDiffuse = true;
+uniform bool useSpecular = true;
+uniform bool useShadow = true;
 uniform bool useSSAO = true;
 uniform vec3 ssaoKernel[4];
 
@@ -95,7 +98,12 @@ float SSAO(mat3 kernelBasis, vec3 originPos, float cmpDepth, float radius) {
 void main(){
 
   // Material properties
-  vec3 material_kd = texture2D(diffuseTexture, texUV).rgb;
+  vec3 material_kd;
+  if (useDiffuse) {
+    material_kd = texture2D(diffuseTexture, texUV).rgb;
+  } else {
+    material_kd = vec3(0, 0, 0);
+  }
   vec3 material_emissive = texture2D(emissiveTexture, texUV).rgb;
 
   // Don't write pixels that weren't actually drawn onto this texture.
@@ -104,12 +112,16 @@ void main(){
     return;
   }
 
-  vec4 material_ks_shininess = texture2D(specularTexture, texUV).rgba;
-  vec3 material_ks = material_ks_shininess.rgb;
-  float material_shininess = material_ks_shininess.a * 200.0;
-
-  //material_ks = vec3(0.5, 0.5, 0.5);
-  //material_shininess = 96.0; //10.0; //96.0;
+  vec3 material_ks;
+  float material_shininess;
+  if (useSpecular) {
+    vec4 material_ks_shininess = texture2D(specularTexture, texUV).rgba;
+    material_ks = material_ks_shininess.rgb;
+    material_shininess = material_ks_shininess.a * 200.0;
+  } else {
+    material_ks = vec3(0, 0, 0);
+    material_shininess = 0;
+  }
 
   vec3 lightFalloffModified = lightFalloff;
   vec3 material_ka = lightAmbience * material_kd;
@@ -124,8 +136,6 @@ void main(){
 
   vec4 vertexPositionWorldspace = inverse(V) * vertexPositionCameraspace;
   //vertexPositionWorldspace = vertexPositionWorldspace / vertexPositionWorldspace.w;
-
-  vec4 shadowCoord = depthBiasVP * vertexPositionWorldspace;
 
   // Vector that goes from the vertex to the camera, in camera space.
   vec3 eyeDirectionCameraspace = -vertexPositionCameraspace.xyz / vertexPositionCameraspace.w;
@@ -168,114 +178,119 @@ void main(){
 
   float visibility = 0.0;
 
-  // Fixed bias.
-  //float bias = 0.005;
+  if (!useShadow) {
+    visibility = 1.0;
+  } else {
+    vec4 shadowCoord = depthBiasVP * vertexPositionWorldspace;
 
-  // Variable bias (based off of gradient).
-  float bias = 0.005 * tan(acos(cosTheta));
-  bias = clamp(bias, 0, 0.01);
+    // Fixed bias.
+    //float bias = 0.005;
 
-  /*vec2 offset = vec2(fract(texUV.x * 0.5) > 0.25,*/
-                     /*fract(texUV.y * 0.5) > 0.25);  // mod*/
-  /*offset.y += offset.x;  // y ^= x in floating point*/
-  /*if (offset.y > 1.1)*/
-    /*offset.y = 0;*/
+    // Variable bias (based off of gradient).
+    float bias = 0.005 * tan(acos(cosTheta));
+    bias = clamp(bias, 0, 0.01);
 
-  // Sample the shadow map n times.
-  int num_samples = 1; // TODO: Up samples for some light types.
-  for (int i = 0; i < num_samples; i++){
-    // use either :
-    //  - Always the same samples.
-    //    Gives a fixed pattern in the shadow, but no noise
-    int index = i;
-    //  - A random sample, based on the pixel's screen location.
-    //    No banding, but the shadow moves with the camera, which looks weird.
-    //int index = int(16.0 * random(gl_FragCoord.xyy, i)) % 16;
-    //  - A random sample, based on the pixel's position in world space.
-    //    The position is rounded to the millimeter to avoid too much aliasing
-    //int index = int(16.0 * random(floor(vertexPositionWorldspace.xyz * 1000.0), i)) % 16;
+    /*vec2 offset = vec2(fract(texUV.x * 0.5) > 0.25,*/
+                       /*fract(texUV.y * 0.5) > 0.25);  // mod*/
+    /*offset.y += offset.x;  // y ^= x in floating point*/
+    /*if (offset.y > 1.1)*/
+      /*offset.y = 0;*/
 
-    // Lose visibility for each sample that is hidden in shadow.
-    //visibility -= sample_shadow_coverage * (1.0 - texture(shadowMap, vec3(shadowCoord.xy + poissonDisk[index] / 700.0, (shadowCoord.z - bias) / shadowCoord.w)));
+    // Sample the shadow map n times.
+    int num_samples = 1; // TODO: Up samples for some light types.
+    for (int i = 0; i < num_samples; i++){
+      // use either :
+      //  - Always the same samples.
+      //    Gives a fixed pattern in the shadow, but no noise
+      int index = i;
+      //  - A random sample, based on the pixel's screen location.
+      //    No banding, but the shadow moves with the camera, which looks weird.
+      //int index = int(16.0 * random(gl_FragCoord.xyy, i)) % 16;
+      //  - A random sample, based on the pixel's position in world space.
+      //    The position is rounded to the millimeter to avoid too much aliasing
+      //int index = int(16.0 * random(floor(vertexPositionWorldspace.xyz * 1000.0), i)) % 16;
+
+      // Lose visibility for each sample that is hidden in shadow.
+      //visibility -= sample_shadow_coverage * (1.0 - texture(shadowMap, vec3(shadowCoord.xy + poissonDisk[index] / 700.0, (shadowCoord.z - bias) / shadowCoord.w)));
 
 
-  //vec2 windowOffset = vec2(i%4*3-1.5, i/4*3-1.5);
-  //shadowCoefficient += texture(shadowMap, vec3(shadowCoord.xy + (offset + windowOffset) / 2048.0, (shadowCoord.z - bias)/shadowCoord.w));
-  //shadowCoefficient += texture(shadowMap, vec3(shadowCoord.xy + (offset + offsetTable[index]) / 700.0, (shadowCoord.z - bias)/shadowCoord.w));
+    //vec2 windowOffset = vec2(i%4*3-1.5, i/4*3-1.5);
+    //shadowCoefficient += texture(shadowMap, vec3(shadowCoord.xy + (offset + windowOffset) / 2048.0, (shadowCoord.z - bias)/shadowCoord.w));
+    //shadowCoefficient += texture(shadowMap, vec3(shadowCoord.xy + (offset + offsetTable[index]) / 700.0, (shadowCoord.z - bias)/shadowCoord.w));
 
-  switch (lightType) {
-    case 0: // Directional light.
-      visibility += texture(shadowMap, vec3(shadowCoord.xy + poissonDisk[index] / 700.0, (shadowCoord.z - bias)/shadowCoord.w));
-      break;
+    switch (lightType) {
+      case 0: // Directional light.
+        visibility += texture(shadowMap, vec3(shadowCoord.xy + poissonDisk[index] / 700.0, (shadowCoord.z - bias)/shadowCoord.w));
+        break;
 
-    case 1: // Spot light.
-      float coneAngle = acos(dot(-normalize(vertexPositionToLightPositionWorldspace), normalize(lightDirectionWorldspace)));
+      case 1: // Spot light.
+        float coneAngle = acos(dot(-normalize(vertexPositionToLightPositionWorldspace), normalize(lightDirectionWorldspace)));
 
-/*
-      // Hard circle.
-      if (coneAngle <= radians(lightSpreadDegrees)) {
-        visibility += texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
-      }
-*/
-
-      // Quadratic falloff by angle.
-      float distFrac = coneAngle/radians(lightSpreadDegrees);
-      if (distFrac <= 1.0) {
-        visibility += /*step(-1.0, -distFrac) * */ (1 - distFrac/2.5) * (1 - distFrac) * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
-        //lightFalloffModified.z += distFrac;
-      }
-
-      // Exponential light decay by angle.
-      //visibility += (2 - pow(2, coneAngle/radians(lightSpreadDegrees))) * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
-
-      // Staged falloff.
-/*
-      float distFrac = coneAngle/radians(lightSpreadDegrees);
-      if (distFrac <= 1.0) {
-        visibility += texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));;
-        if (distFrac < 0.3) {
-          // Nothing extra.
-        } else if (distFrac < 0.7) {
-          lightFalloffModified.x += 1.0;
-          //lightFalloffModified.y += 1.0;
-          //lightFalloffModified.z += 1.0;
-        } else {
-          lightFalloffModified.x += 2.0;
-          //lightFalloffModified.y += 2.0;
-          //lightFalloffModified.z += 3.0;
+  /*
+        // Hard circle.
+        if (coneAngle <= radians(lightSpreadDegrees)) {
+          visibility += texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
         }
-      }
-*/
-      break;
+  */
 
-    case 2: // Point light.
-      // Turn world space vector to depth value to compare with shadow map ortho depth.
-      vec3 absvec = abs(vertexPositionToLightPositionWorldspace);
-      vec3 v = vertexPositionToLightPositionWorldspace;
-      float lzc = max(abs(v.x), max(abs(v.y), abs(v.z)));
-      float f = 500;
-      float n = 1.0;
-      float nzc = (f+n)/(f-n) - (2*f*n)/(f-n)/lzc;
-      float v2dv = (nzc + 1.0) * 0.5;
+        // Quadratic falloff by angle.
+        float distFrac = coneAngle/radians(lightSpreadDegrees);
+        if (distFrac <= 1.0) {
+          visibility += /*step(-1.0, -distFrac) * */ (1 - distFrac/2.5) * (1 - distFrac) * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
+          //lightFalloffModified.z += distFrac;
+        }
 
-      visibility += texture(shadowMapCube, vec4(shadowCoord.xyz/shadowCoord.w, v2dv - bias - 0.002));
+        // Exponential light decay by angle.
+        //visibility += (2 - pow(2, coneAngle/radians(lightSpreadDegrees))) * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
 
-      break;
+        // Staged falloff.
+  /*
+        float distFrac = coneAngle/radians(lightSpreadDegrees);
+        if (distFrac <= 1.0) {
+          visibility += texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));;
+          if (distFrac < 0.3) {
+            // Nothing extra.
+          } else if (distFrac < 0.7) {
+            lightFalloffModified.x += 1.0;
+            //lightFalloffModified.y += 1.0;
+            //lightFalloffModified.z += 1.0;
+          } else {
+            lightFalloffModified.x += 2.0;
+            //lightFalloffModified.y += 2.0;
+            //lightFalloffModified.z += 3.0;
+          }
+        }
+  */
+        break;
+
+      case 2: // Point light.
+        // Turn world space vector to depth value to compare with shadow map ortho depth.
+        vec3 absvec = abs(vertexPositionToLightPositionWorldspace);
+        vec3 v = vertexPositionToLightPositionWorldspace;
+        float lzc = max(abs(v.x), max(abs(v.y), abs(v.z)));
+        float f = 500;
+        float n = 1.0;
+        float nzc = (f+n)/(f-n) - (2*f*n)/(f-n)/lzc;
+        float v2dv = (nzc + 1.0) * 0.5;
+
+        visibility += texture(shadowMapCube, vec4(shadowCoord.xyz/shadowCoord.w, v2dv - bias - 0.002));
+
+        break;
+    }
+
+      //visibility -= sample_shadow_coverage * (1.0 - texture(shadowMap, vec3(shadowCoord.xy + poissonDisk[index] / 700.0, (shadowCoord.z - bias) / shadowCoord.w))); // Best
+
+      //visibility -= sample_shadow_coverage * (1.0 - shadowCoord.z/shadowCoord.w * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w)));
+      //visibility -= sample_shadow_coverage * (1.0 - textureProj(shadowMap, shadowCoord));
+
+      /*float indexAngle = i*3.14/num_samples;*/
+      /*vec2 sampleOffset = vec2(cos(indexAngle), sin(indexAngle));*/
+      /*bool isShadowed = texture2D(shadowMap, shadowCoord.xy + sampleOffset / 400.0).r > (shadowCoord.z - bias) / shadowCoord.w;*/
+      /*visibility -= sample_shadow_coverage * (1.0 - float(isShadowed));*/
+    }
+
+    visibility = visibility / num_samples;
   }
-
-    //visibility -= sample_shadow_coverage * (1.0 - texture(shadowMap, vec3(shadowCoord.xy + poissonDisk[index] / 700.0, (shadowCoord.z - bias) / shadowCoord.w))); // Best
-
-    //visibility -= sample_shadow_coverage * (1.0 - shadowCoord.z/shadowCoord.w * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w)));
-    //visibility -= sample_shadow_coverage * (1.0 - textureProj(shadowMap, shadowCoord));
-
-    /*float indexAngle = i*3.14/num_samples;*/
-    /*vec2 sampleOffset = vec2(cos(indexAngle), sin(indexAngle));*/
-    /*bool isShadowed = texture2D(shadowMap, shadowCoord.xy + sampleOffset / 400.0).r > (shadowCoord.z - bias) / shadowCoord.w;*/
-    /*visibility -= sample_shadow_coverage * (1.0 - float(isShadowed));*/
-  }
-
-  visibility = visibility / num_samples;
-
 
   float lightDist = length(vertexPositionToLightPositionWorldspace);
   float attenuation = 1.0 / dot(lightFalloffModified, vec3(1, lightDist, lightDist*lightDist));

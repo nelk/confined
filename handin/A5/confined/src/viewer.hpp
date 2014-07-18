@@ -42,6 +42,7 @@ public:
 private:
   int width, height;
   GLFWwindow* window;
+  Settings* settings;
   Controller* controller;
   std::vector<Mesh*> meshes;
   Mesh* pointLightMesh;

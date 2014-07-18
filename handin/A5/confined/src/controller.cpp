@@ -5,8 +5,9 @@
 
 #include "controller.hpp"
 
-Controller::Controller(Viewer* viewer)
-  : viewer(viewer), lastTime(0), position(0, 0, 0), horizontalAngle(0.86f), verticalAngle(0), skipMovements(2) {}
+Controller::Controller(Viewer* viewer, Settings* settings)
+  : viewer(viewer), settings(settings), lastTime(0), position(0, 0, 0), horizontalAngle(0.86f), verticalAngle(0), skipMovements(2), flashlight(true) {
+}
 
 void Controller::reset() {
   lastTime = glfwGetTime();
@@ -34,6 +35,20 @@ glm::mat4 Controller::getViewMatrix(){
 }
 glm::mat4 Controller::getProjectionMatrix(){
   return projectionMatrix;
+}
+
+bool Controller::checkKeyJustPressed(int k) {
+  bool wasPressed;
+  if (keysPressed.find(k) == keysPressed.end()) {
+    wasPressed = false;
+  } else {
+    wasPressed = keysPressed[k];
+  }
+
+  bool isPressed = glfwGetKey(viewer->getWindow(), k) == GLFW_PRESS;
+
+  keysPressed[k] = isPressed;
+  return !wasPressed && isPressed;
 }
 
 void Controller::update() {
@@ -117,6 +132,21 @@ void Controller::update() {
     position -= up * deltaTime * SPEED;
   }
   */
+
+  // Flashlight (F).
+  if (checkKeyJustPressed(GLFW_KEY_F)) {
+    flashlight = !flashlight;
+  }
+
+  // Settings toggled by key press.
+  for (int i = 0; i < 10; i++) {
+    if (checkKeyJustPressed(GLFW_KEY_0 + i) || checkKeyJustPressed(GLFW_KEY_KP_0 + i)) {
+      if (i < Settings::NUM_SETTINGS) {
+        std::cerr << "Toggling " << Settings::settingNames[i] << std::endl;
+        settings->toggle((Settings::SettingsEnum) i);
+      }
+    }
+  }
 
   // Projection matrix: 45 degree Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units.
   projectionMatrix = glm::perspective(45.0f, width/(float)height, 0.1f, 100.0f);

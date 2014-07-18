@@ -13,7 +13,7 @@
 #include "controller.hpp"
 
 #define MIN_REQUIRED_COLOUR_ATTACHMENTS 2
-#define RENDER_DEBUG_IMAGES true
+#define RENDER_DEBUG_IMAGES false
 #define SHADOWMAP_WIDTH 2048
 #define SHADOWMAP_HEIGHT 2048
 #define MAX_FPS 60
@@ -53,7 +53,8 @@ bool checkGLFramebuffer() {
 
 Viewer::Viewer(): width(DEFAULT_WIDTH), height(DEFAULT_HEIGHT) {
 
-  controller = new Controller(this);
+  settings = new Settings();
+  controller = new Controller(this, settings);
 
   glfwWindowHint(GLFW_SAMPLES, 4);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -142,7 +143,7 @@ bool Viewer::initGL() {
     std::cerr << "Loading sphere mesh resulted in not 1 meshes!!" << std::endl;
     exit(1);
   }
-  glm::vec3 startPosition(0, 2, -10);
+  glm::vec3 startPosition(0, 3, -10);
   controller->setHorizontalAngle(0);
 
   controller->setPosition(startPosition);
@@ -304,9 +305,9 @@ bool Viewer::initGL() {
 
   // Scene-specific setup:
 
-  // Flash light.
-  lights.push_back(Light::spotLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0, 0, 0), glm::vec3(0.0, 0.0, -1.0), 15.0));
-  lights.back()->getFalloff() = glm::vec3(1.0, 0.02, 0.001);
+  // Flashlight.
+  lights.push_back(Light::spotLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0, 0, 0), glm::vec3(0.0, 0.0, -1.0), 18.0));
+  lights.back()->getFalloff() = glm::vec3(1.0, 0.01, 0.0005);
   lights.back()->getAmbience() = glm::vec3(0.04, 0.04, 0.04);
   //lights.back()->setEnabled(false);
 
@@ -361,6 +362,9 @@ void Viewer::run() {
   GLuint deferredViewMatrixId = glGetUniformLocation(deferredShadingProgramId, "V");
   GLuint deferredProjectionMatrixId = glGetUniformLocation(deferredShadingProgramId, "P");
   GLuint lightPosId = glGetUniformLocation(deferredShadingProgramId, "lightPositionWorldspace");
+  GLuint deferredUseDiffuseId = glGetUniformLocation(deferredShadingProgramId, "useDiffuse");
+  GLuint deferredUseSpecularId = glGetUniformLocation(deferredShadingProgramId, "useSpecular");
+  GLuint deferredUseShadowId = glGetUniformLocation(deferredShadingProgramId, "useShadow");
   GLuint lightDirId = glGetUniformLocation(deferredShadingProgramId, "lightDirectionWorldspace");
   GLuint lightTypeId = glGetUniformLocation(deferredShadingProgramId, "lightType");
   GLuint lightColourId = glGetUniformLocation(deferredShadingProgramId, "lightColour");
@@ -369,7 +373,7 @@ void Viewer::run() {
   GLuint lightSpreadDegreesId = glGetUniformLocation(deferredShadingProgramId, "lightSpreadDegrees");
   GLuint cameraPositionId = glGetUniformLocation(deferredShadingProgramId, "cameraPositionWorldspace");
 
-  GLuint depthBiasId = glGetUniformLocation(deferredShadingProgramId, "depthBiasVP");
+  GLuint depthBiasId = glGetUniformLocation(deferredShadingProgramId, "shadowmapDepthBiasVP");
 
   // Deferred shading textures.
   GLuint deferredDiffuseTextureId = glGetUniformLocation(deferredShadingProgramId, "diffuseTexture");
@@ -381,7 +385,7 @@ void Viewer::run() {
   GLuint shadowmapCubeId = glGetUniformLocation(deferredShadingProgramId, "shadowMapCube");
 
   // SSAO.
-  GLuint useSSAOId = glGetUniformLocation(deferredShadingProgramId, "useSSAO");
+  GLuint deferredUseSSAOId = glGetUniformLocation(deferredShadingProgramId, "useSSAO");
   GLuint ssaoKernelId = glGetUniformLocation(deferredShadingProgramId, "ssaoKernel");
   GLuint ssaoNoiseId = glGetUniformLocation(deferredShadingProgramId, "ssaoNoiseTexture");
 
@@ -398,6 +402,16 @@ void Viewer::run() {
   GLuint geomUseNormalTextureId = glGetUniformLocation(geomTexturesProgramId, "useNormalTexture");
 
   GLuint postProcessTexId = glGetUniformLocation(postProcessProgramId, "texture");
+  GLuint postProcessUseBlurId = glGetUniformLocation(postProcessProgramId, "useBlur");
+  GLuint postProcessUseMotionBlurId = glGetUniformLocation(postProcessProgramId, "useMotionBlur");
+
+  // Set up shadowmap data.
+  glm::mat4 shadowmapBiasMatrix(
+    0.5, 0.0, 0.0, 0.0,
+    0.0, 0.5, 0.0, 0.0,
+    0.0, 0.0, 0.5, 0.0,
+    0.5, 0.5, 0.5, 1.0
+  );
 
   // Set up SSAO data.
   srand(1);
@@ -441,9 +455,7 @@ void Viewer::run() {
     double deltaTime = currentTime - lastTime;
     lastTime = currentTime;
 
-    // TODO: Make config class and hook up controller to flip options like this.
-    bool useSSAO = false; //(int) std::floor(currentTime) % 2 == 0;
-    bool doPostProcessing = useSSAO;
+    bool doPostProcessing = settings->isSet(Settings::BLUR) || settings->isSet(Settings::MOTION_BLUR);
 
 
     // ======= Deferred rendering stage 1: Render geometry into textures. ===========
@@ -501,13 +513,13 @@ void Viewer::run() {
         glUniform3f(geomMaterialEmissiveId, 0, 0, 0);
 
         // Bind diffuse texture if it exists.
-        glUniform1i(geomUseDiffuseTextureId, material->hasDiffuseTexture());
+        glUniform1i(geomUseDiffuseTextureId, settings->isSet(Settings::TEXTURE_MAP) && material->hasDiffuseTexture());
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, material->getDiffuseTexture());
         glUniform1i(geomDiffuseTexId, 0);
 
         // Bind normal texture if it exists.
-        glUniform1i(geomUseNormalTextureId, material->hasNormalTexture());
+        glUniform1i(geomUseNormalTextureId, settings->isSet(Settings::NORMAL_MAP) && material->hasNormalTexture());
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, material->getNormalTexture());
         glUniform1i(geomNormalTexId, 1);
@@ -557,11 +569,7 @@ void Viewer::run() {
       glDrawBuffer(GL_FRONT_LEFT);
     }
 
-    if (useSSAO) {
-      glClearColor(0.0f, 0.4f, 0.0f, 0.0f);
-    } else {
-      glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-    }
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -572,6 +580,7 @@ void Viewer::run() {
 
     // Flashlight.
     lights[0]->getPosition() = cameraPosition + glm::vec3(0, -0.6f, 0);
+    lights[0]->setEnabled(controller->isFlashlightOn());
     // TODO: Why backwards about x?
     lights[0]->getDirection() = glm::vec3(glm::inverse(viewMatrix) * glm::vec4(0, 0, -1, 0));
     //lights[0]->setEnabled(false);
@@ -584,93 +593,98 @@ void Viewer::run() {
       Light* light = *it;
       if (!light->isEnabled()) continue;
 
-      // ======= Shadow mapping =========
-      glUseProgram(depthProgramId);
-      if (light->getType() == Light::POINT) {
-        glBindFramebuffer(GL_FRAMEBUFFER, shadowCubeMapFramebuffer);
-      } else {
-        glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFramebuffer);
-      }
-
-      glDrawBuffer(GL_NONE); // No colour output.
-      glViewport(0, 0, SHADOWMAP_WIDTH, SHADOWMAP_HEIGHT);
-      glEnable(GL_DEPTH_TEST);
-
       glm::vec3 lightPos = light->getPosition();
       glm::vec3 lightDir = light->getDirection();
+      glm::mat4 shadowmapDepthBiasVP;
 
-      glm::mat4 depthVP;
-
-      // Loop for all shadow maps that have to be generated for this light.
-      for (int shadowMapFace = 0; shadowMapFace < 6; shadowMapFace++) {
-
-        // Bind shadow map texture.
+      // ======= Shadow mapping =========
+      if (settings->isSet(Settings::SHADOW_MAP)) {
+        glUseProgram(depthProgramId);
         if (light->getType() == Light::POINT) {
-          // Shadow cube map.
-          glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + shadowMapFace, shadowmapCubeDepthTexture, 0);
+          glBindFramebuffer(GL_FRAMEBUFFER, shadowCubeMapFramebuffer);
         } else {
-          glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowmapDepthTexture, 0);
+          glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFramebuffer);
         }
 
-        glClear(GL_DEPTH_BUFFER_BIT);
+        glDrawBuffer(GL_NONE); // No colour output.
+        glViewport(0, 0, SHADOWMAP_WIDTH, SHADOWMAP_HEIGHT);
+        glEnable(GL_DEPTH_TEST);
 
-        // Compute the MVP matrix from the light's point of view.
-        glm::mat4 depthProjectionMatrix;
-        glm::mat4 depthViewMatrix;
-        glm::vec3 lightDirectionWorldspace;
-        switch (light->getType()) {
-          case Light::DIRECTIONAL:
-            // TODO: Need to adjust for scene size...
-            //depthProjectionMatrix = glm::ortho<float>(-10, 10, -10, 10, -10, 20);
-            depthProjectionMatrix = glm::ortho<float>(-40, 40, -40, 40, -10, 100);
-            depthViewMatrix = glm::lookAt(glm::vec3(0, 0, 0), lightDir, glm::vec3(0, 1, 0));
-            break;
-          case Light::SPOT:
-            depthProjectionMatrix = glm::perspective(light->getSpread() + 15.0f, 1.0f, 2.0f, 100.0f);
-            depthViewMatrix = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0, 1, 0));
-            break;
-          case Light::POINT:
-            depthProjectionMatrix = glm::perspective(90.0f, 1.0f, 1.0f, 500.0f);
-            switch (shadowMapFace) {
-              case 0: // +X
-                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(1, 0, 0),glm::vec3(0, -1, 0));
-                break;
-              case 1: // -X
-                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(-1, 0, 0),glm::vec3(0, -1, 0));
-                break;
-              case 2:// +Y
-                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, 1, 0),glm::vec3(0, 0, 1));
-                break;
-              case 3: // -Y
-                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, -1, 0),glm::vec3(0, 0, -1));
-                break;
-              case 4:// +Z
-                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, 0, 1), glm::vec3(0, -1, 0));
-                break;
-              case 5: // -Z
-                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, 0, -1), glm::vec3(0, -1, 0));
-                break;
-            }
-            break;
+        glm::mat4 depthVP;
+
+        // Loop for all shadow maps that have to be generated for this light.
+        for (int shadowMapFace = 0; shadowMapFace < 6; shadowMapFace++) {
+
+          // Bind shadow map texture.
+          if (light->getType() == Light::POINT) {
+            // Shadow cube map.
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + shadowMapFace, shadowmapCubeDepthTexture, 0);
+          } else {
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowmapDepthTexture, 0);
+          }
+
+          glClear(GL_DEPTH_BUFFER_BIT);
+
+          // Compute the MVP matrix from the light's point of view.
+          glm::mat4 depthProjectionMatrix;
+          glm::mat4 depthViewMatrix;
+          glm::vec3 lightDirectionWorldspace;
+          switch (light->getType()) {
+            case Light::DIRECTIONAL:
+              // TODO: Need to adjust for scene size...
+              //depthProjectionMatrix = glm::ortho<float>(-10, 10, -10, 10, -10, 20);
+              depthProjectionMatrix = glm::ortho<float>(-40, 40, -40, 40, -10, 100);
+              depthViewMatrix = glm::lookAt(glm::vec3(0, 0, 0), lightDir, glm::vec3(0, 1, 0));
+              break;
+            case Light::SPOT:
+              depthProjectionMatrix = glm::perspective(light->getSpread() + 15.0f, 1.0f, 2.0f, 100.0f);
+              depthViewMatrix = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0, 1, 0));
+              break;
+            case Light::POINT:
+              depthProjectionMatrix = glm::perspective(90.0f, 1.0f, 1.0f, 500.0f);
+              switch (shadowMapFace) {
+                case 0: // +X
+                  depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(1, 0, 0),glm::vec3(0, -1, 0));
+                  break;
+                case 1: // -X
+                  depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(-1, 0, 0),glm::vec3(0, -1, 0));
+                  break;
+                case 2:// +Y
+                  depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, 1, 0),glm::vec3(0, 0, 1));
+                  break;
+                case 3: // -Y
+                  depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, -1, 0),glm::vec3(0, 0, -1));
+                  break;
+                case 4:// +Z
+                  depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, 0, 1), glm::vec3(0, -1, 0));
+                  break;
+                case 5: // -Z
+                  depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, 0, -1), glm::vec3(0, -1, 0));
+                  break;
+              }
+              break;
+          }
+          glm::mat4 depthModelMatrix = glm::mat4(1.0);
+          depthVP = depthProjectionMatrix * depthViewMatrix;
+          glm::mat4 depthMVP = depthVP * depthModelMatrix;
+
+          glUniformMatrix4fv(depthMatrixId, 1, GL_FALSE, &depthMVP[0][0]);
+
+          for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
+            (*it)->renderGLVertsOnly();
+          }
+
+          if (light->getType() != Light::POINT) break;
         }
-        glm::mat4 depthModelMatrix = glm::mat4(1.0);
-        depthVP = depthProjectionMatrix * depthViewMatrix;
-        glm::mat4 depthMVP = depthVP * depthModelMatrix;
 
-        glUniformMatrix4fv(depthMatrixId, 1, GL_FALSE, &depthMVP[0][0]);
-
-        for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
-          (*it)->renderGLVertsOnly();
+        // TODO: Debug angles/perspectives of point light - seems a little off for some directions.
+        // TODO: Fix shadow stripes!
+        if (light->getType() == Light::POINT) {
+          // TODO: Figure out why we need to shift by -1 here.
+          depthVP = glm::translate(glm::mat4(1.0), glm::vec3(-lightPos.x - 1, -lightPos.y - 1, -lightPos.z - 1));
         }
 
-        if (light->getType() != Light::POINT) break;
-      }
-
-      // TODO: Debug angles/perspectives of point light - seems a little off for some directions.
-      // TODO: Fix shadow stripes!
-      if (light->getType() == Light::POINT) {
-        // TODO: Figure out why we need to shift by -1 here.
-        depthVP = glm::translate(glm::mat4(1.0), glm::vec3(-lightPos.x - 1, -lightPos.y - 1, -lightPos.z - 1));
+        shadowmapDepthBiasVP = shadowmapBiasMatrix * depthVP;
       }
 
       // ======= Deferred rendering stage 2: Deferred rendering using textures. ===========
@@ -769,22 +783,17 @@ void Viewer::run() {
       //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_DEPTH_TEXTURE_MODE, GL_INTENSITY);
       */
 
-      glm::mat4 biasMatrix(
-        0.5, 0.0, 0.0, 0.0,
-        0.0, 0.5, 0.0, 0.0,
-        0.0, 0.0, 0.5, 0.0,
-        0.5, 0.5, 0.5, 1.0
-      );
-      glm::mat4 depthBiasVP = biasMatrix * depthVP;
-
       glUniformMatrix4fv(deferredViewMatrixId, 1, GL_FALSE, &viewMatrix[0][0]);
       glUniformMatrix4fv(deferredProjectionMatrixId, 1, GL_FALSE, &projectionMatrix[0][0]);
-      glUniformMatrix4fv(depthBiasId, 1, GL_FALSE, &depthBiasVP[0][0]);
+      glUniformMatrix4fv(depthBiasId, 1, GL_FALSE, &shadowmapDepthBiasVP[0][0]);
       glUniform3f(cameraPositionId, cameraPosition.x, cameraPosition.y, cameraPosition.z);
       glUniform3f(lightDirId, lightDir.x, lightDir.y, lightDir.z);
       glUniform3f(lightPosId, lightPos.x, lightPos.y, lightPos.z);
 
-      glUniform1i(useSSAOId, useSSAO);
+      glUniform1i(deferredUseDiffuseId, settings->isSet(Settings::LIGHT_DIFFUSE));
+      glUniform1i(deferredUseSpecularId, settings->isSet(Settings::LIGHT_SPECULAR));
+      glUniform1i(deferredUseShadowId, settings->isSet(Settings::SHADOW_MAP));
+      glUniform1i(deferredUseSSAOId, settings->isSet(Settings::SSAO));
       glUniform3fv(ssaoKernelId, sizeof(ssaoKernel), (float*)ssaoKernel);
 
       glm::vec3 lightColour = light->getColour();
@@ -815,6 +824,11 @@ void Viewer::run() {
 
       glActiveTexture(GL_TEXTURE0);
       glUniform1i(postProcessTexId, 0);
+
+      // Settings.
+      glUniform1i(postProcessUseBlurId, settings->isSet(Settings::BLUR));
+      glUniform1i(postProcessUseMotionBlurId, settings->isSet(Settings::MOTION_BLUR));
+
       glViewport(0, 0, width, height);
       glBindTexture(GL_TEXTURE_2D, accumRenderTexture);
       drawQuad();
@@ -894,6 +908,9 @@ void Viewer::run() {
 Viewer::~Viewer() {
   delete controller;
   controller = NULL;
+
+  delete settings;
+  settings = NULL;
 
   glDeleteProgram(depthProgramId);
   glDeleteProgram(quadProgramId);
