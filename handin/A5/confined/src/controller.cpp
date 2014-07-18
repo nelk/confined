@@ -75,6 +75,9 @@ void Controller::update() {
     cos(verticalAngle) * cos(horizontalAngle)
   );
 
+  // Direction but without vertical.
+  glm::vec3 flatDirection = glm::normalize(glm::vec3(1, 0, 1) * direction);
+
   glm::vec3 right = glm::vec3(
     sin(horizontalAngle - M_PI/2.0),
     0,
@@ -87,12 +90,12 @@ void Controller::update() {
   // Forwards.
   if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS
       || glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
-    position += direction * deltaTime * SPEED;
+    position += flatDirection * deltaTime * SPEED;
   }
   // Backwards.
   if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS
       || glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
-    position -= direction * deltaTime * SPEED;
+    position -= flatDirection * deltaTime * SPEED;
   }
   // Right.
   if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS
@@ -105,6 +108,7 @@ void Controller::update() {
     position -= right * deltaTime * SPEED;
   }
   // Up.
+  /*
   if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
     position += up * deltaTime * SPEED;
   }
@@ -112,6 +116,7 @@ void Controller::update() {
   if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
     position -= up * deltaTime * SPEED;
   }
+  */
 
   // Projection matrix: 45 degree Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units.
   projectionMatrix = glm::perspective(45.0f, width/(float)height, 0.1f, 100.0f);
