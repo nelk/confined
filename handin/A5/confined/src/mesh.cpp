@@ -217,38 +217,47 @@ void Mesh::renderGL() {
 
 
 bool loadTexture(aiTextureType aiType, const aiMaterial* m, Material *material) {
-  int num_textures = m->GetTextureCount(aiType);
-  if (num_textures >= 1) {
-    aiString texFileName;
-    if (m->GetTexture(aiType, 0, &texFileName) == AI_SUCCESS) {
-      std::string prefixedTexFileName = "models/" + std::string(texFileName.C_Str());
-      FIBITMAP* bitmap = FreeImage_Load(FreeImage_GetFileType(prefixedTexFileName.c_str(), 0), prefixedTexFileName.c_str());
-      FIBITMAP *pImage = FreeImage_ConvertTo24Bits(bitmap);
+  aiString texFileName;
+  aiReturn result = m->GetTexture(aiType, 0, &texFileName);
+  std::string prefixedTexFileName;
 
-      const int texWidth = FreeImage_GetWidth(bitmap);
-      const int texHeight = FreeImage_GetHeight(bitmap);
-
-      //unsigned char raw[32*texWidth*texHeight];
-      /*
-      BYTE* raw = (BYTE*)malloc(32*texWidth*texHeight*sizeof(BYTE));
-      FreeImage_ConvertToRawBits(raw, pImage, texWidth*texHeight, 32, 1, 1, 1, false);
-
-      material->setDiffuseTexture(texWidth, texHeight, (void*) raw);
-      */
-
-      if (aiType == aiTextureType_DIFFUSE) {
-        material->setDiffuseTexture(texWidth, texHeight, (void*) FreeImage_GetBits(pImage));
-      } else if (aiType == aiTextureType_HEIGHT) {
-        material->setNormalTexture(texWidth, texHeight, (void*) FreeImage_GetBits(pImage));
-      }
-
-      //free(raw);
-      FreeImage_Unload(pImage);
-      FreeImage_Unload(bitmap);
-      return true;
+  if (result == AI_SUCCESS) {
+    prefixedTexFileName = "models/" + std::string(texFileName.C_Str());
+  } else if (aiType == aiTextureType_HEIGHT && m->GetTexture(aiTextureType_DIFFUSE, 0, &texFileName) == AI_SUCCESS) {
+    std::string originalName(texFileName.C_Str());
+    int lastPeriod = originalName.find_last_of('.');
+    if (lastPeriod == std::string::npos) {
+      return false;
     }
+    prefixedTexFileName = "models/" + originalName.substr(0, lastPeriod) + "_normal" + originalName.substr(lastPeriod);
+  } else {
+    return false;
   }
-  return false;
+
+  FIBITMAP* bitmap = FreeImage_Load(FreeImage_GetFileType(prefixedTexFileName.c_str(), 0), prefixedTexFileName.c_str());
+  FIBITMAP *pImage = FreeImage_ConvertTo24Bits(bitmap);
+
+  const int texWidth = FreeImage_GetWidth(bitmap);
+  const int texHeight = FreeImage_GetHeight(bitmap);
+
+  //unsigned char raw[32*texWidth*texHeight];
+  /*
+  BYTE* raw = (BYTE*)malloc(32*texWidth*texHeight*sizeof(BYTE));
+  FreeImage_ConvertToRawBits(raw, pImage, texWidth*texHeight, 32, 1, 1, 1, false);
+
+  material->setDiffuseTexture(texWidth, texHeight, (void*) raw);
+  */
+
+  if (aiType == aiTextureType_DIFFUSE) {
+    material->setDiffuseTexture(texWidth, texHeight, (void*) FreeImage_GetBits(pImage));
+  } else if (aiType == aiTextureType_HEIGHT) {
+    material->setNormalTexture(texWidth, texHeight, (void*) FreeImage_GetBits(pImage));
+  }
+
+  //free(raw);
+  FreeImage_Unload(pImage);
+  FreeImage_Unload(bitmap);
+  return true;
 }
 
 void MessageFunction(FREE_IMAGE_FORMAT fif, const char *msg) {
@@ -289,7 +298,7 @@ std::vector<Mesh*> loadScene(const char* fileName, bool invertNormals) {
 
     loadTexture(aiTextureType_DIFFUSE, m, materials[matId]);
     loadTexture(aiTextureType_HEIGHT, m, materials[matId]); // Normal Map.
-    // NOTE: Must use "bump" in .mtl file.
+    // NOTE: Must use "bump" in .mtl file, or have name.png and name_normal.png in same directory.
   }
 
   // Load meshes.

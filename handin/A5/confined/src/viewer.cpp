@@ -132,7 +132,8 @@ bool Viewer::initGL() {
 
   glGenVertexArrays(1, &vertexArrayId);
 
-  meshes = loadScene("models/monkeybox.obj");
+  //meshes = loadScene("models/monkeybox.obj");
+  meshes = loadScene("models/shadowhouse.obj");
   std::vector<Mesh*> pointLightMeshes = loadScene("models/sphere.obj", false);
   if (pointLightMeshes.size() == 1) {
     pointLightMesh = pointLightMeshes[0];
@@ -302,14 +303,27 @@ bool Viewer::initGL() {
 
 
   // Scene-specific setup:
-  lights.push_back(Light::spotLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0, 0, 0), glm::vec3(0.0, 0.0, -1.0), 10.0));
+
+  // Flash light.
+  lights.push_back(Light::spotLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0, 0, 0), glm::vec3(0.0, 0.0, -1.0), 15.0));
   lights.back()->getFalloff() = glm::vec3(1.0, 0.02, 0.001);
-  lights.back()->setEnabled(false);
+  lights.back()->getAmbience() = glm::vec3(0.04, 0.04, 0.04);
+  //lights.back()->setEnabled(false);
 
   // Monkeybox.
+  /*
   lights.push_back(Light::pointLight(glm::vec3(0.2, 0.2, 0.2), glm::vec3(0.0, 3.0, 0.0)));
   lights.back()->getAmbience() = glm::vec3(0.4, 0.4, 0.4);
+  */
 
+  // "Sun"
+  lights.push_back(Light::directionalLight(glm::vec3(0.7, 0.7, 0.7), glm::vec3(0.1, -1.0, 0.0)));
+  //lights.back()->getAmbience() = glm::vec3(0.1, 0.1, 0.1);
+  lights.back()->setEnabled(false);
+
+  // Lamp
+  lights.push_back(Light::pointLight(glm::vec3(0.2, 0.2, 0.2), glm::vec3(0.0, 3.0, 0.0)));
+  lights.back()->setEnabled(false);
 
   return true;
 }
@@ -428,7 +442,7 @@ void Viewer::run() {
     lastTime = currentTime;
 
     // TODO: Make config class and hook up controller to flip options like this.
-    bool useSSAO = true; //(int) std::floor(currentTime) % 2 == 0;
+    bool useSSAO = false; //(int) std::floor(currentTime) % 2 == 0;
     bool doPostProcessing = useSSAO;
 
 
@@ -563,7 +577,7 @@ void Viewer::run() {
     //lights[0]->setEnabled(false);
 
     // Monkey box.
-    lights[1]->getPosition() = glm::vec3(std::cos(lightTime)/2.0, 3.0, std::sin(lightTime)/2.0); // Point.
+    //lights[1]->getPosition() = glm::vec3(std::cos(lightTime)/2.0, 3.0, std::sin(lightTime)/2.0); // Point.
 
 
     for (std::vector<Light*>::const_iterator it = lights.begin(); it != lights.end(); it++) {
@@ -607,11 +621,12 @@ void Viewer::run() {
         switch (light->getType()) {
           case Light::DIRECTIONAL:
             // TODO: Need to adjust for scene size...
-            depthProjectionMatrix = glm::ortho<float>(-10, 10, -10, 10, -10, 20);
+            //depthProjectionMatrix = glm::ortho<float>(-10, 10, -10, 10, -10, 20);
+            depthProjectionMatrix = glm::ortho<float>(-40, 40, -40, 40, -10, 100);
             depthViewMatrix = glm::lookAt(glm::vec3(0, 0, 0), lightDir, glm::vec3(0, 1, 0));
             break;
           case Light::SPOT:
-            depthProjectionMatrix = glm::perspective(light->getSpread() + 10.0f, 1.0f, 2.0f, 100.0f);
+            depthProjectionMatrix = glm::perspective(light->getSpread() + 15.0f, 1.0f, 2.0f, 100.0f);
             depthViewMatrix = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0, 1, 0));
             break;
           case Light::POINT:

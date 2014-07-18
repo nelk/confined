@@ -34,8 +34,7 @@ Kd 0.8 0.8 0.8
 Ks 0.8 0.8 0.8
 d 1
 illum 2
-map_Kd bricks/AlternatingBrick-ColorMap.png
-bump bricks/AlternatingBrick-NormalMap.png
+map_Kd textures/alternatingbricks.png
 
 newmtl None_CandlestickRender1.png
 Ns 0

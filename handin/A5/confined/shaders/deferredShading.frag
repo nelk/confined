@@ -221,7 +221,7 @@ void main(){
       // Quadratic falloff by angle.
       float distFrac = coneAngle/radians(lightSpreadDegrees);
       if (distFrac <= 1.0) {
-        visibility += /*step(-1.0, -distFrac) * */ (1 - distFrac/1.5) * (1 - distFrac) * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
+        visibility += /*step(-1.0, -distFrac) * */ (1 - distFrac/2.5) * (1 - distFrac) * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
         //lightFalloffModified.z += distFrac;
       }
 

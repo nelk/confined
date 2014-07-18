@@ -45,10 +45,9 @@ void main() {
     // Represents tangent space -> camera space.
     mat3 tbn = mat3(tangent, bitangent, normalize(normalCameraspace));
 
-    // This isn't working...
     outNormal = tbn * (texture2D(normalTexture, UV).xyz * 2.0 - 1.0);
   } else {
-    outNormal = normalCameraspace;
+    outNormal = normalize(normalCameraspace);
   }
   outNormal = (outNormal + 1.0)/2.0; // Shift to fit into texture colour.
 

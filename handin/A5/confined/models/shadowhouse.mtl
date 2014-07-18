@@ -1,0 +1,40 @@
+# Blender MTL File: 'shadowhouse.blend'
+# Material Count: 4
+
+newmtl Roof
+Ns 50.980392
+Ka 0.000000 0.000000 0.000000
+Kd 0.287072 0.148330 0.137354
+Ks 0.177083 0.177083 0.177083
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl brick_material
+Ns 96.078431
+Ka 0.000000 0.000000 0.000000
+Kd 0.000000 0.000000 0.000000
+Ks 0.270833 0.270833 0.270833
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd textures/alternatingbricks.png
+
+newmtl floor
+Ns 180.392157
+Ka 0.000000 0.000000 0.000000
+Kd 0.254831 0.254831 0.254831
+Ks 0.697917 0.697917 0.697917
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl grass_material
+Ns 266.666667
+Ka 0.000000 0.000000 0.000000
+Kd 0.000000 0.000000 0.000000
+Ks 0.187500 0.187500 0.187500
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd textures/grass.png
