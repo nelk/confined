@@ -16,7 +16,8 @@
 #define RENDER_DEBUG_IMAGES false
 #define SHADOWMAP_WIDTH 2048
 #define SHADOWMAP_HEIGHT 2048
-#define MAX_FPS 60
+#define TARGET_FPS 60
+#define TARGET_FRAME_DELTA 0.01666667
 #define FPS_SAMPLE_RATE 20
 #define SSAO_NOISE_TEXTURE_WIDTH 4
 
@@ -55,6 +56,10 @@ Viewer::Viewer(): width(DEFAULT_WIDTH), height(DEFAULT_HEIGHT) {
 
   settings = new Settings();
   controller = new Controller(this, settings);
+
+  // Initial settings (all start on).
+  settings->set(Settings::SSAO, false);
+  settings->set(Settings::BLUR, false);
 
   glfwWindowHint(GLFW_SAMPLES, 4);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -401,9 +406,13 @@ void Viewer::run() {
   GLuint geomNormalTexId = glGetUniformLocation(geomTexturesProgramId, "normalTexture");
   GLuint geomUseNormalTextureId = glGetUniformLocation(geomTexturesProgramId, "useNormalTexture");
 
-  GLuint postProcessTexId = glGetUniformLocation(postProcessProgramId, "texture");
+  GLuint postProcessTexId = glGetUniformLocation(postProcessProgramId, "tex");
+  GLuint postProcessDepthTexId = glGetUniformLocation(postProcessProgramId, "depthTexture");
   GLuint postProcessUseBlurId = glGetUniformLocation(postProcessProgramId, "useBlur");
   GLuint postProcessUseMotionBlurId = glGetUniformLocation(postProcessProgramId, "useMotionBlur");
+  GLuint postProcessCurrentTimeId = glGetUniformLocation(postProcessProgramId, "currentTime");
+  GLuint postProcessNewToOldMatrixId = glGetUniformLocation(postProcessProgramId, "newToOldMatrix");
+  GLuint postProcessFPSCorrectionId = glGetUniformLocation(postProcessProgramId, "fpsCorrection");
 
   // Set up shadowmap data.
   glm::mat4 shadowmapBiasMatrix(
@@ -441,7 +450,6 @@ void Viewer::run() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, SSAO_NOISE_TEXTURE_WIDTH, SSAO_NOISE_TEXTURE_WIDTH, 0, GL_RGB, GL_FLOAT, ssaoNoise);
 
-  double lightTime = 0.0;
   controller->reset();
 
   glBindVertexArray(vertexArrayId);
@@ -449,6 +457,8 @@ void Viewer::run() {
   double lastTime = glfwGetTime();
   long fpsDisplayCounter = 0;
   double lastFPSTime = lastTime;
+
+  glm::mat4 lastVP = glm::mat4(1.0);
 
   do {
     double currentTime = glfwGetTime();
@@ -490,16 +500,18 @@ void Viewer::run() {
     const glm::mat4& projectionMatrix = controller->getProjectionMatrix();
     const glm::mat4& viewMatrix = controller->getViewMatrix();
     const glm::vec3& cameraPosition = controller->getPosition();
+    const glm::mat4 VP = projectionMatrix * viewMatrix;
 
     // Send MVP transformations to currently bound shader.
     glUniformMatrix4fv(geomViewMatrixId, 1, GL_FALSE, &viewMatrix[0][0]);
     glUniformMatrix4fv(geomProjectionMatrixId, 1, GL_FALSE, &projectionMatrix[0][0]);
 
+
     for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
       Mesh* mesh = *it;
 
       glm::mat4 modelMatrix = mesh->getModelMatrix();
-      glm::mat4 MVP = projectionMatrix * viewMatrix * modelMatrix;
+      glm::mat4 MVP = VP * modelMatrix;
 
       glUniformMatrix4fv(geomMVPId, 1, GL_FALSE, &MVP[0][0]);
       glUniformMatrix4fv(geomModelMatrixId, 1, GL_FALSE, &modelMatrix[0][0]);
@@ -536,7 +548,7 @@ void Viewer::run() {
 
       // Set model matrix to move model to point light's position.
       glm::mat4 sphereModelMatrix = glm::translate(glm::mat4(1.0), light->getPosition()) * pointLightMesh->getModelMatrix();
-      glm::mat4 MVP = projectionMatrix * viewMatrix * sphereModelMatrix;
+      glm::mat4 MVP = VP * sphereModelMatrix;
       glUniformMatrix4fv(geomModelMatrixId, 1, GL_FALSE, &sphereModelMatrix[0][0]);
       glUniformMatrix4fv(geomMVPId, 1, GL_FALSE, &MVP[0][0]);
 
@@ -574,7 +586,6 @@ void Viewer::run() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     bool firstBlendPass = true;
-    lightTime += 3.0 * deltaTime;
 
     // Moving lights.
 
@@ -586,7 +597,7 @@ void Viewer::run() {
     //lights[0]->setEnabled(false);
 
     // Monkey box.
-    //lights[1]->getPosition() = glm::vec3(std::cos(lightTime)/2.0, 3.0, std::sin(lightTime)/2.0); // Point.
+    //lights[1]->getPosition() = glm::vec3(std::cos(3.0*currentTime)/2.0, 3.0, std::sin(3.0*currentTime)/2.0); // Point.
 
 
     for (std::vector<Light*>::const_iterator it = lights.begin(); it != lights.end(); it++) {
@@ -816,6 +827,9 @@ void Viewer::run() {
     if (doPostProcessing) {
       glUseProgram(postProcessProgramId);
 
+      glViewport(0, 0, width, height);
+      // TODO: Clear?
+
       // Draw to screen.
       glBindFramebuffer(GL_FRAMEBUFFER, 0);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
@@ -823,17 +837,30 @@ void Viewer::run() {
       glDisable(GL_DEPTH_TEST);
 
       glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, accumRenderTexture);
       glUniform1i(postProcessTexId, 0);
+
+      glActiveTexture(GL_TEXTURE0 + 1);
+      glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
+      glUniform1i(postProcessDepthTexId, 1);
+
 
       // Settings.
       glUniform1i(postProcessUseBlurId, settings->isSet(Settings::BLUR));
       glUniform1i(postProcessUseMotionBlurId, settings->isSet(Settings::MOTION_BLUR));
+      glUniform1f(postProcessCurrentTimeId, currentTime);
 
-      glViewport(0, 0, width, height);
-      glBindTexture(GL_TEXTURE_2D, accumRenderTexture);
+      glm::mat4 newToOldMatrix = lastVP * glm::inverse(VP);
+      glUniformMatrix4fv(postProcessNewToOldMatrixId, 1, GL_FALSE, &newToOldMatrix[0][0]);
+      float fpsCorrection = TARGET_FRAME_DELTA / deltaTime;
+      glUniform1f(postProcessFPSCorrectionId, fpsCorrection);
+
+
       drawQuad();
     }
 
+
+    lastVP = VP;
 
 
     // ============ Debug Rendering =============
