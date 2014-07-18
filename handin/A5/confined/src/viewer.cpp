@@ -87,6 +87,12 @@ void Viewer::updateSize(int width, int height) {
   glBindTexture(GL_TEXTURE_2D, deferredDiffuseTexture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_FLOAT, 0);
 
+  glBindTexture(GL_TEXTURE_2D, deferredSpecularTexture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_FLOAT, 0);
+
+  glBindTexture(GL_TEXTURE_2D, deferredEmissiveTexture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_FLOAT, 0);
+
   glBindTexture(GL_TEXTURE_2D, deferredNormalTexture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, width, height, 0, GL_RGB, GL_FLOAT, 0);
 
@@ -126,8 +132,15 @@ bool Viewer::initGL() {
 
   glGenVertexArrays(1, &vertexArrayId);
 
-  //meshes = loadScene("models/test1.obj");
   meshes = loadScene("models/monkeybox.obj");
+  std::vector<Mesh*> pointLightMeshes = loadScene("models/sphere.obj", false);
+  if (pointLightMeshes.size() == 1) {
+    pointLightMesh = pointLightMeshes[0];
+    pointLightMesh->getModelMatrix() = glm::scale(glm::mat4(1.0), glm::vec3(0.1, 0.1, 0.1));
+  } else {
+    std::cerr << "Loading sphere mesh resulted in not 1 meshes!!" << std::endl;
+    exit(1);
+  }
   glm::vec3 startPosition(0, 2, -10);
   controller->setHorizontalAngle(0);
 
@@ -141,6 +154,18 @@ bool Viewer::initGL() {
   // Deferred rendering texture targets.
   glGenTextures(1, &deferredDiffuseTexture);
   glBindTexture(GL_TEXTURE_2D, deferredDiffuseTexture);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_FLOAT, 0);
+
+  glGenTextures(1, &deferredSpecularTexture);
+  glBindTexture(GL_TEXTURE_2D, deferredSpecularTexture);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_FLOAT, 0);
+
+  glGenTextures(1, &deferredEmissiveTexture);
+  glBindTexture(GL_TEXTURE_2D, deferredEmissiveTexture);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_FLOAT, 0);
@@ -162,9 +187,11 @@ bool Viewer::initGL() {
   // This is necessary.
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, deferredDepthTexture, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, deferredDepthTexture, 0);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, deferredDiffuseTexture, 0);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, deferredNormalTexture, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, deferredSpecularTexture, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, deferredEmissiveTexture, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, deferredNormalTexture, 0);
 
   if (!checkGLFramebuffer()) return false;
 
@@ -216,7 +243,7 @@ bool Viewer::initGL() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadowmapDepthTexture, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowmapDepthTexture, 0);
 
   if (!checkGLFramebuffer()) return false;
 
@@ -279,15 +306,10 @@ bool Viewer::initGL() {
   lights.back()->getFalloff() = glm::vec3(1.0, 0.02, 0.001);
   lights.back()->setEnabled(false);
 
+  // Monkeybox.
   lights.push_back(Light::pointLight(glm::vec3(0.2, 0.2, 0.2), glm::vec3(0.0, 3.0, 0.0)));
-  lights.back()->getAmbience() = glm::vec3(0.2, 0.2, 0.2);
-  lights.back()->setEnabled(false); // turn off
+  lights.back()->getAmbience() = glm::vec3(0.4, 0.4, 0.4);
 
-  lights.push_back(Light::pointLight(glm::vec3(0.4, 0.0, 0.0), glm::vec3(-1.0, 3.0, -3.0)));
-  lights.back()->getFalloff() = glm::vec3(1.0, 0.2, 0.06);
-  lights.back()->setEnabled(false);
-
-  lights.push_back(Light::pointLight(glm::vec3(0.5, 0.5, 0.5), glm::vec3(0.0, 3.0, 0.0)));
 
   return true;
 }
@@ -317,13 +339,12 @@ void Viewer::run() {
   GLuint texId = glGetUniformLocation(quadProgramId, "texture");
 
   // Handles for MVP matrix uniforms (render pass).
-  GLuint matrixId = glGetUniformLocation(geomTexturesProgramId, "MVP");
+  GLuint geomMVPId = glGetUniformLocation(geomTexturesProgramId, "MVP");
   GLuint geomViewMatrixId = glGetUniformLocation(geomTexturesProgramId, "V");
   GLuint geomModelMatrixId = glGetUniformLocation(geomTexturesProgramId, "M");
   GLuint geomProjectionMatrixId = glGetUniformLocation(geomTexturesProgramId, "P");
 
   GLuint deferredViewMatrixId = glGetUniformLocation(deferredShadingProgramId, "V");
-  GLuint deferredModelMatrixId = glGetUniformLocation(deferredShadingProgramId, "M");
   GLuint deferredProjectionMatrixId = glGetUniformLocation(deferredShadingProgramId, "P");
   GLuint lightPosId = glGetUniformLocation(deferredShadingProgramId, "lightPositionWorldspace");
   GLuint lightDirId = glGetUniformLocation(deferredShadingProgramId, "lightDirectionWorldspace");
@@ -338,6 +359,8 @@ void Viewer::run() {
 
   // Deferred shading textures.
   GLuint deferredDiffuseTextureId = glGetUniformLocation(deferredShadingProgramId, "diffuseTexture");
+  GLuint deferredSpecularTextureId = glGetUniformLocation(deferredShadingProgramId, "specularTexture");
+  GLuint deferredEmissiveTextureId = glGetUniformLocation(deferredShadingProgramId, "emissiveTexture");
   GLuint deferredNormalTextureId = glGetUniformLocation(deferredShadingProgramId, "normalTexture");
   GLuint deferredDepthTextureId = glGetUniformLocation(deferredShadingProgramId, "depthTexture");
   GLuint shadowmapId = glGetUniformLocation(deferredShadingProgramId, "shadowMap");
@@ -350,9 +373,11 @@ void Viewer::run() {
 
   // Handles for material properties (render pass).
   //GLuint material_ka = glGetUniformLocation(geomTexturesProgramId, "material_ka");
-  GLuint material_kd = glGetUniformLocation(geomTexturesProgramId, "material_kd");
-  //GLuint material_ks = glGetUniformLocation(geomTexturesProgramId, "material_ks");
-  //GLuint material_shininess = glGetUniformLocation(geomTexturesProgramId, "material_shininess");
+  GLuint geomMaterialKdId = glGetUniformLocation(geomTexturesProgramId, "material_kd");
+  GLuint geomMaterialKsId = glGetUniformLocation(geomTexturesProgramId, "material_ks");
+  GLuint geomMaterialShininessId = glGetUniformLocation(geomTexturesProgramId, "material_shininess");
+  GLuint geomMaterialEmissiveId = glGetUniformLocation(geomTexturesProgramId, "material_emissive");
+
   GLuint geomDiffuseTexId = glGetUniformLocation(geomTexturesProgramId, "diffuseTexture");
   GLuint geomUseDiffuseTextureId = glGetUniformLocation(geomTexturesProgramId, "useDiffuseTexture");
   GLuint geomNormalTexId = glGetUniformLocation(geomTexturesProgramId, "normalTexture");
@@ -403,7 +428,7 @@ void Viewer::run() {
     lastTime = currentTime;
 
     // TODO: Make config class and hook up controller to flip options like this.
-    bool useSSAO = false;//(int) std::floor(currentTime) % 2 == 0;
+    bool useSSAO = true; //(int) std::floor(currentTime) % 2 == 0;
     bool doPostProcessing = useSSAO;
 
 
@@ -417,14 +442,16 @@ void Viewer::run() {
     glEnable(GL_DEPTH_TEST);
 
     // Bind textures to fbo as multiple render target.
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, deferredDepthTexture, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, deferredDepthTexture, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, deferredDiffuseTexture, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, deferredNormalTexture, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, deferredSpecularTexture, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, deferredEmissiveTexture, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, deferredNormalTexture, 0);
 
     // Set to render both colour attachments.
     glBindFramebuffer(GL_FRAMEBUFFER, deferredShadingFramebuffer);
-    GLenum drawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
-    glDrawBuffers(2, drawBuffers);
+    GLenum drawBuffers[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
+    glDrawBuffers(4, drawBuffers);
 
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
@@ -437,22 +464,27 @@ void Viewer::run() {
     const glm::mat4& projectionMatrix = controller->getProjectionMatrix();
     const glm::mat4& viewMatrix = controller->getViewMatrix();
     const glm::vec3& cameraPosition = controller->getPosition();
-    glm::mat4 modelMatrix = glm::mat4(1.0);
-    glm::mat4 MVP = projectionMatrix * viewMatrix * modelMatrix;
 
     // Send MVP transformations to currently bound shader.
-    glUniformMatrix4fv(matrixId, 1, GL_FALSE, &MVP[0][0]);
-    glUniformMatrix4fv(geomModelMatrixId, 1, GL_FALSE, &modelMatrix[0][0]);
     glUniformMatrix4fv(geomViewMatrixId, 1, GL_FALSE, &viewMatrix[0][0]);
     glUniformMatrix4fv(geomProjectionMatrixId, 1, GL_FALSE, &projectionMatrix[0][0]);
 
     for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
-      Material* material = (*it)->getMaterial();
+      Mesh* mesh = *it;
+
+      glm::mat4 modelMatrix = mesh->getModelMatrix();
+      glm::mat4 MVP = projectionMatrix * viewMatrix * modelMatrix;
+
+      glUniformMatrix4fv(geomMVPId, 1, GL_FALSE, &MVP[0][0]);
+      glUniformMatrix4fv(geomModelMatrixId, 1, GL_FALSE, &modelMatrix[0][0]);
+
+      Material* material = mesh->getMaterial();
       if (material != NULL) {
         //glUniform3f(material_ka, material->ka.x, material->ka.y, material->ka.z);
-        glUniform3f(material_kd, material->getDiffuse().x, material->getDiffuse().y, material->getDiffuse().z);
-        //glUniform3f(material_ks, material->ks.x, material->ks.y, material->ks.z);
-        //glUniform1f(material_shininess, material->shininess);
+        glUniform3f(geomMaterialKdId, material->getDiffuse().x, material->getDiffuse().y, material->getDiffuse().z);
+        glUniform3f(geomMaterialKsId, material->getSpecular().x, material->getSpecular().y, material->getSpecular().z);
+        glUniform1f(geomMaterialShininessId, material->getShininess());
+        glUniform3f(geomMaterialEmissiveId, 0, 0, 0);
 
         // Bind diffuse texture if it exists.
         glUniform1i(geomUseDiffuseTextureId, material->hasDiffuseTexture());
@@ -466,7 +498,30 @@ void Viewer::run() {
         glBindTexture(GL_TEXTURE_2D, material->getNormalTexture());
         glUniform1i(geomNormalTexId, 1);
       }
-      (*it)->renderGL();
+      mesh->renderGL();
+    }
+
+    // Render point lights as spheres.
+    glUniform1i(geomUseDiffuseTextureId, false);
+    glUniform1i(geomUseNormalTextureId, false);
+    for (std::vector<Light*>::const_iterator lightIt = lights.begin(); lightIt != lights.end(); lightIt++) {
+      Light *light = *lightIt;
+      if (!light->isEnabled() || light->getType() != Light::POINT) continue;
+
+      // Set model matrix to move model to point light's position.
+      glm::mat4 sphereModelMatrix = glm::translate(glm::mat4(1.0), light->getPosition()) * pointLightMesh->getModelMatrix();
+      glm::mat4 MVP = projectionMatrix * viewMatrix * sphereModelMatrix;
+      glUniformMatrix4fv(geomModelMatrixId, 1, GL_FALSE, &sphereModelMatrix[0][0]);
+      glUniformMatrix4fv(geomMVPId, 1, GL_FALSE, &MVP[0][0]);
+
+      // Use light's diffuse as emissive material.
+      glUniform3f(geomMaterialKdId, 0, 0, 0);
+      glUniform3f(geomMaterialKsId, 0, 0, 0);
+      glm::vec3 emissiveLight = light->getColour();
+      emissiveLight *= 5.0;
+      glUniform3f(geomMaterialEmissiveId, emissiveLight.x, emissiveLight.y, emissiveLight.z);
+
+      pointLightMesh->renderGL();
     }
 
 
@@ -507,12 +562,8 @@ void Viewer::run() {
     lights[0]->getDirection() = glm::vec3(glm::inverse(viewMatrix) * glm::vec4(0, 0, -1, 0));
     //lights[0]->setEnabled(false);
 
-    //lights[1]->getPosition() = glm::vec3(std::cos(lightTime), 3.0, std::sin(lightTime)); // Point.
-
-
-    //lights[0]->getDirection() = glm::vec3(std::cos(lightTime), -1.0, std::sin(lightTime)); // Green.
-    //lights[1]->getDirection() = glm::vec3(0, std::sin(lightTime), std::cos(lightTime)); // Red.
-    //lights[2]->getDirection()[2] = 0.2*std::sin(1.5*lightTime); // Spot.
+    // Monkey box.
+    lights[1]->getPosition() = glm::vec3(std::cos(lightTime)/2.0, 3.0, std::sin(lightTime)/2.0); // Point.
 
 
     for (std::vector<Light*>::const_iterator it = lights.begin(); it != lights.end(); it++) {
@@ -544,7 +595,7 @@ void Viewer::run() {
           // Shadow cube map.
           glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + shadowMapFace, shadowmapCubeDepthTexture, 0);
         } else {
-          glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadowmapDepthTexture, 0);
+          glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowmapDepthTexture, 0);
         }
 
         glClear(GL_DEPTH_BUFFER_BIT);
@@ -645,16 +696,24 @@ void Viewer::run() {
       glUniform1i(deferredDiffuseTextureId, 0);
 
       glActiveTexture(GL_TEXTURE0 + 1);
-      glBindTexture(GL_TEXTURE_2D, deferredNormalTexture);
-      glUniform1i(deferredNormalTextureId, 1);
+      glBindTexture(GL_TEXTURE_2D, deferredSpecularTexture);
+      glUniform1i(deferredSpecularTextureId, 1);
 
       glActiveTexture(GL_TEXTURE0 + 2);
-      glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
-      glUniform1i(deferredDepthTextureId, 2);
+      glBindTexture(GL_TEXTURE_2D, deferredEmissiveTexture);
+      glUniform1i(deferredEmissiveTextureId, 2);
 
       glActiveTexture(GL_TEXTURE0 + 3);
+      glBindTexture(GL_TEXTURE_2D, deferredNormalTexture);
+      glUniform1i(deferredNormalTextureId, 3);
+
+      glActiveTexture(GL_TEXTURE0 + 4);
+      glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
+      glUniform1i(deferredDepthTextureId, 4);
+
+      glActiveTexture(GL_TEXTURE0 + 5);
       glBindTexture(GL_TEXTURE_2D, shadowmapDepthTexture);
-      glUniform1i(shadowmapId, 3);
+      glUniform1i(shadowmapId, 5);
 
       /*
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
@@ -667,9 +726,9 @@ void Viewer::run() {
       //glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE, GL_INTENSITY);
       */
 
-      glActiveTexture(GL_TEXTURE0 + 4);
+      glActiveTexture(GL_TEXTURE0 + 6);
       glBindTexture(GL_TEXTURE_CUBE_MAP, shadowmapCubeDepthTexture);
-      glUniform1i(shadowmapCubeId, 4);
+      glUniform1i(shadowmapCubeId, 6);
 
       // TODO: Do we need these?
       /*
@@ -681,9 +740,9 @@ void Viewer::run() {
       glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
       */
 
-      glActiveTexture(GL_TEXTURE0 + 5);
+      glActiveTexture(GL_TEXTURE0 + 7);
       glBindTexture(GL_TEXTURE_2D, ssaoNoiseTexture);
-      glUniform1i(ssaoNoiseId, 5);
+      glUniform1i(ssaoNoiseId, 7);
 
       /*
       glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
@@ -703,7 +762,6 @@ void Viewer::run() {
       );
       glm::mat4 depthBiasVP = biasMatrix * depthVP;
 
-      glUniformMatrix4fv(deferredModelMatrixId, 1, GL_FALSE, &modelMatrix[0][0]);
       glUniformMatrix4fv(deferredViewMatrixId, 1, GL_FALSE, &viewMatrix[0][0]);
       glUniformMatrix4fv(deferredProjectionMatrixId, 1, GL_FALSE, &projectionMatrix[0][0]);
       glUniformMatrix4fv(depthBiasId, 1, GL_FALSE, &depthBiasVP[0][0]);
@@ -833,6 +891,8 @@ Viewer::~Viewer() {
 
   glDeleteTextures(1, &shadowmapDepthTexture);
   glDeleteTextures(1, &deferredDiffuseTexture);
+  glDeleteTextures(1, &deferredSpecularTexture);
+  glDeleteTextures(1, &deferredEmissiveTexture);
   glDeleteTextures(1, &deferredNormalTexture);
   glDeleteTextures(1, &deferredDepthTexture);
   glDeleteTextures(1, &ssaoNoiseTexture);

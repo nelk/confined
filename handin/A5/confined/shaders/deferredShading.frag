@@ -7,7 +7,11 @@ in vec2 texUV;
 layout(location = 0) out vec3 colour;
 
 // Constant inputs.
+
+// Texture samplers.
 uniform sampler2D diffuseTexture; // Albedo.
+uniform sampler2D specularTexture; // Specular, Shininess.
+uniform sampler2D emissiveTexture;
 uniform sampler2D normalTexture;
 uniform sampler2D depthTexture;
 uniform sampler2DShadow shadowMap;
@@ -25,13 +29,7 @@ uniform float lightSpreadDegrees;
 uniform vec3 cameraPositionWorldspace;
 uniform mat4 P;
 uniform mat4 V;
-uniform mat4 M;
 uniform mat4 depthBiasVP;
-
-//uniform vec3 material_ka;
-//uniform vec3 material_kd;
-//uniform vec3 material_ks;
-//uniform float material_shininess;
 
 uniform bool useSSAO = true;
 uniform vec3 ssaoKernel[4];
@@ -97,17 +95,24 @@ float SSAO(mat3 kernelBasis, vec3 originPos, float cmpDepth, float radius) {
 void main(){
 
   // Material properties
-  // TODO: Texture diffuse.
   vec3 material_kd = texture2D(diffuseTexture, texUV).rgb;
+  vec3 material_emissive = texture2D(emissiveTexture, texUV).rgb;
 
   // Don't write pixels that weren't actually drawn onto this texture.
-  if (material_kd == vec3(0, 0, 0))
-    discard;
+  if (material_kd == vec3(0, 0, 0) && material_emissive == vec3(0, 0, 0)) {
+    colour = vec3(0, 0, 0);
+    return;
+  }
+
+  vec4 material_ks_shininess = texture2D(specularTexture, texUV).rgba;
+  vec3 material_ks = material_ks_shininess.rgb;
+  float material_shininess = material_ks_shininess.a * 200.0;
+
+  //material_ks = vec3(0.5, 0.5, 0.5);
+  //material_shininess = 96.0; //10.0; //96.0;
 
   vec3 lightFalloffModified = lightFalloff;
   vec3 material_ka = lightAmbience * material_kd;
-  vec3 material_ks = vec3(0.5, 0.5, 0.5);
-  float material_shininess = 96.0; //10.0; //96.0;
 
   float x = texUV.x;
   float y = texUV.y;
@@ -292,10 +297,11 @@ void main(){
     ambientOcclusion = SSAO(kernelBasis, vertexPositionCameraspace.xyz, z, 1.5);
   }
 
-  colour = material_ka * (1.0 - ambientOcclusion)
+  colour = material_emissive                 // Emissive.
+    + material_ka * (1.0 - ambientOcclusion) // Ambient.
     + visibility * lightColour * attenuation
     * (
-      material_kd * cosTheta // Diffuse.
+      material_kd * cosTheta                 // Diffuse.
     + material_ks * pow(cosAlpha, material_shininess) // Specular.
     );
 }

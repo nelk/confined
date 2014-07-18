@@ -44,6 +44,7 @@ private:
   GLFWwindow* window;
   Controller* controller;
   std::vector<Mesh*> meshes;
+  Mesh* pointLightMesh;
   std::vector<Light*> lights;
 
   GLuint programId;
@@ -55,6 +56,8 @@ private:
   GLuint geomTexturesProgramId;
   GLuint deferredShadingProgramId;
   GLuint deferredDiffuseTexture;
+  GLuint deferredSpecularTexture;
+  GLuint deferredEmissiveTexture;
   GLuint deferredNormalTexture;
   GLuint deferredDepthTexture;
 

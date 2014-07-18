@@ -45,12 +45,17 @@ public:
     return numIndices;
   }
 
+  glm::mat4& getModelMatrix() {
+    return modelMatrix;
+  }
+
 private:
   GLuint buffers[NUM_BUFS];
   int numIndices;
   Material* material;
+  glm::mat4 modelMatrix;
 };
 
-std::vector<Mesh*> loadScene(const char* fileName);
+std::vector<Mesh*> loadScene(const char* fileName, bool invertNormals = false);
 
 #endif

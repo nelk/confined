@@ -11,6 +11,8 @@ Mesh::Mesh(
     std::vector<unsigned short>& indices,
     Material* material): material(material) {
 
+  modelMatrix = glm::mat4(1.0);
+
   for (int i = 0; i < NUM_BUFS; i++) {
     buffers[i] = 0;
   }
@@ -31,7 +33,7 @@ Mesh::Mesh(
   std::vector<glm::vec3> tangents(vertices.size(), glm::vec3(0, 0, 0));
   std::vector<glm::vec3> bitangents(vertices.size(), glm::vec3(0, 0, 0));
   // Only do tangents if there are enough UVs.
-  std::cerr << "#UVs: " << uvs.size() << ", #Vertices: " << vertices.size() << std::endl;
+  //std::cerr << "#UVs: " << uvs.size() << ", #Vertices: " << vertices.size() << std::endl;
   if (uvs.size() >= vertices.size()) {
     // Go through each triangular face and add tangents.
     for (unsigned int face = 0; face*3 + 2 < indices.size(); face++) {
@@ -253,7 +255,7 @@ void MessageFunction(FREE_IMAGE_FORMAT fif, const char *msg) {
   std::cerr << (int)fif << ": " << msg << std::endl;
 }
 
-std::vector<Mesh*> loadScene(const char* fileName) {
+std::vector<Mesh*> loadScene(const char* fileName, bool invertNormals) {
 
   FreeImage_SetOutputMessage(MessageFunction); 
 
@@ -326,7 +328,11 @@ std::vector<Mesh*> loadScene(const char* fileName) {
       normals.reserve(mesh->mNumVertices);
       for(unsigned int i=0; i<mesh->mNumVertices; i++){
         aiVector3D n = mesh->mNormals[i];
-        normals.push_back(glm::vec3(n.x, n.y, n.z));
+        if (invertNormals) {
+          normals.push_back(-glm::vec3(n.x, n.y, n.z));
+        } else {
+          normals.push_back(glm::vec3(n.x, n.y, n.z));
+        }
       }
     }
 

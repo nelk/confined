@@ -8,16 +8,21 @@ in vec3 bitangentCameraspace;
 
 // Output.
 layout(location = 0) out vec3 outDiffuse;
-layout(location = 1) out vec3 outNormal;
-layout(location = 2) out float gl_FragDepth;
+layout(location = 1) out vec4 outSpecular; // Includes shininess in alpha (0-100).
+layout(location = 2) out vec3 outEmissive;
+layout(location = 3) out vec3 outNormal;
+layout(location = 4) out float gl_FragDepth;
 
+// Texture samplers.
 uniform sampler2D diffuseTexture;
 uniform sampler2D normalTexture;
+
 uniform bool useDiffuseTexture;
 uniform bool useNormalTexture;
 uniform vec3 material_kd;
-
-// TODO: Pass through specular and shininess.
+uniform vec3 material_ks;
+uniform float material_shininess;
+uniform vec3 material_emissive;
 
 void main() {
   // Output Diffuse colour.
@@ -27,6 +32,8 @@ void main() {
     outDiffuse = material_kd;
   }
 
+  outSpecular = vec4(material_ks, material_shininess/200.0);
+  outEmissive = material_emissive;
 
   //vec3 normalCameraspace2 = (normalize(normalCameraspace) + 1.0) / 2.0; // Shift normal to be positive.
 
