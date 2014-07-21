@@ -58,7 +58,11 @@ public:
     return normalTexture;
   }
 
-private:
+  virtual void update() {}
+
+  virtual bool isMirror() { return false; }
+
+protected:
   void setTexture(GLuint &tex, int w, int h, void* data) {
     if (tex != 0) {
       glDeleteTextures(1, &tex);

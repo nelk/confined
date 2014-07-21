@@ -8,6 +8,7 @@
 
 #include "shader.hpp"
 #include "mesh.hpp"
+#include "mirror.hpp"
 
 #include "viewer.hpp"
 #include "controller.hpp"
@@ -19,7 +20,6 @@
 #define TARGET_FPS 60
 #define TARGET_FRAME_DELTA 0.01666667
 #define FPS_SAMPLE_RATE 20
-#define SSAO_NOISE_TEXTURE_WIDTH 4
 
 void window_size_callback(GLFWwindow* window, int width, int height) {
   Viewer* viewer = (Viewer*)glfwGetWindowUserPointer(window);
@@ -108,8 +108,18 @@ void Viewer::updateSize(int width, int height) {
   glBindTexture(GL_TEXTURE_2D, accumRenderTexture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, width, height, 0, GL_RGB, GL_FLOAT, 0);
 
-  glBindRenderbuffer(GL_RENDERBUFFER, depthRenderBuffer);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
+  for (int i = 0; i < 2; i++) {
+    glBindRenderbuffer(GL_RENDERBUFFER, depthRenderBuffers[0]);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
+  }
+
+  // Update Mirror textures, which are of screen size.
+  for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
+    Material *material = (*it)->getMaterial();
+    if (!material->isMirror()) continue;
+    Mirror* mirror = static_cast<Mirror*>(material);
+    mirror->updateSize(width, height);
+  }
 }
 
 bool Viewer::initGL() {
@@ -131,15 +141,11 @@ bool Viewer::initGL() {
     std::cerr << "Only " << maxAttachments << " supported FBO Colour Attachments, but this program requires " << MIN_REQUIRED_COLOUR_ATTACHMENTS << std::endl;
   }
 
-  glEnable(GL_DEPTH_TEST);
-  // Accept fragment if it closer to the camera than the former one.
-  glDepthFunc(GL_LESS);
-  glEnable(GL_CULL_FACE);
-
   glGenVertexArrays(1, &vertexArrayId);
+  glBindVertexArray(vertexArrayId);
 
-  //meshes = loadScene("models/monkeybox.obj");
   meshes = loadScene("models/shadowhouse.obj");
+  //meshes = loadScene("models/monkeybox.obj");
   std::vector<Mesh*> pointLightMeshes = loadScene("models/sphere.obj", false);
   if (pointLightMeshes.size() == 1) {
     pointLightMesh = pointLightMeshes[0];
@@ -148,10 +154,6 @@ bool Viewer::initGL() {
     std::cerr << "Loading sphere mesh resulted in not 1 meshes!!" << std::endl;
     exit(1);
   }
-  glm::vec3 startPosition(0, 3, -10);
-  controller->setHorizontalAngle(0);
-
-  controller->setPosition(startPosition);
 
   // Framebuffer for deferred shading.
   deferredShadingFramebuffer = 0;
@@ -217,10 +219,10 @@ bool Viewer::initGL() {
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, accumRenderTexture, 0);
 
   // Depth render buffer.
-  glGenRenderbuffers(1, &depthRenderBuffer);
-  glBindRenderbuffer(GL_RENDERBUFFER, depthRenderBuffer);
+  glGenRenderbuffers(2, &depthRenderBuffers[0]);
+  glBindRenderbuffer(GL_RENDERBUFFER, depthRenderBuffers[0]);
   glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderBuffer);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderBuffers[0]);
 
   if (!checkGLFramebuffer()) return false;
 
@@ -308,20 +310,52 @@ bool Viewer::initGL() {
   }
 
 
+  // Set up constant data.
+  shadowmapBiasMatrix = glm::mat4(
+    0.5, 0.0, 0.0, 0.0,
+    0.0, 0.5, 0.0, 0.0,
+    0.0, 0.0, 0.5, 0.0,
+    0.5, 0.5, 0.5, 1.0
+  );
+
+  // Set up SSAO data.
+  srand(1);
+  for (int i = 0; i < 4; i++) {
+    ssaoKernel[i] = glm::vec3(
+      (float)(rand() / (float)(RAND_MAX) * 2.0f - 1.0f),
+      (float)(rand() / (float)(RAND_MAX) * 2.0f - 1.0f),
+      (float)(rand() / (float)(RAND_MAX)));
+    ssaoKernel[i] = glm::normalize(ssaoKernel[i]);
+
+    float scale = (float) i / 4.0f;
+    ssaoKernel[i] *= 0.9f * scale * scale;
+  }
+  for (int i = 0; i < NOISE_SIZE; i++) {
+    ssaoNoise[i] = glm::vec3(
+      (float)(rand() / (float)(RAND_MAX)),
+      (float)(rand() / (float)(RAND_MAX)),
+      0.0f);
+    ssaoNoise[i] = glm::normalize(ssaoNoise[i]);
+  }
+  glBindTexture(GL_TEXTURE_2D, ssaoNoiseTexture);
+  // Required or data won't show up!
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, SSAO_NOISE_TEXTURE_WIDTH, SSAO_NOISE_TEXTURE_WIDTH, 0, GL_RGB, GL_FLOAT, ssaoNoise);
+
+
   // Scene-specific setup:
+  glm::vec3 startPosition(0, 3, -10);
+  controller->setHorizontalAngle(0);
+  controller->setPosition(startPosition);
 
   // Flashlight.
   lights.push_back(Light::spotLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0, 0, 0), glm::vec3(0.0, 0.0, -1.0), 18.0));
   //lights.push_back(Light::pointLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0, 3, 0)));
   lights.back()->getFalloff() = glm::vec3(1.0, 0.01, 0.0005);
-  lights.back()->getAmbience() = glm::vec3(0.04, 0.04, 0.04);
+  //lights.back()->getAmbience() = glm::vec3(0.04, 0.04, 0.04);
+  lights.back()->getAmbience() = glm::vec3(0.2, 0.2, 0.2);
   //lights.back()->setEnabled(false);
-
-  // Monkeybox.
-  /*
-  lights.push_back(Light::pointLight(glm::vec3(0.2, 0.2, 0.2), glm::vec3(0.0, 3.0, 0.0)));
-  lights.back()->getAmbience() = glm::vec3(0.4, 0.4, 0.4);
-  */
 
   // "Sun"
   lights.push_back(Light::directionalLight(glm::vec3(0.7, 0.7, 0.7), glm::vec3(0.1, -1.0, 0.0)));
@@ -330,7 +364,7 @@ bool Viewer::initGL() {
 
   // Lamp
   lights.push_back(Light::pointLight(glm::vec3(0.2, 0.2, 0.2), glm::vec3(0.0, 3.0, 0.0)));
-  lights.back()->setEnabled(false);
+  //lights.back()->setEnabled(false);
 
   return true;
 }
@@ -353,103 +387,462 @@ void Viewer::drawQuad() {
 }
 
 
-void Viewer::run() {
+void Viewer::bindRenderTarget(GLuint renderTargetFBO) {
+
+  checkGLErrors("bindRenderTarget start");
+  // Render to target.
+  if (renderTargetFBO == 0) {
+    // Render to screen.
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDrawBuffer(GL_FRONT_LEFT);
+  } else {
+    glBindFramebuffer(GL_FRAMEBUFFER, renderTargetFBO);
+    glDrawBuffer(GL_COLOR_ATTACHMENT0);
+  }
+  checkGLErrors("bindRenderTarget end");
+}
+
+void Viewer::renderScene(GLuint renderTargetFBO, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const glm::vec3& cameraPosition, bool postProcess, double currentTime, double deltaTime, const glm::vec3& halfspacePosition, const glm::vec3& halfspaceNormal) {
+
   // Handle for MVP uniform (shadow depth pass).
-  GLuint depthMatrixId = glGetUniformLocation(depthProgramId, "depthMVP");
+  static GLuint depthMatrixId = glGetUniformLocation(depthProgramId, "depthMVP");
 
-  GLuint texId = glGetUniformLocation(quadProgramId, "texture");
+  // Handles for Geometry pass.
+  static GLuint geomMVPId = glGetUniformLocation(geomTexturesProgramId, "MVP");
+  static GLuint geomViewMatrixId = glGetUniformLocation(geomTexturesProgramId, "V");
+  static GLuint geomModelMatrixId = glGetUniformLocation(geomTexturesProgramId, "M");
+  static GLuint geomProjectionMatrixId = glGetUniformLocation(geomTexturesProgramId, "P");
+  static GLuint geomHalfspacePointId = glGetUniformLocation(geomTexturesProgramId, "halfspacePoint");
+  static GLuint geomHalfspaceNormalId = glGetUniformLocation(geomTexturesProgramId, "halfspaceNormal");
+  static GLuint geomUseNoPerspectiveUVId = glGetUniformLocation(geomTexturesProgramId, "useNoPerspectiveUVs");
 
-  // Handles for MVP matrix uniforms (render pass).
-  GLuint geomMVPId = glGetUniformLocation(geomTexturesProgramId, "MVP");
-  GLuint geomViewMatrixId = glGetUniformLocation(geomTexturesProgramId, "V");
-  GLuint geomModelMatrixId = glGetUniformLocation(geomTexturesProgramId, "M");
-  GLuint geomProjectionMatrixId = glGetUniformLocation(geomTexturesProgramId, "P");
+  // Handles for material properties (geometry pass).
+  //GLuint material_ka = glGetUniformLocation(geomTexturesProgramId, "material_ka");
+  static GLuint geomMaterialKdId = glGetUniformLocation(geomTexturesProgramId, "material_kd");
+  static GLuint geomMaterialKsId = glGetUniformLocation(geomTexturesProgramId, "material_ks");
+  static GLuint geomMaterialShininessId = glGetUniformLocation(geomTexturesProgramId, "material_shininess");
+  static GLuint geomMaterialEmissiveId = glGetUniformLocation(geomTexturesProgramId, "material_emissive");
 
-  GLuint deferredViewMatrixId = glGetUniformLocation(deferredShadingProgramId, "V");
-  GLuint deferredProjectionMatrixId = glGetUniformLocation(deferredShadingProgramId, "P");
-  GLuint lightPosId = glGetUniformLocation(deferredShadingProgramId, "lightPositionWorldspace");
-  GLuint deferredUseDiffuseId = glGetUniformLocation(deferredShadingProgramId, "useDiffuse");
-  GLuint deferredUseSpecularId = glGetUniformLocation(deferredShadingProgramId, "useSpecular");
-  GLuint deferredUseShadowId = glGetUniformLocation(deferredShadingProgramId, "useShadow");
-  GLuint lightDirId = glGetUniformLocation(deferredShadingProgramId, "lightDirectionWorldspace");
-  GLuint lightTypeId = glGetUniformLocation(deferredShadingProgramId, "lightType");
-  GLuint lightColourId = glGetUniformLocation(deferredShadingProgramId, "lightColour");
-  GLuint lightAmbienceId = glGetUniformLocation(deferredShadingProgramId, "lightAmbience");
-  GLuint lightFalloffId = glGetUniformLocation(deferredShadingProgramId, "lightFalloff");
-  GLuint lightSpreadDegreesId = glGetUniformLocation(deferredShadingProgramId, "lightSpreadDegrees");
-  GLuint cameraPositionId = glGetUniformLocation(deferredShadingProgramId, "cameraPositionWorldspace");
+  static GLuint geomDiffuseTexId = glGetUniformLocation(geomTexturesProgramId, "diffuseTexture");
+  static GLuint geomUseDiffuseTextureId = glGetUniformLocation(geomTexturesProgramId, "useDiffuseTexture");
+  static GLuint geomNormalTexId = glGetUniformLocation(geomTexturesProgramId, "normalTexture");
+  static GLuint geomUseNormalTextureId = glGetUniformLocation(geomTexturesProgramId, "useNormalTexture");
 
-  GLuint depthBiasId = glGetUniformLocation(deferredShadingProgramId, "shadowmapDepthBiasVP");
+  static GLuint deferredViewMatrixId = glGetUniformLocation(deferredShadingProgramId, "V");
+  static GLuint deferredProjectionMatrixId = glGetUniformLocation(deferredShadingProgramId, "P");
+  static GLuint lightPosId = glGetUniformLocation(deferredShadingProgramId, "lightPositionWorldspace");
+  static GLuint deferredUseDiffuseId = glGetUniformLocation(deferredShadingProgramId, "useDiffuse");
+  static GLuint deferredUseSpecularId = glGetUniformLocation(deferredShadingProgramId, "useSpecular");
+  static GLuint deferredUseShadowId = glGetUniformLocation(deferredShadingProgramId, "useShadow");
+  static GLuint lightDirId = glGetUniformLocation(deferredShadingProgramId, "lightDirectionWorldspace");
+  static GLuint lightTypeId = glGetUniformLocation(deferredShadingProgramId, "lightType");
+  static GLuint lightColourId = glGetUniformLocation(deferredShadingProgramId, "lightColour");
+  static GLuint lightAmbienceId = glGetUniformLocation(deferredShadingProgramId, "lightAmbience");
+  static GLuint lightFalloffId = glGetUniformLocation(deferredShadingProgramId, "lightFalloff");
+  static GLuint lightSpreadDegreesId = glGetUniformLocation(deferredShadingProgramId, "lightSpreadDegrees");
+  static GLuint cameraPositionId = glGetUniformLocation(deferredShadingProgramId, "cameraPositionWorldspace");
+
+  static GLuint depthBiasId = glGetUniformLocation(deferredShadingProgramId, "shadowmapDepthBiasVP");
 
   // Deferred shading textures.
-  GLuint deferredDiffuseTextureId = glGetUniformLocation(deferredShadingProgramId, "diffuseTexture");
-  GLuint deferredSpecularTextureId = glGetUniformLocation(deferredShadingProgramId, "specularTexture");
-  GLuint deferredEmissiveTextureId = glGetUniformLocation(deferredShadingProgramId, "emissiveTexture");
-  GLuint deferredNormalTextureId = glGetUniformLocation(deferredShadingProgramId, "normalTexture");
-  GLuint deferredDepthTextureId = glGetUniformLocation(deferredShadingProgramId, "depthTexture");
-  GLuint shadowmapId = glGetUniformLocation(deferredShadingProgramId, "shadowMap");
-  GLuint shadowmapCubeId = glGetUniformLocation(deferredShadingProgramId, "shadowMapCube");
+  static GLuint deferredDiffuseTextureId = glGetUniformLocation(deferredShadingProgramId, "diffuseTexture");
+  static GLuint deferredSpecularTextureId = glGetUniformLocation(deferredShadingProgramId, "specularTexture");
+  static GLuint deferredEmissiveTextureId = glGetUniformLocation(deferredShadingProgramId, "emissiveTexture");
+  static GLuint deferredNormalTextureId = glGetUniformLocation(deferredShadingProgramId, "normalTexture");
+  static GLuint deferredDepthTextureId = glGetUniformLocation(deferredShadingProgramId, "depthTexture");
+  static GLuint shadowmapId = glGetUniformLocation(deferredShadingProgramId, "shadowMap");
+  static GLuint shadowmapCubeId = glGetUniformLocation(deferredShadingProgramId, "shadowMapCube");
 
   // SSAO.
-  GLuint deferredUseSSAOId = glGetUniformLocation(deferredShadingProgramId, "useSSAO");
-  GLuint ssaoKernelId = glGetUniformLocation(deferredShadingProgramId, "ssaoKernel");
-  GLuint ssaoNoiseId = glGetUniformLocation(deferredShadingProgramId, "ssaoNoiseTexture");
+  static GLuint deferredUseSSAOId = glGetUniformLocation(deferredShadingProgramId, "useSSAO");
+  static GLuint ssaoKernelId = glGetUniformLocation(deferredShadingProgramId, "ssaoKernel");
+  static GLuint ssaoNoiseId = glGetUniformLocation(deferredShadingProgramId, "ssaoNoiseTexture");
 
-  // Handles for material properties (render pass).
-  //GLuint material_ka = glGetUniformLocation(geomTexturesProgramId, "material_ka");
-  GLuint geomMaterialKdId = glGetUniformLocation(geomTexturesProgramId, "material_kd");
-  GLuint geomMaterialKsId = glGetUniformLocation(geomTexturesProgramId, "material_ks");
-  GLuint geomMaterialShininessId = glGetUniformLocation(geomTexturesProgramId, "material_shininess");
-  GLuint geomMaterialEmissiveId = glGetUniformLocation(geomTexturesProgramId, "material_emissive");
 
-  GLuint geomDiffuseTexId = glGetUniformLocation(geomTexturesProgramId, "diffuseTexture");
-  GLuint geomUseDiffuseTextureId = glGetUniformLocation(geomTexturesProgramId, "useDiffuseTexture");
-  GLuint geomNormalTexId = glGetUniformLocation(geomTexturesProgramId, "normalTexture");
-  GLuint geomUseNormalTextureId = glGetUniformLocation(geomTexturesProgramId, "useNormalTexture");
+  static GLuint postProcessTexId = glGetUniformLocation(postProcessProgramId, "tex");
+  static GLuint postProcessDepthTexId = glGetUniformLocation(postProcessProgramId, "depthTexture");
+  static GLuint postProcessUseBlurId = glGetUniformLocation(postProcessProgramId, "useBlur");
+  static GLuint postProcessUseMotionBlurId = glGetUniformLocation(postProcessProgramId, "useMotionBlur");
+  static GLuint postProcessCurrentTimeId = glGetUniformLocation(postProcessProgramId, "currentTime");
+  static GLuint postProcessNewToOldMatrixId = glGetUniformLocation(postProcessProgramId, "newToOldMatrix");
+  static GLuint postProcessFPSCorrectionId = glGetUniformLocation(postProcessProgramId, "fpsCorrection");
 
-  GLuint postProcessTexId = glGetUniformLocation(postProcessProgramId, "tex");
-  GLuint postProcessDepthTexId = glGetUniformLocation(postProcessProgramId, "depthTexture");
-  GLuint postProcessUseBlurId = glGetUniformLocation(postProcessProgramId, "useBlur");
-  GLuint postProcessUseMotionBlurId = glGetUniformLocation(postProcessProgramId, "useMotionBlur");
-  GLuint postProcessCurrentTimeId = glGetUniformLocation(postProcessProgramId, "currentTime");
-  GLuint postProcessNewToOldMatrixId = glGetUniformLocation(postProcessProgramId, "newToOldMatrix");
-  GLuint postProcessFPSCorrectionId = glGetUniformLocation(postProcessProgramId, "fpsCorrection");
 
-  // Set up shadowmap data.
-  glm::mat4 shadowmapBiasMatrix(
-    0.5, 0.0, 0.0, 0.0,
-    0.0, 0.5, 0.0, 0.0,
-    0.0, 0.0, 0.5, 0.0,
-    0.5, 0.5, 0.5, 1.0
-  );
+  static glm::mat4 lastVP = glm::mat4(1.0);
 
-  // Set up SSAO data.
-  srand(1);
-  glm::vec3 ssaoKernel[4];
-  for (int i = 0; i < 4; i++) {
-    ssaoKernel[i] = glm::vec3(
-      (float)(rand() / (float)(RAND_MAX) * 2.0f - 1.0f),
-      (float)(rand() / (float)(RAND_MAX) * 2.0f - 1.0f),
-      (float)(rand() / (float)(RAND_MAX)));
-    ssaoKernel[i] = glm::normalize(ssaoKernel[i]);
 
-    float scale = (float) i / 4.0f;
-    ssaoKernel[i] *= 0.9f * scale * scale;
+  // ======= Deferred rendering stage 1: Render geometry into textures. ===========
+
+  glUseProgram(geomTexturesProgramId);
+
+  // Render to framebuffer.
+  glBindFramebuffer(GL_FRAMEBUFFER, deferredShadingFramebuffer);
+  glViewport(0, 0, width, height);
+  glEnable(GL_DEPTH_TEST);
+
+  // Bind textures to fbo as multiple render target.
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, deferredDepthTexture, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, deferredDiffuseTexture, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, deferredSpecularTexture, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, deferredEmissiveTexture, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, deferredNormalTexture, 0);
+
+  // Set to render both colour attachments.
+  glBindFramebuffer(GL_FRAMEBUFFER, deferredShadingFramebuffer);
+  GLenum drawBuffers[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
+  glDrawBuffers(4, drawBuffers);
+
+  glEnable(GL_CULL_FACE);
+  glCullFace(GL_BACK);
+
+  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  const glm::mat4 VP = projectionMatrix * viewMatrix;
+
+  // Send MVP transformations to currently bound shader.
+  glUniformMatrix4fv(geomViewMatrixId, 1, GL_FALSE, &viewMatrix[0][0]);
+  glUniformMatrix4fv(geomProjectionMatrixId, 1, GL_FALSE, &projectionMatrix[0][0]);
+  glUniform3fv(geomHalfspacePointId, 1, &halfspacePosition[0]);
+  glUniform3fv(geomHalfspaceNormalId, 1, &halfspaceNormal[0]);
+
+
+  for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
+    Mesh* mesh = *it;
+
+    glm::mat4 modelMatrix = mesh->getModelMatrix();
+    glm::mat4 MVP = VP * modelMatrix;
+
+    glUniformMatrix4fv(geomModelMatrixId, 1, GL_FALSE, &modelMatrix[0][0]);
+    glUniformMatrix4fv(geomMVPId, 1, GL_FALSE, &MVP[0][0]);
+
+    Material* material = mesh->getMaterial();
+    if (material != NULL) {
+      //glUniform3f(material_ka, material->ka.x, material->ka.y, material->ka.z);
+      glUniform3f(geomMaterialKdId, material->getDiffuse().x, material->getDiffuse().y, material->getDiffuse().z);
+      glUniform3f(geomMaterialKsId, material->getSpecular().x, material->getSpecular().y, material->getSpecular().z);
+      glUniform1f(geomMaterialShininessId, material->getShininess());
+      glUniform3f(geomMaterialEmissiveId, 0, 0, 0);
+
+      // Bind diffuse texture if it exists.
+      glUniform1i(geomUseDiffuseTextureId, settings->isSet(Settings::TEXTURE_MAP) && material->hasDiffuseTexture());
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, material->getDiffuseTexture());
+      glUniform1i(geomDiffuseTexId, 0);
+
+      // Avoid hardware perspective divide if pre-divided for mirrors.
+      glUniform1i(geomUseNoPerspectiveUVId, material->isMirror());
+
+      // Bind normal texture if it exists.
+      glUniform1i(geomUseNormalTextureId, settings->isSet(Settings::NORMAL_MAP) && material->hasNormalTexture());
+      glActiveTexture(GL_TEXTURE1);
+      glBindTexture(GL_TEXTURE_2D, material->getNormalTexture());
+      glUniform1i(geomNormalTexId, 1);
+    }
+    mesh->renderGL();
   }
-  int noiseSize = SSAO_NOISE_TEXTURE_WIDTH * SSAO_NOISE_TEXTURE_WIDTH;
-  glm::vec3 ssaoNoise[noiseSize];
-  for (int i = 0; i < noiseSize; i++) {
-    ssaoNoise[i] = glm::vec3(
-      (float)(rand() / (float)(RAND_MAX)),
-      (float)(rand() / (float)(RAND_MAX)),
-      0.0f);
-    ssaoNoise[i] = glm::normalize(ssaoNoise[i]);
+
+  // Render point lights as spheres.
+  glUniform1i(geomUseDiffuseTextureId, false);
+  glUniform1i(geomUseNormalTextureId, false);
+  for (std::vector<Light*>::const_iterator lightIt = lights.begin(); lightIt != lights.end(); lightIt++) {
+    Light *light = *lightIt;
+    if (!light->isEnabled() || light->getType() != Light::POINT) continue;
+
+    // Set model matrix to move model to point light's position.
+    glm::mat4 sphereModelMatrix = glm::translate(glm::mat4(1.0), light->getPosition()) * pointLightMesh->getModelMatrix();
+    glm::mat4 MVP = VP * sphereModelMatrix;
+    glUniformMatrix4fv(geomModelMatrixId, 1, GL_FALSE, &sphereModelMatrix[0][0]);
+    glUniformMatrix4fv(geomMVPId, 1, GL_FALSE, &MVP[0][0]);
+
+    // Use light's diffuse as emissive material.
+    glUniform3f(geomMaterialKdId, 0, 0, 0);
+    glUniform3f(geomMaterialKsId, 0, 0, 0);
+    glm::vec3 emissiveLight = light->getColour();
+    emissiveLight *= 5.0;
+    glUniform3f(geomMaterialEmissiveId, emissiveLight.x, emissiveLight.y, emissiveLight.z);
+
+    pointLightMesh->renderGL();
   }
-  glBindTexture(GL_TEXTURE_2D, ssaoNoiseTexture);
-  // Required or data won't show up!
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, SSAO_NOISE_TEXTURE_WIDTH, SSAO_NOISE_TEXTURE_WIDTH, 0, GL_RGB, GL_FLOAT, ssaoNoise);
+
+
+  // ======= Shadow map and blend deferred shading for each light ======================
+
+  // Clear target first.
+  if (postProcess) {
+    // Render to texture.
+    glBindFramebuffer(GL_FRAMEBUFFER, accumRenderFramebuffer);
+    glBindTexture(GL_TEXTURE_2D, accumRenderTexture);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, accumRenderTexture, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderBuffers[0]);
+    glDrawBuffer(GL_COLOR_ATTACHMENT0);
+  } else {
+    bindRenderTarget(renderTargetFBO);
+  }
+
+  glViewport(0, 0, width, height);
+  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+  glEnable(GL_DEPTH_TEST);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  bool firstBlendPass = true;
+
+  for (std::vector<Light*>::const_iterator it = lights.begin(); it != lights.end(); it++) {
+    Light* light = *it;
+    if (!light->isEnabled()) continue;
+
+    glm::vec3 lightPos = light->getPosition();
+    glm::vec3 lightDir = light->getDirection();
+    glm::mat4 shadowmapDepthBiasVP;
+
+    // ======= Shadow mapping =========
+    if (settings->isSet(Settings::SHADOW_MAP)) {
+      glUseProgram(depthProgramId);
+      if (light->getType() == Light::POINT) {
+        glBindFramebuffer(GL_FRAMEBUFFER, shadowCubeMapFramebuffer);
+      } else {
+        glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFramebuffer);
+      }
+
+      glDrawBuffer(GL_NONE); // No colour output.
+      glViewport(0, 0, SHADOWMAP_WIDTH, SHADOWMAP_HEIGHT);
+      glEnable(GL_DEPTH_TEST);
+
+      glm::mat4 depthVP;
+
+      // Loop for all shadow maps that have to be generated for this light.
+      for (int shadowMapFace = 0; shadowMapFace < 6; shadowMapFace++) {
+
+        // Bind shadow map texture.
+        if (light->getType() == Light::POINT) {
+          // Shadow cube map.
+          glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + shadowMapFace, shadowmapCubeDepthTexture, 0);
+        } else {
+          glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowmapDepthTexture, 0);
+        }
+
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        // Compute the MVP matrix from the light's point of view.
+        glm::mat4 depthProjectionMatrix;
+        glm::mat4 depthViewMatrix;
+        glm::vec3 lightDirectionWorldspace;
+        switch (light->getType()) {
+          case Light::DIRECTIONAL:
+            // TODO: Need to adjust for scene size...
+            //depthProjectionMatrix = glm::ortho<float>(-10, 10, -10, 10, -10, 20);
+            depthProjectionMatrix = glm::ortho<float>(-40, 40, -40, 40, -10, 100);
+            depthViewMatrix = glm::lookAt(glm::vec3(0, 0, 0), lightDir, glm::vec3(0, 1, 0));
+            break;
+          case Light::SPOT:
+            depthProjectionMatrix = glm::perspective(light->getSpread() + 15.0f, 1.0f, 2.0f, 100.0f);
+            depthViewMatrix = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0, 1, 0));
+            break;
+          case Light::POINT:
+            depthProjectionMatrix = glm::perspective(90.0f, 1.0f, 1.0f, 500.0f);
+            switch (shadowMapFace) {
+              case 0: // +X
+                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(1, 0, 0),glm::vec3(0, -1, 0));
+                break;
+              case 1: // -X
+                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(-1, 0, 0),glm::vec3(0, -1, 0));
+                break;
+              case 2:// +Y
+                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, 1, 0),glm::vec3(0, 0, 1));
+                break;
+              case 3: // -Y
+                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, -1, 0),glm::vec3(0, 0, -1));
+                break;
+              case 4:// +Z
+                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, 0, 1), glm::vec3(0, -1, 0));
+                break;
+              case 5: // -Z
+                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, 0, -1), glm::vec3(0, -1, 0));
+                break;
+            }
+            break;
+        }
+        glm::mat4 depthModelMatrix = glm::mat4(1.0);
+        depthVP = depthProjectionMatrix * depthViewMatrix;
+        glm::mat4 depthMVP = depthVP * depthModelMatrix;
+
+        glUniformMatrix4fv(depthMatrixId, 1, GL_FALSE, &depthMVP[0][0]);
+
+        for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
+          (*it)->renderGLVertsOnly();
+        }
+
+        if (light->getType() != Light::POINT) break;
+      }
+
+      // TODO: Debug angles/perspectives of point light - seems a little off for some directions.
+      // TODO: Fix shadow stripes!
+      if (light->getType() == Light::POINT) {
+        // TODO: Figure out why we need to shift by -1 here.
+        //depthVP = glm::translate(glm::mat4(1.0), glm::vec3(-lightPos.x - 1, -lightPos.y - 1, -lightPos.z - 1));
+        depthVP = glm::translate(glm::mat4(1.0), glm::vec3(-lightPos.x - 1, -lightPos.y - 1, -lightPos.z - 1));
+      }
+
+      shadowmapDepthBiasVP = shadowmapBiasMatrix * depthVP;
+    }
+
+    // ======= Deferred rendering stage 2: Deferred rendering using textures. ===========
+
+    glUseProgram(deferredShadingProgramId);
+
+    if (postProcess) {
+      // Set output to accumulation texture.
+      glBindFramebuffer(GL_FRAMEBUFFER, accumRenderFramebuffer);
+      glBindTexture(GL_TEXTURE_2D, accumRenderTexture);
+      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, accumRenderTexture, 0);
+      glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderBuffers[0]);
+      glDrawBuffer(GL_COLOR_ATTACHMENT0);
+    } else {
+      bindRenderTarget(renderTargetFBO);
+    }
+
+    glViewport(0, 0, width, height);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
+    // Blend in order to accumulate lights.
+    glEnablei(GL_BLEND, 0);
+    glDisable(GL_DEPTH_TEST);
+    if (firstBlendPass) {
+      firstBlendPass = false;
+      glBlendFunc(GL_ONE, GL_ZERO);
+    } else {
+      glBlendFunc(GL_ONE, GL_ONE);
+    }
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, deferredDiffuseTexture);
+    glUniform1i(deferredDiffuseTextureId, 0);
+
+    glActiveTexture(GL_TEXTURE0 + 1);
+    glBindTexture(GL_TEXTURE_2D, deferredSpecularTexture);
+    glUniform1i(deferredSpecularTextureId, 1);
+
+    glActiveTexture(GL_TEXTURE0 + 2);
+    glBindTexture(GL_TEXTURE_2D, deferredEmissiveTexture);
+    glUniform1i(deferredEmissiveTextureId, 2);
+
+    glActiveTexture(GL_TEXTURE0 + 3);
+    glBindTexture(GL_TEXTURE_2D, deferredNormalTexture);
+    glUniform1i(deferredNormalTextureId, 3);
+
+    glActiveTexture(GL_TEXTURE0 + 4);
+    glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
+    glUniform1i(deferredDepthTextureId, 4);
+
+    glActiveTexture(GL_TEXTURE0 + 5);
+    glBindTexture(GL_TEXTURE_2D, shadowmapDepthTexture);
+    glUniform1i(shadowmapId, 5);
+
+    /*
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    // Don't know if this is necessary - doesn't seem to do anything.
+    //glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE, GL_INTENSITY);
+    */
+
+    glActiveTexture(GL_TEXTURE0 + 6);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, shadowmapCubeDepthTexture);
+    glUniform1i(shadowmapCubeId, 6);
+
+    // TODO: Do we need these?
+    /*
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+    */
+
+    glActiveTexture(GL_TEXTURE0 + 7);
+    glBindTexture(GL_TEXTURE_2D, ssaoNoiseTexture);
+    glUniform1i(ssaoNoiseId, 7);
+
+    /*
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_DEPTH_TEXTURE_MODE, GL_INTENSITY);
+    */
+
+    glUniformMatrix4fv(deferredViewMatrixId, 1, GL_FALSE, &viewMatrix[0][0]);
+    glUniformMatrix4fv(deferredProjectionMatrixId, 1, GL_FALSE, &projectionMatrix[0][0]);
+    glUniformMatrix4fv(depthBiasId, 1, GL_FALSE, &shadowmapDepthBiasVP[0][0]);
+    glUniform3f(cameraPositionId, cameraPosition.x, cameraPosition.y, cameraPosition.z);
+    glUniform3f(lightDirId, lightDir.x, lightDir.y, lightDir.z);
+    glUniform3f(lightPosId, lightPos.x, lightPos.y, lightPos.z);
+
+    glUniform1i(deferredUseDiffuseId, settings->isSet(Settings::LIGHT_DIFFUSE));
+    glUniform1i(deferredUseSpecularId, settings->isSet(Settings::LIGHT_SPECULAR));
+    glUniform1i(deferredUseShadowId, settings->isSet(Settings::SHADOW_MAP));
+    glUniform1i(deferredUseSSAOId, settings->isSet(Settings::SSAO));
+    glUniform3fv(ssaoKernelId, sizeof(ssaoKernel), (float*)ssaoKernel);
+
+    glm::vec3 lightColour = light->getColour();
+    glm::vec3 lightAmbience = light->getAmbience();
+    glm::vec3 lightFalloff = light->getFalloff();
+    glUniform1i(lightTypeId, (int) light->getType());
+    glUniform3f(lightColourId, lightColour.x, lightColour.y, lightColour.z);
+    glUniform3f(lightAmbienceId, lightAmbience.x, lightAmbience.y, lightAmbience.z);
+    glUniform3f(lightFalloffId, lightFalloff.x, lightFalloff.y, lightFalloff.z);
+    glUniform1f(lightSpreadDegreesId, light->getSpread());
+
+    drawQuad();
+
+    glDisablei(GL_BLEND, 0);
+  }
+
+  // --------- Final pass - post-processing and rendering to screen ---------------
+
+  if (postProcess) {
+    glUseProgram(postProcessProgramId);
+
+    glViewport(0, 0, width, height);
+    // TODO: Clear?
+
+    bindRenderTarget(renderTargetFBO);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+    glDisable(GL_DEPTH_TEST);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, accumRenderTexture);
+    glUniform1i(postProcessTexId, 0);
+
+    glActiveTexture(GL_TEXTURE0 + 1);
+    glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
+    glUniform1i(postProcessDepthTexId, 1);
+
+
+    // Settings.
+    glUniform1i(postProcessUseBlurId, settings->isSet(Settings::BLUR));
+    glUniform1i(postProcessUseMotionBlurId, settings->isSet(Settings::MOTION_BLUR));
+    glUniform1f(postProcessCurrentTimeId, currentTime);
+
+    glm::mat4 newToOldMatrix = lastVP * glm::inverse(VP);
+    glUniformMatrix4fv(postProcessNewToOldMatrixId, 1, GL_FALSE, &newToOldMatrix[0][0]);
+    float fpsCorrection = TARGET_FRAME_DELTA / deltaTime;
+    glUniform1f(postProcessFPSCorrectionId, fpsCorrection);
+
+    drawQuad();
+
+    lastVP = VP; // Note: Only storing if doing post-processing. Gets around mirror rendering messing with this.
+  }
+}
+
+void Viewer::run() {
+  static GLuint texId = glGetUniformLocation(quadProgramId, "texture");
 
   controller->reset();
 
@@ -459,8 +852,6 @@ void Viewer::run() {
   long fpsDisplayCounter = 0;
   double lastFPSTime = lastTime;
 
-  glm::mat4 lastVP = glm::mat4(1.0);
-
   do {
     double currentTime = glfwGetTime();
     double deltaTime = currentTime - lastTime;
@@ -468,403 +859,64 @@ void Viewer::run() {
 
     bool doPostProcessing = settings->isSet(Settings::BLUR) || settings->isSet(Settings::MOTION_BLUR);
 
-
-    // ======= Deferred rendering stage 1: Render geometry into textures. ===========
-
-    glUseProgram(geomTexturesProgramId);
-
-    // Render to framebuffer.
-    glBindFramebuffer(GL_FRAMEBUFFER, deferredShadingFramebuffer);
-    glViewport(0, 0, width, height);
-    glEnable(GL_DEPTH_TEST);
-
-    // Bind textures to fbo as multiple render target.
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, deferredDepthTexture, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, deferredDiffuseTexture, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, deferredSpecularTexture, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, deferredEmissiveTexture, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, deferredNormalTexture, 0);
-
-    // Set to render both colour attachments.
-    glBindFramebuffer(GL_FRAMEBUFFER, deferredShadingFramebuffer);
-    GLenum drawBuffers[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
-    glDrawBuffers(4, drawBuffers);
-
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    // Compute the MVP matrix from keyboard and mouse input
+    // Get camera info from keyboard and mouse input.
     controller->update();
     const glm::mat4& projectionMatrix = controller->getProjectionMatrix();
     const glm::mat4& viewMatrix = controller->getViewMatrix();
     const glm::vec3& cameraPosition = controller->getPosition();
-    const glm::mat4 VP = projectionMatrix * viewMatrix;
-
-    // Send MVP transformations to currently bound shader.
-    glUniformMatrix4fv(geomViewMatrixId, 1, GL_FALSE, &viewMatrix[0][0]);
-    glUniformMatrix4fv(geomProjectionMatrixId, 1, GL_FALSE, &projectionMatrix[0][0]);
-
-
-    for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
-      Mesh* mesh = *it;
-
-      glm::mat4 modelMatrix = mesh->getModelMatrix();
-      glm::mat4 MVP = VP * modelMatrix;
-
-      glUniformMatrix4fv(geomModelMatrixId, 1, GL_FALSE, &modelMatrix[0][0]);
-      glUniformMatrix4fv(geomMVPId, 1, GL_FALSE, &MVP[0][0]);
-
-      Material* material = mesh->getMaterial();
-      if (material != NULL) {
-        //glUniform3f(material_ka, material->ka.x, material->ka.y, material->ka.z);
-        glUniform3f(geomMaterialKdId, material->getDiffuse().x, material->getDiffuse().y, material->getDiffuse().z);
-        glUniform3f(geomMaterialKsId, material->getSpecular().x, material->getSpecular().y, material->getSpecular().z);
-        glUniform1f(geomMaterialShininessId, material->getShininess());
-        glUniform3f(geomMaterialEmissiveId, 0, 0, 0);
-
-        // Bind diffuse texture if it exists.
-        glUniform1i(geomUseDiffuseTextureId, settings->isSet(Settings::TEXTURE_MAP) && material->hasDiffuseTexture());
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, material->getDiffuseTexture());
-        glUniform1i(geomDiffuseTexId, 0);
-
-        // Bind normal texture if it exists.
-        glUniform1i(geomUseNormalTextureId, settings->isSet(Settings::NORMAL_MAP) && material->hasNormalTexture());
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, material->getNormalTexture());
-        glUniform1i(geomNormalTexId, 1);
-      }
-      mesh->renderGL();
-    }
-
-    // Render point lights as spheres.
-    glUniform1i(geomUseDiffuseTextureId, false);
-    glUniform1i(geomUseNormalTextureId, false);
-    for (std::vector<Light*>::const_iterator lightIt = lights.begin(); lightIt != lights.end(); lightIt++) {
-      Light *light = *lightIt;
-      if (!light->isEnabled() || light->getType() != Light::POINT) continue;
-
-      // Set model matrix to move model to point light's position.
-      glm::mat4 sphereModelMatrix = glm::translate(glm::mat4(1.0), light->getPosition()) * pointLightMesh->getModelMatrix();
-      glm::mat4 MVP = VP * sphereModelMatrix;
-      glUniformMatrix4fv(geomModelMatrixId, 1, GL_FALSE, &sphereModelMatrix[0][0]);
-      glUniformMatrix4fv(geomMVPId, 1, GL_FALSE, &MVP[0][0]);
-
-      // Use light's diffuse as emissive material.
-      glUniform3f(geomMaterialKdId, 0, 0, 0);
-      glUniform3f(geomMaterialKsId, 0, 0, 0);
-      glm::vec3 emissiveLight = light->getColour();
-      emissiveLight *= 5.0;
-      glUniform3f(geomMaterialEmissiveId, emissiveLight.x, emissiveLight.y, emissiveLight.z);
-
-      pointLightMesh->renderGL();
-    }
-
-
-    // ======= Shadow map and blend deferred shading for each light ======================
-
-    // Clear target first.
-    glViewport(0, 0, width, height);
-
-    if (doPostProcessing) {
-      // Render to texture.
-      glBindFramebuffer(GL_FRAMEBUFFER, accumRenderFramebuffer);
-      glBindTexture(GL_TEXTURE_2D, accumRenderTexture);
-      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, accumRenderTexture, 0);
-      glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderBuffer);
-      glDrawBuffer(GL_COLOR_ATTACHMENT0);
-    } else {
-      // Render to screen.
-      glBindFramebuffer(GL_FRAMEBUFFER, 0);
-      glDrawBuffer(GL_FRONT_LEFT);
-    }
-
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glEnable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    bool firstBlendPass = true;
 
     // Moving lights.
 
     // Flashlight.
-    lights[0]->getPosition() = cameraPosition;
-    //lights[0]->getPosition() = cameraPosition + glm::vec3(0, -0.6f, 0);
+    //lights[0]->getPosition() = cameraPosition;
+    lights[0]->getPosition() = cameraPosition + glm::vec3(0, -01.6f, 0);
     lights[0]->setEnabled(controller->isFlashlightOn());
     // TODO: Why backwards about x?
     lights[0]->getDirection() = glm::vec3(glm::inverse(viewMatrix) * glm::vec4(0, 0, -1, 0));
-    //lights[0]->setEnabled(false);
 
     // Monkey box.
-    //lights[1]->getPosition() = glm::vec3(std::cos(3.0*currentTime)/2.0, 3.0, std::sin(3.0*currentTime)/2.0); // Point.
+    lights.back()->getPosition() = glm::vec3(std::cos(3.0*currentTime)/2.0, 3.0, std::sin(3.0*currentTime)/2.0); // Point.
 
 
-    for (std::vector<Light*>::const_iterator it = lights.begin(); it != lights.end(); it++) {
-      Light* light = *it;
-      if (!light->isEnabled()) continue;
 
-      glm::vec3 lightPos = light->getPosition();
-      glm::vec3 lightDir = light->getDirection();
-      glm::mat4 shadowmapDepthBiasVP;
+    // Note that this technique won't generally work for multiple mirrors without cube maps, because mirror view is only rendered one direction.
+    for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
+      Mesh* mesh = *it;
+      Material* material = mesh->getMaterial();
+      if (material == NULL || !material->isMirror()) continue;
 
-      // ======= Shadow mapping =========
-      if (settings->isSet(Settings::SHADOW_MAP)) {
-        glUseProgram(depthProgramId);
-        if (light->getType() == Light::POINT) {
-          glBindFramebuffer(GL_FRAMEBUFFER, shadowCubeMapFramebuffer);
-        } else {
-          glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFramebuffer);
-        }
+      Mirror* mirror = static_cast<Mirror*>(material);
 
-        glDrawBuffer(GL_NONE); // No colour output.
-        glViewport(0, 0, SHADOWMAP_WIDTH, SHADOWMAP_HEIGHT);
-        glEnable(GL_DEPTH_TEST);
+      const glm::vec3 *mirrorQuad = mesh->getFirstFourVertices();
+      const glm::vec3 mirrorVertex = mirrorQuad[0];
+      const glm::vec3 mirrorNormal = mesh->getFirstNormal();
+      const glm::mat4 mirroredViewMatrix = controller->getMirroredViewMatrix(mirrorVertex, mirrorNormal);
 
-        glm::mat4 depthVP;
-
-        // Loop for all shadow maps that have to be generated for this light.
-        for (int shadowMapFace = 0; shadowMapFace < 6; shadowMapFace++) {
-
-          // Bind shadow map texture.
-          if (light->getType() == Light::POINT) {
-            // Shadow cube map.
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + shadowMapFace, shadowmapCubeDepthTexture, 0);
-          } else {
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowmapDepthTexture, 0);
-          }
-
-          glClear(GL_DEPTH_BUFFER_BIT);
-
-          // Compute the MVP matrix from the light's point of view.
-          glm::mat4 depthProjectionMatrix;
-          glm::mat4 depthViewMatrix;
-          glm::vec3 lightDirectionWorldspace;
-          switch (light->getType()) {
-            case Light::DIRECTIONAL:
-              // TODO: Need to adjust for scene size...
-              //depthProjectionMatrix = glm::ortho<float>(-10, 10, -10, 10, -10, 20);
-              depthProjectionMatrix = glm::ortho<float>(-40, 40, -40, 40, -10, 100);
-              depthViewMatrix = glm::lookAt(glm::vec3(0, 0, 0), lightDir, glm::vec3(0, 1, 0));
-              break;
-            case Light::SPOT:
-              depthProjectionMatrix = glm::perspective(light->getSpread() + 15.0f, 1.0f, 2.0f, 100.0f);
-              depthViewMatrix = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0, 1, 0));
-              break;
-            case Light::POINT:
-              depthProjectionMatrix = glm::perspective(90.0f, 1.0f, 1.0f, 500.0f);
-              switch (shadowMapFace) {
-                case 0: // +X
-                  depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(1, 0, 0),glm::vec3(0, -1, 0));
-                  break;
-                case 1: // -X
-                  depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(-1, 0, 0),glm::vec3(0, -1, 0));
-                  break;
-                case 2:// +Y
-                  depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, 1, 0),glm::vec3(0, 0, 1));
-                  break;
-                case 3: // -Y
-                  depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, -1, 0),glm::vec3(0, 0, -1));
-                  break;
-                case 4:// +Z
-                  depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, 0, 1), glm::vec3(0, -1, 0));
-                  break;
-                case 5: // -Z
-                  depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, 0, -1), glm::vec3(0, -1, 0));
-                  break;
-              }
-              break;
-          }
-          glm::mat4 depthModelMatrix = glm::mat4(1.0);
-          depthVP = depthProjectionMatrix * depthViewMatrix;
-          glm::mat4 depthMVP = depthVP * depthModelMatrix;
-
-          glUniformMatrix4fv(depthMatrixId, 1, GL_FALSE, &depthMVP[0][0]);
-
-          for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
-            (*it)->renderGLVertsOnly();
-          }
-
-          if (light->getType() != Light::POINT) break;
-        }
-
-        // TODO: Debug angles/perspectives of point light - seems a little off for some directions.
-        // TODO: Fix shadow stripes!
-        if (light->getType() == Light::POINT) {
-          // TODO: Figure out why we need to shift by -1 here.
-          //depthVP = glm::translate(glm::mat4(1.0), glm::vec3(-lightPos.x - 1, -lightPos.y - 1, -lightPos.z - 1));
-          depthVP = glm::translate(glm::mat4(1.0), glm::vec3(-lightPos.x - 1, -lightPos.y - 1, -lightPos.z - 1));
-        }
-
-        shadowmapDepthBiasVP = shadowmapBiasMatrix * depthVP;
+      // TODO: This is a hack - make it work generally by scaling using original UVs...
+      const glm::mat4 uvVP = projectionMatrix * mirroredViewMatrix * mesh->getModelMatrix();
+      std::vector<glm::vec2> newUVs;
+      for (int i = 0; i < 4; i++) {
+        glm::vec4 projUV = uvVP * glm::vec4(mirrorQuad[i], 1);
+        projUV = projUV / projUV[3];
+        // Important Note: These are now pre-computed as perspective-corrected, so hardware perspective correction needs to be turned off when interpolating these!
+        newUVs.push_back(glm::vec2(projUV[0] * 0.5f + 0.5f, projUV[1] * 0.5f + 0.5f));
       }
+      mesh->setUVs(newUVs);
 
-      // ======= Deferred rendering stage 2: Deferred rendering using textures. ===========
+      renderScene(mirror->getMirrorFBO(), mirroredViewMatrix, projectionMatrix, cameraPosition, false, currentTime, deltaTime, mirrorVertex, mirrorNormal);
 
-      glUseProgram(deferredShadingProgramId);
-
-      glViewport(0, 0, width, height);
-      if (doPostProcessing) {
-        // Set output to accumulation texture.
-        glBindFramebuffer(GL_FRAMEBUFFER, accumRenderFramebuffer);
-        glBindTexture(GL_TEXTURE_2D, accumRenderTexture);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, accumRenderTexture, 0);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderBuffer);
-        glDrawBuffer(GL_COLOR_ATTACHMENT0);
-      } else {
-        // Render to screen.
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glDrawBuffer(GL_FRONT_LEFT);
-      }
-
-      glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-
-      //glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-      //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-      // Blend in order to accumulate lights.
-      glEnablei(GL_BLEND, 0);
-      glDisable(GL_DEPTH_TEST);
-      if (firstBlendPass) {
-        firstBlendPass = false;
-        glBlendFunc(GL_ONE, GL_ZERO);
-      } else {
-        glBlendFunc(GL_ONE, GL_ONE);
-      }
-
-      glActiveTexture(GL_TEXTURE0);
-      glBindTexture(GL_TEXTURE_2D, deferredDiffuseTexture);
-      glUniform1i(deferredDiffuseTextureId, 0);
-
-      glActiveTexture(GL_TEXTURE0 + 1);
-      glBindTexture(GL_TEXTURE_2D, deferredSpecularTexture);
-      glUniform1i(deferredSpecularTextureId, 1);
-
-      glActiveTexture(GL_TEXTURE0 + 2);
-      glBindTexture(GL_TEXTURE_2D, deferredEmissiveTexture);
-      glUniform1i(deferredEmissiveTextureId, 2);
-
-      glActiveTexture(GL_TEXTURE0 + 3);
-      glBindTexture(GL_TEXTURE_2D, deferredNormalTexture);
-      glUniform1i(deferredNormalTextureId, 3);
-
-      glActiveTexture(GL_TEXTURE0 + 4);
-      glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
-      glUniform1i(deferredDepthTextureId, 4);
-
-      glActiveTexture(GL_TEXTURE0 + 5);
-      glBindTexture(GL_TEXTURE_2D, shadowmapDepthTexture);
-      glUniform1i(shadowmapId, 5);
-
-      /*
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-      // Don't know if this is necessary - doesn't seem to do anything.
-      //glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE, GL_INTENSITY);
-      */
-
-      glActiveTexture(GL_TEXTURE0 + 6);
-      glBindTexture(GL_TEXTURE_CUBE_MAP, shadowmapCubeDepthTexture);
-      glUniform1i(shadowmapCubeId, 6);
-
-      // TODO: Do we need these?
-      /*
-      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
-      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
-      */
-
-      glActiveTexture(GL_TEXTURE0 + 7);
-      glBindTexture(GL_TEXTURE_2D, ssaoNoiseTexture);
-      glUniform1i(ssaoNoiseId, 7);
-
-      /*
-      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
-      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
-      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-      //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_DEPTH_TEXTURE_MODE, GL_INTENSITY);
-      */
-
-      glUniformMatrix4fv(deferredViewMatrixId, 1, GL_FALSE, &viewMatrix[0][0]);
-      glUniformMatrix4fv(deferredProjectionMatrixId, 1, GL_FALSE, &projectionMatrix[0][0]);
-      glUniformMatrix4fv(depthBiasId, 1, GL_FALSE, &shadowmapDepthBiasVP[0][0]);
-      glUniform3f(cameraPositionId, cameraPosition.x, cameraPosition.y, cameraPosition.z);
-      glUniform3f(lightDirId, lightDir.x, lightDir.y, lightDir.z);
-      glUniform3f(lightPosId, lightPos.x, lightPos.y, lightPos.z);
-
-      glUniform1i(deferredUseDiffuseId, settings->isSet(Settings::LIGHT_DIFFUSE));
-      glUniform1i(deferredUseSpecularId, settings->isSet(Settings::LIGHT_SPECULAR));
-      glUniform1i(deferredUseShadowId, settings->isSet(Settings::SHADOW_MAP));
-      glUniform1i(deferredUseSSAOId, settings->isSet(Settings::SSAO));
-      glUniform3fv(ssaoKernelId, sizeof(ssaoKernel), (float*)ssaoKernel);
-
-      glm::vec3 lightColour = light->getColour();
-      glm::vec3 lightAmbience = light->getAmbience();
-      glm::vec3 lightFalloff = light->getFalloff();
-      glUniform1i(lightTypeId, (int) light->getType());
-      glUniform3f(lightColourId, lightColour.x, lightColour.y, lightColour.z);
-      glUniform3f(lightAmbienceId, lightAmbience.x, lightAmbience.y, lightAmbience.z);
-      glUniform3f(lightFalloffId, lightFalloff.x, lightFalloff.y, lightFalloff.z);
-      glUniform1f(lightSpreadDegreesId, light->getSpread());
-
-      drawQuad();
-
-      glDisablei(GL_BLEND, 0);
-
+      mirror->update();
     }
 
-    // --------- Final pass - post-processing and rendering to screen ---------------
+    renderScene(0, viewMatrix, projectionMatrix, cameraPosition, doPostProcessing, currentTime, deltaTime, glm::vec3(0), glm::vec3(0));
 
-    if (doPostProcessing) {
-      glUseProgram(postProcessProgramId);
-
-      glViewport(0, 0, width, height);
-      // TODO: Clear?
-
-      // Draw to screen.
-      glBindFramebuffer(GL_FRAMEBUFFER, 0);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-      glDrawBuffer(GL_FRONT_LEFT);
-      glDisable(GL_DEPTH_TEST);
-
-      glActiveTexture(GL_TEXTURE0);
-      glBindTexture(GL_TEXTURE_2D, accumRenderTexture);
-      glUniform1i(postProcessTexId, 0);
-
-      glActiveTexture(GL_TEXTURE0 + 1);
-      glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
-      glUniform1i(postProcessDepthTexId, 1);
-
-
-      // Settings.
-      glUniform1i(postProcessUseBlurId, settings->isSet(Settings::BLUR));
-      glUniform1i(postProcessUseMotionBlurId, settings->isSet(Settings::MOTION_BLUR));
-      glUniform1f(postProcessCurrentTimeId, currentTime);
-
-      glm::mat4 newToOldMatrix = lastVP * glm::inverse(VP);
-      glUniformMatrix4fv(postProcessNewToOldMatrixId, 1, GL_FALSE, &newToOldMatrix[0][0]);
-      float fpsCorrection = TARGET_FRAME_DELTA / deltaTime;
-      glUniform1f(postProcessFPSCorrectionId, fpsCorrection);
-
-
-      drawQuad();
+    std::vector<Mesh*> allMirrors;
+    for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
+      Material* m = (*it)->getMaterial();
+      if (m != NULL && m->isMirror()) {
+        allMirrors.push_back(*it);
+      }
     }
-
-
-    lastVP = VP;
-
 
     // ============ Debug Rendering =============
     if (RENDER_DEBUG_IMAGES) {
@@ -881,6 +933,21 @@ void Viewer::run() {
       glActiveTexture(GL_TEXTURE0);
       glUniform1i(texId, 0);
 
+      // Draw mirror 1 ----------------
+      if (allMirrors.size() >= 1) {
+        glViewport(0, 0, width/4, height/4);
+        glBindTexture(GL_TEXTURE_2D, static_cast<Mirror*>(allMirrors[0]->getMaterial())->getMirrorTexture());
+        drawQuad();
+      }
+
+      // Draw mirror 2 ----------------
+      if (allMirrors.size() >= 2) {
+        glViewport(width/4, 0, width/4, height/4);
+        glBindTexture(GL_TEXTURE_2D, static_cast<Mirror*>(allMirrors[1]->getMaterial())->getMirrorTexture());
+        drawQuad();
+      }
+
+      /*
       // Draw diffuse ----------------
       glViewport(0, 0, height/4, height/4);
       glBindTexture(GL_TEXTURE_2D, deferredDiffuseTexture);
@@ -910,6 +977,7 @@ void Viewer::run() {
       //glViewport(height/4, height*3/4, height/4, height/4);
       //glBindTexture(GL_TEXTURE_CUBE_MAP, shadowmapCubeDepthTexture);
       //drawQuad();
+      */
     }
     // =========== End Debug =================
 
@@ -963,7 +1031,7 @@ Viewer::~Viewer() {
 
   glDeleteBuffers(1, &quadVertexBuffer);
   glDeleteVertexArrays(1, &vertexArrayId);
-  glDeleteRenderbuffers(1, &depthRenderBuffer);
+  glDeleteRenderbuffers(2, &depthRenderBuffers[0]);
 
   for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
     delete *it;

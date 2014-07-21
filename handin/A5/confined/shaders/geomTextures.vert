@@ -8,7 +8,9 @@ layout(location = 3) in vec3 vertexTangentModelspace;
 layout(location = 4) in vec3 vertexBitangentModelspace;
 
 // Interpolated outputs.
-out vec2 UV;
+out vec2 UV_perspective;
+noperspective out vec2 UV_noperspective;
+out vec3 positionModelspace;
 out vec3 normalCameraspace;
 out vec3 tangentCameraspace;
 out vec3 bitangentCameraspace;
@@ -21,6 +23,7 @@ uniform mat4 M;
 
 void main(){
   gl_Position = MVP * vec4(vertexPositionModelspace, 1);
+  positionModelspace = vertexPositionModelspace;
 
   // Normal of the the vertex, in camera space.
   // Only correct if ModelMatrix does not scale the model, use its inverse transpose if not.
@@ -29,6 +32,7 @@ void main(){
   tangentCameraspace = (V * M * vec4(vertexTangentModelspace, 0)).xyz;
   bitangentCameraspace = (V * M * vec4(vertexBitangentModelspace, 0)).xyz;
 
-  UV = vertexUV;
+  UV_perspective = vertexUV;
+  UV_noperspective = vertexUV;
 }
 

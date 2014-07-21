@@ -27,13 +27,18 @@ public:
     NUM_BUFS = 5
   };
 
-  Mesh(std::vector<glm::vec3>& vertices,
+  Mesh(std::string name,
+    std::vector<glm::vec3>& vertices,
     std::vector<glm::vec2>& uvs,
     std::vector<glm::vec3>& normals,
     std::vector<unsigned short>& triangles,
     Material* material
   );
   ~Mesh();
+
+  std::string getName() {
+    return name;
+  }
 
   Material* getMaterial() {
     return material;
@@ -49,11 +54,25 @@ public:
     return modelMatrix;
   }
 
+  glm::vec3* getFirstFourVertices() {
+    return firstFourVertices;
+  }
+
+  glm::vec3& getFirstNormal() {
+    return firstNormal;
+  }
+
+  void setUVs(std::vector<glm::vec2>& uvs);
+
 private:
+  std::string name;
   GLuint buffers[NUM_BUFS];
   int numIndices;
   Material* material;
   glm::mat4 modelMatrix;
+
+  glm::vec3 firstFourVertices[4];
+  glm::vec3 firstNormal;
 };
 
 std::vector<Mesh*> loadScene(const char* fileName, bool invertNormals = false);

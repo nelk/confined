@@ -17,6 +17,7 @@ public:
   Controller(Viewer* viewer, Settings* settings);
 
   glm::mat4 getViewMatrix();
+  glm::mat4 getMirroredViewMatrix(const glm::vec3& mirrorPosition, const glm::vec3& mirrorNormal);
   glm::mat4 getProjectionMatrix();
   void setPosition(glm::vec3& p);
   glm::vec3 getPosition();
@@ -38,6 +39,7 @@ private:
   glm::mat4 viewMatrix;
   glm::mat4 projectionMatrix;
   glm::vec3 position;
+  glm::vec3 direction;
   glm::vec3 velocity;
   float horizontalAngle;
   float verticalAngle;

@@ -1,7 +1,9 @@
 #version 330 core
 
 // Inputs from vertex shader.
-in vec2 UV;
+in vec2 UV_perspective;
+noperspective in vec2 UV_noperspective;
+in vec3 positionModelspace;
 in vec3 normalCameraspace;
 in vec3 tangentCameraspace;
 in vec3 bitangentCameraspace;
@@ -24,7 +26,24 @@ uniform vec3 material_ks;
 uniform float material_shininess;
 uniform vec3 material_emissive;
 
+uniform vec3 halfspacePoint; // Model space.
+uniform vec3 halfspaceNormal; // (0, 0, 0) means don't do test.
+uniform bool useNoPerspectiveUVs = false;;
+
 void main() {
+  // Check if in halfspace.
+  if (halfspaceNormal != vec3(0, 0, 0) && dot((positionModelspace - halfspacePoint), halfspaceNormal) <= 0) {
+    discard;
+  }
+
+  vec2 UV;
+  // TODO: Make this uncessary by un-perspective dividing on CPU?
+  if (useNoPerspectiveUVs) {
+    UV = UV_noperspective;
+  } else {
+    UV = UV_perspective;
+  }
+
   // Output Diffuse colour.
   if (useDiffuseTexture) {
     outDiffuse = texture2D(diffuseTexture, UV).rgb;

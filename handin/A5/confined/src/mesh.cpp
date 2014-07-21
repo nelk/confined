@@ -4,12 +4,15 @@
 #include <FreeImage.h>
 #include <iostream>
 
+#include "mirror.hpp"
+
 Mesh::Mesh(
+    std::string name,
     std::vector<glm::vec3>& vertices,
     std::vector<glm::vec2>& uvs,
     std::vector<glm::vec3>& normals,
     std::vector<unsigned short>& indices,
-    Material* material): material(material) {
+    Material* material): name(name), material(material) {
 
   modelMatrix = glm::mat4(1.0);
 
@@ -101,11 +104,23 @@ Mesh::Mesh(
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[ELEMENT_BUF]);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
 
-  std::cout << "Created Mesh with " << numIndices << " indices" << std::endl;
+  // For mirrors.
+  for (unsigned int i = 0; i < 4 && i < vertices.size(); i++) {
+    firstFourVertices[i] = vertices[i];
+  }
+  firstNormal = normals[0];
+
+  std::cout << "Created Mesh '" << name << "' with " << numIndices << " indices" << std::endl;
 }
 
 Mesh::~Mesh() {
   glDeleteBuffers(NUM_BUFS, buffers);
+}
+
+void Mesh::setUVs(std::vector<glm::vec2>& uvs) {
+  // TODO: Update Tangents and Bitangents!
+  glBindBuffer(GL_ARRAY_BUFFER, buffers[UV_BUF]);
+  glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
 }
 
 
@@ -226,7 +241,7 @@ bool loadTexture(aiTextureType aiType, const aiMaterial* m, Material *material) 
   } else if (aiType == aiTextureType_HEIGHT && m->GetTexture(aiTextureType_DIFFUSE, 0, &texFileName) == AI_SUCCESS) {
     std::string originalName(texFileName.C_Str());
     int lastPeriod = originalName.find_last_of('.');
-    if (lastPeriod == std::string::npos) {
+    if (lastPeriod == (int)std::string::npos) {
       return false;
     }
     prefixedTexFileName = "models/" + originalName.substr(0, lastPeriod) + "_normal" + originalName.substr(lastPeriod);
@@ -290,11 +305,26 @@ std::vector<Mesh*> loadScene(const char* fileName, bool invertNormals) {
     m->Get(AI_MATKEY_SHININESS, shininess);
     //AI_MATKEY_COLOR_REFLECTIVE
 
-    materials[matId] = new Material(
-      glm::vec3(ka.r, ka.g, ka.b),
-      glm::vec3(kd.r, kd.g, kd.b),
-      glm::vec3(ks.r, ks.g, ks.b),
-      shininess);
+    aiString materialName;
+    m->Get(AI_MATKEY_NAME, materialName);
+
+    std::string materialNameString(materialName.C_Str());
+    //std::cerr << "Loading material " << materialNameString << std::endl;
+
+    if (materialNameString.substr(0, 6) == "Mirror") {
+      std::cerr << "Creating mirror" << std::endl;
+      materials[matId] = new Mirror(
+        glm::vec3(ka.r, ka.g, ka.b),
+        glm::vec3(kd.r, kd.g, kd.b),
+        glm::vec3(ks.r, ks.g, ks.b),
+        shininess);
+    } else {
+      materials[matId] = new Material(
+        glm::vec3(ka.r, ka.g, ka.b),
+        glm::vec3(kd.r, kd.g, kd.b),
+        glm::vec3(ks.r, ks.g, ks.b),
+        shininess);
+    }
 
     loadTexture(aiTextureType_DIFFUSE, m, materials[matId]);
     loadTexture(aiTextureType_HEIGHT, m, materials[matId]); // Normal Map.
@@ -357,7 +387,8 @@ std::vector<Mesh*> loadScene(const char* fileName, bool invertNormals) {
       indices.push_back(mesh->mFaces[i].mIndices[2]);
     }
 
-    meshes.push_back(new Mesh(vertices, uvs, normals, indices, material));
+    // TODO: Names not working.
+    meshes.push_back(new Mesh(std::string(mesh->mName.C_Str()), vertices, uvs, normals, indices, material));
   }
 
   // TODO: Don't leak materials.

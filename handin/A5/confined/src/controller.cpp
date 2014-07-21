@@ -37,6 +37,19 @@ glm::mat4 Controller::getProjectionMatrix(){
   return projectionMatrix;
 }
 
+glm::mat4 Controller::getMirroredViewMatrix(const glm::vec3& mirrorPosition, const glm::vec3& mirrorNormal) {
+
+  glm::vec3 p_mirrored = position - 2 * glm::dot(mirrorNormal, position - mirrorPosition) * mirrorNormal;
+  glm::vec3 p2 = position + direction;
+  glm::vec3 p2_mirrored = p2 - 2 * glm::dot(mirrorNormal, p2 - mirrorPosition) * mirrorNormal;
+
+  return glm::lookAt(
+    p_mirrored,   // Camera position.
+    p2_mirrored,  // Lookat position.
+    glm::vec3(0, 1, 0)   // Up.
+  );
+}
+
 bool Controller::checkKeyJustPressed(int k) {
   bool wasPressed;
   if (keysPressed.find(k) == keysPressed.end()) {
@@ -85,7 +98,7 @@ void Controller::update() {
   }
 
   // Compute 3 direction vectors from spherical coordinates.
-  glm::vec3 direction(
+  direction = glm::vec3(
     cos(verticalAngle) * sin(horizontalAngle),
     sin(verticalAngle),
     cos(verticalAngle) * cos(horizontalAngle)
@@ -156,9 +169,9 @@ void Controller::update() {
   projectionMatrix = glm::perspective(45.0f, width/(float)height, 0.1f, 100.0f);
   // Camera matrix
   viewMatrix = glm::lookAt(
-    position,           // Camera position.
+    position,             // Camera position.
     position + direction, // Lookat position.
-    up                  // Up.
+    up                    // Up.
   );
 
   lastTime = currentTime;
