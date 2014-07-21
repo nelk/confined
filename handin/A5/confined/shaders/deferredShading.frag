@@ -158,7 +158,7 @@ void main(){
     case 2:
       // For spot light and point light use point's position.
       // This is wrong!: l = normalize((V * vec4(vertexPositionToLightPositionWorldspace, 1.0)).xyz);
-      l = normalize((vec4(lightPositionCameraspace, 1.0) - vertexPositionCameraspace).xyz);
+      l = normalize(lightPositionCameraspace - vertexPositionCameraspace.xyz);
       break;
   }
 
@@ -319,4 +319,16 @@ void main(){
       material_kd * cosTheta                 // Diffuse.
     + material_ks * pow(cosAlpha, material_shininess) // Specular.
     );
+
+  // Visualize normals in camera space.
+  //colour = n * 0.5 + 0.5;
+
+  // Visualize angle with eye direction.
+  //colour = vec3(cosTheta, 0, 0);
+
+  // Visualize speculars only.
+  //colour = vec3(1, 1, 1) * pow(cosAlpha, material_shininess);
+  //colour = vec3(1, 1, 1) * pow(cosAlpha, 400);
+
+  //colour = vec3(pow(clamp(dot(E, R), 0, 1), 100), 0, 0); // Phong.
 }

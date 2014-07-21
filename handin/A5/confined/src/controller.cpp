@@ -6,7 +6,7 @@
 #include "controller.hpp"
 
 Controller::Controller(Viewer* viewer, Settings* settings)
-  : viewer(viewer), settings(settings), lastTime(0), position(0, 0, 0), horizontalAngle(0.86f), verticalAngle(0), skipMovements(2), flashlight(true) {
+  : viewer(viewer), settings(settings), lastTime(0), position(0, 0, 0), velocity(0, 0, 0), horizontalAngle(0), verticalAngle(0), skipMovements(2), flashlight(true) {
 }
 
 void Controller::reset() {
@@ -77,10 +77,11 @@ void Controller::update() {
   horizontalAngle += MOUSE_SPEED * delta_x;
   verticalAngle   += MOUSE_SPEED * delta_y;
 
-  if (verticalAngle > M_PI/2) {
-    verticalAngle = M_PI/2;
-  } else if (verticalAngle < -M_PI/2) {
-    verticalAngle = -M_PI/2;
+  const float epsilon = 0.01; // To prevent direction flipping at extremes.
+  if (verticalAngle > M_PI/2 - epsilon) {
+    verticalAngle = M_PI/2 - epsilon;
+  } else if (verticalAngle < -M_PI/2 + epsilon) {
+    verticalAngle = -M_PI/2 + epsilon;
   }
 
   // Compute 3 direction vectors from spherical coordinates.
@@ -100,6 +101,11 @@ void Controller::update() {
   );
 
   glm::vec3 up = glm::cross(right, direction);
+
+  // TODO: Jumping.
+  if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+    velocity = glm::vec3(0, 10.0f, 0);
+  }
 
   // Keyboard movement.
   // Forwards.
@@ -123,15 +129,13 @@ void Controller::update() {
     position -= right * deltaTime * SPEED;
   }
   // Up.
-  /*
   if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
-    position += up * deltaTime * SPEED;
+    position += glm::vec3(0, 1, 0) * deltaTime * SPEED;
   }
   // Down.
   if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-    position -= up * deltaTime * SPEED;
+    position -= glm::vec3(0, 1, 0) * deltaTime * SPEED;
   }
-  */
 
   // Flashlight (F).
   if (checkKeyJustPressed(GLFW_KEY_F)) {

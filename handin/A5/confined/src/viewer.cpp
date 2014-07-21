@@ -312,6 +312,7 @@ bool Viewer::initGL() {
 
   // Flashlight.
   lights.push_back(Light::spotLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0, 0, 0), glm::vec3(0.0, 0.0, -1.0), 18.0));
+  //lights.push_back(Light::pointLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0, 3, 0)));
   lights.back()->getFalloff() = glm::vec3(1.0, 0.01, 0.0005);
   lights.back()->getAmbience() = glm::vec3(0.04, 0.04, 0.04);
   //lights.back()->setEnabled(false);
@@ -513,8 +514,8 @@ void Viewer::run() {
       glm::mat4 modelMatrix = mesh->getModelMatrix();
       glm::mat4 MVP = VP * modelMatrix;
 
-      glUniformMatrix4fv(geomMVPId, 1, GL_FALSE, &MVP[0][0]);
       glUniformMatrix4fv(geomModelMatrixId, 1, GL_FALSE, &modelMatrix[0][0]);
+      glUniformMatrix4fv(geomMVPId, 1, GL_FALSE, &MVP[0][0]);
 
       Material* material = mesh->getMaterial();
       if (material != NULL) {
@@ -590,7 +591,8 @@ void Viewer::run() {
     // Moving lights.
 
     // Flashlight.
-    lights[0]->getPosition() = cameraPosition + glm::vec3(0, -0.6f, 0);
+    lights[0]->getPosition() = cameraPosition;
+    //lights[0]->getPosition() = cameraPosition + glm::vec3(0, -0.6f, 0);
     lights[0]->setEnabled(controller->isFlashlightOn());
     // TODO: Why backwards about x?
     lights[0]->getDirection() = glm::vec3(glm::inverse(viewMatrix) * glm::vec4(0, 0, -1, 0));
@@ -692,6 +694,7 @@ void Viewer::run() {
         // TODO: Fix shadow stripes!
         if (light->getType() == Light::POINT) {
           // TODO: Figure out why we need to shift by -1 here.
+          //depthVP = glm::translate(glm::mat4(1.0), glm::vec3(-lightPos.x - 1, -lightPos.y - 1, -lightPos.z - 1));
           depthVP = glm::translate(glm::mat4(1.0), glm::vec3(-lightPos.x - 1, -lightPos.y - 1, -lightPos.z - 1));
         }
 

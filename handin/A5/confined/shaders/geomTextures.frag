@@ -40,7 +40,8 @@ void main() {
   if (useNormalTexture) {
     // Gram-Schmidt, in camera space.
     vec3 tangent = normalize(tangentCameraspace); //normalize(tangentCameraspace - normalCameraspace * dot(normalCameraspace, tangentCameraspace));
-    vec3 bitangent = normalize(bitangentCameraspace); //cross(normalCameraspace, tangent);
+    // TODO: Why does negative improve this?
+    vec3 bitangent = -normalize(bitangentCameraspace); //cross(normalCameraspace, tangent);
 
     // Represents tangent space -> camera space.
     mat3 tbn = mat3(tangent, bitangent, normalize(normalCameraspace));

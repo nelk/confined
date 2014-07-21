@@ -8,6 +8,7 @@
 
 #define SPEED 5.0f
 #define MOUSE_SPEED 0.001f
+#define GRAVITY 1.0f
 
 class Viewer;
 
@@ -37,6 +38,7 @@ private:
   glm::mat4 viewMatrix;
   glm::mat4 projectionMatrix;
   glm::vec3 position;
+  glm::vec3 velocity;
   float horizontalAngle;
   float verticalAngle;
   int skipMovements;
