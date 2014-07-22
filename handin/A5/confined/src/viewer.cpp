@@ -146,8 +146,9 @@ bool Viewer::initGL() {
   glBindVertexArray(vertexArrayId);
 
   meshes = loadScene("models/shadowhouse.obj");
-  //meshes = loadScene("models/monkeybox.obj");
   std::vector<Mesh*> pointLightMeshes = loadScene("models/sphere.obj", false);
+  characterMeshes = loadScene("models/minecraft_rigs/steve.obj");
+  meshes.insert(meshes.end(), characterMeshes.begin(), characterMeshes.end());
   if (pointLightMeshes.size() == 1) {
     pointLightMesh = pointLightMeshes[0];
     pointLightMesh->getModelMatrix() = glm::scale(glm::mat4(1.0), glm::vec3(0.1, 0.1, 0.1));
@@ -380,7 +381,6 @@ bool Viewer::initGL() {
       lights.push_back(Light::pointLight(candleColour, vecs[0]));
       lights.back()->getAmbience() = glm::vec3(0.1, 0.1, 0.1);
       lights.back()->getFalloff() = glm::vec3(1.0, 0.002, 0.008);
-      lights.back()->setEnabled(false); //temp
     }
   }
 
@@ -682,13 +682,12 @@ void Viewer::renderScene(GLuint renderTargetFBO, const glm::mat4& viewMatrix, co
             }
             break;
         }
-        glm::mat4 depthModelMatrix = glm::mat4(1.0);
         depthVP = depthProjectionMatrix * depthViewMatrix;
-        glm::mat4 depthMVP = depthVP * depthModelMatrix;
-
-        glUniformMatrix4fv(depthMatrixId, 1, GL_FALSE, &depthMVP[0][0]);
 
         for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
+          glm::mat4 depthMVP = depthVP * (*it)->getModelMatrix();
+          glUniformMatrix4fv(depthMatrixId, 1, GL_FALSE, &depthMVP[0][0]);
+
           (*it)->renderGLVertsOnly();
         }
 
@@ -884,6 +883,12 @@ void Viewer::run() {
     const glm::mat4& projectionMatrix = controller->getProjectionMatrix();
     const glm::mat4& viewMatrix = controller->getViewMatrix();
     const glm::vec3& cameraPosition = controller->getPosition();
+
+    // Move character.
+    glm::mat4 characterModelMatrix = glm::inverse(viewMatrix);
+    for (std::vector<Mesh*>::iterator it = characterMeshes.begin(); it != characterMeshes.end(); it++) {
+      (*it)->getModelMatrix() = characterModelMatrix;
+    }
 
     // Moving lights.
 

@@ -57,6 +57,7 @@ private:
   Controller* controller;
   std::vector<Mesh*> meshes;
   Mesh* pointLightMesh;
+  std::vector<Mesh*> characterMeshes;
   std::vector<Light*> lights;
 
   glm::mat4 shadowmapBiasMatrix;

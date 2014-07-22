@@ -1,3 +1,9 @@
+/*
+ * Confined, by Alex Klen.
+ *
+ *
+ * Credit to The Micahel (http://www.youtube.com/The0Micahel) for his rigged Steve from Minecraft model.
+*/
 
 #include <iostream>
 #include "viewer.hpp"
