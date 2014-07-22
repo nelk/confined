@@ -29,7 +29,7 @@ uniform float lightSpreadDegrees;
 uniform vec3 cameraPositionWorldspace;
 uniform mat4 P;
 uniform mat4 V;
-uniform mat4 depthBiasVP;
+uniform mat4 shadowmapDepthBiasVP;
 
 uniform bool useDiffuse = true;
 uniform bool useSpecular = true;
@@ -181,7 +181,7 @@ void main(){
   if (!useShadow) {
     visibility = 1.0;
   } else {
-    vec4 shadowCoord = depthBiasVP * vertexPositionWorldspace;
+    vec4 shadowCoord = shadowmapDepthBiasVP * vertexPositionWorldspace;
 
     // Fixed bias.
     //float bias = 0.005;
