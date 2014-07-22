@@ -27,7 +27,7 @@ public:
     NUM_BUFS = 5
   };
 
-  Mesh(std::string name,
+  Mesh(
     std::vector<glm::vec3>& vertices,
     std::vector<glm::vec2>& uvs,
     std::vector<glm::vec3>& normals,
@@ -35,6 +35,10 @@ public:
     Material* material
   );
   ~Mesh();
+
+  void setName(std::string name) {
+    this->name = name;
+  }
 
   std::string getName() {
     return name;

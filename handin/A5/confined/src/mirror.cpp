@@ -4,8 +4,8 @@
 
 #include "viewer.hpp" // For DEFAULT_*
 
-Mirror::Mirror(const glm::vec3& ka, const glm::vec3& kd, const glm::vec3& ks, float shininess)
-  : Material(ka, kd, ks, shininess), reflective(true) {
+Mirror::Mirror(const glm::vec3& ka, const glm::vec3& kd, const glm::vec3& ks, const glm::vec3& ke, float shininess)
+  : Material(ka, kd, ks, ke, shininess), reflective(true) {
 
   mirrorFBO = 0;
   glGenFramebuffers(1, &mirrorFBO);

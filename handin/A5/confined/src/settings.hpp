@@ -14,6 +14,7 @@ public:
     SSAO,
     BLUR,
     MOTION_BLUR,
+    MIRRORS,
     NUM_SETTINGS
   };
 

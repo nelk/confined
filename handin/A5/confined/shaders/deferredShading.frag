@@ -126,6 +126,8 @@ void main(){
   vec3 lightFalloffModified = lightFalloff;
   vec3 material_ka = lightAmbience * material_kd;
 
+  float directLightToEyeIntensity = 0;
+
   float x = texUV.x;
   float y = texUV.y;
   float z = texture2D(depthTexture, texUV).r;
@@ -149,24 +151,64 @@ void main(){
   vec3 n = texture2D(normalTexture, texUV).rgb * 2.0 - 1.0;
   vec3 l = vec3(0, 0, 0); // Direction of the light (from the fragment to the light) in camera space;
 
+  // Eye vector (towards the camera)
+  vec3 E = normalize(eyeDirectionCameraspace);
+  float lightSpreadRadians = radians(lightSpreadDegrees);
+
   switch (lightType) {
     case 0:
       // For directional light just reverse light direction.
       l = -normalize(lightDirectionCameraspace);
       break;
     case 1:
+      // For spot light and point light use point's position.
+      // This is wrong!: l = normalize((V * vec4(vertexPositionToLightPositionWorldspace, 1.0)).xyz);
+      l = normalize(lightPositionCameraspace - vertexPositionCameraspace.xyz);
+
+
+//dot(normalize(vertexPositionToLightPositionWorldspace), normalize(lightDirectionWorldspace))
+
+      float dotVertexLightPos = dot(normalize(vertexPositionCameraspace.xyz), normalize(lightPositionCameraspace));
+
+      float coneAngleFactor =
+        clamp(normalize(lightDirectionCameraspace).z, 0, 1)
+        *
+        clamp(-normalize(lightPositionCameraspace).z, 0, 1)
+        *
+        clamp(dotVertexLightPos, 0, 1);
+/*
+        clamp(dot(vec3(0, 0, -1), normalize(-lightDirectionCameraspace)), 0, 1)
+        *
+        clamp(dot(vec3(0, 0, -1), normalize(lightPositionCameraspace)), 0, 1)
+        *
+        clamp(dot(normalize(vertexPositionCameraspace.xyz), normalize(lightPositionCameraspace)), 0, 1);
+*/
+
+// TODO: Visibility check with cone - intersect ray with cone and compare depth with fragment depth.
+      directLightToEyeIntensity =
+        //step(acos(dot(normalize(vertexPositionWorldspace.xyz - lightPositionWorldspace), normalize(lightDirectionWorldspace))), lightSpreadRadians) *
+        pow(coneAngleFactor, 8); // TODO: Factor in spread angle?
+
+      break;
     case 2:
       // For spot light and point light use point's position.
       // This is wrong!: l = normalize((V * vec4(vertexPositionToLightPositionWorldspace, 1.0)).xyz);
       l = normalize(lightPositionCameraspace - vertexPositionCameraspace.xyz);
+
+      directLightToEyeIntensity =
+        step(vertexPositionCameraspace.z, lightPositionCameraspace.z)
+        * (
+          //0.2*dot(normalize(lightPositionCameraspace), -E)
+          //+
+          1.2*pow(clamp(dot(normalize(vertexPositionCameraspace.xyz), normalize(lightPositionCameraspace)), 0, 1), 1000)
+        );
+
       break;
   }
 
   // Clamped Cosine of the angle between the normal and the light direction.
   float cosTheta = clamp(dot(n, l), 0, 1);
 
-  // Eye vector (towards the camera)
-  vec3 E = normalize(eyeDirectionCameraspace);
   // Direction in which the triangle reflects the light
   //vec3 R = reflect(l, n);
 
@@ -228,24 +270,24 @@ void main(){
 
   /*
         // Hard circle.
-        if (coneAngle <= radians(lightSpreadDegrees)) {
+        if (coneAngle <= lightSpreadRadians) {
           visibility += texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
         }
   */
 
         // Quadratic falloff by angle.
-        float distFrac = coneAngle/radians(lightSpreadDegrees);
+        float distFrac = coneAngle/lightSpreadRadians;
         if (distFrac <= 1.0) {
           visibility += /*step(-1.0, -distFrac) * */ (1 - distFrac/2.5) * (1 - distFrac) * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
           //lightFalloffModified.z += distFrac;
         }
 
         // Exponential light decay by angle.
-        //visibility += (2 - pow(2, coneAngle/radians(lightSpreadDegrees))) * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
+        //visibility += (2 - pow(2, coneAngle/lightSpreadRadians)) * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
 
         // Staged falloff.
   /*
-        float distFrac = coneAngle/radians(lightSpreadDegrees);
+        float distFrac = coneAngle/lightSpreadRadians;
         if (distFrac <= 1.0) {
           visibility += texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));;
           if (distFrac < 0.3) {
@@ -314,11 +356,16 @@ void main(){
 
   colour = material_emissive                 // Emissive.
     + material_ka * (1.0 - ambientOcclusion) // Ambient.
-    + visibility * lightColour * attenuation
+    + lightColour * attenuation
     * (
-      material_kd * cosTheta                 // Diffuse.
-    + material_ks * pow(cosAlpha, material_shininess) // Specular.
-    );
+       visibility
+       * (
+         material_kd * cosTheta                 // Diffuse.
+       + material_ks * pow(cosAlpha, material_shininess) // Specular.
+       )
+   + directLightToEyeIntensity // Direct light.
+   )
+  ;
 
   // Visualize normals in camera space.
   //colour = n * 0.5 + 0.5;

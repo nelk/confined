@@ -15,6 +15,7 @@
 
 #define MIN_REQUIRED_COLOUR_ATTACHMENTS 2
 #define RENDER_DEBUG_IMAGES false
+#define RENDER_LIGHTS_AS_SPHERES false
 #define SHADOWMAP_WIDTH 2048
 #define SHADOWMAP_HEIGHT 2048
 #define TARGET_FPS 60
@@ -364,7 +365,24 @@ bool Viewer::initGL() {
 
   // Lamp
   lights.push_back(Light::pointLight(glm::vec3(0.2, 0.2, 0.2), glm::vec3(0.0, 3.0, 0.0)));
-  //lights.back()->setEnabled(false);
+  lights.back()->setEnabled(false);
+
+  // Test spotlight.
+  //lights.push_back(Light::spotLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0.0, 1.0, -1.0), glm::vec3(0.0, 0.0, 1.0), 15.0));
+
+  // Specific stuff for meshes.
+  for (unsigned int meshId = 0; meshId < meshes.size(); meshId++) {
+    Mesh* mesh = meshes[meshId];
+    if (mesh->getName().substr(0, 11) == "CandleFlame") {
+      glm::vec3 candleColour = glm::vec3(0.8, 0.555, 0);
+      mesh->getMaterial()->getEmissive() = glm::vec3(1, 1, 1);
+      glm::vec3* vecs = mesh->getFirstFourVertices();
+      lights.push_back(Light::pointLight(candleColour, vecs[0]));
+      lights.back()->getAmbience() = glm::vec3(0.1, 0.1, 0.1);
+      lights.back()->getFalloff() = glm::vec3(1.0, 0.002, 0.008);
+      lights.back()->setEnabled(false); //temp
+    }
+  }
 
   return true;
 }
@@ -522,7 +540,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, const glm::mat4& viewMatrix, co
       glUniform3f(geomMaterialKdId, material->getDiffuse().x, material->getDiffuse().y, material->getDiffuse().z);
       glUniform3f(geomMaterialKsId, material->getSpecular().x, material->getSpecular().y, material->getSpecular().z);
       glUniform1f(geomMaterialShininessId, material->getShininess());
-      glUniform3f(geomMaterialEmissiveId, 0, 0, 0);
+      glUniform3f(geomMaterialEmissiveId, material->getEmissive().x, material->getEmissive().y, material->getEmissive().z);
 
       // Bind diffuse texture if it exists.
       glUniform1i(geomUseDiffuseTextureId, settings->isSet(Settings::TEXTURE_MAP) && material->hasDiffuseTexture());
@@ -543,26 +561,28 @@ void Viewer::renderScene(GLuint renderTargetFBO, const glm::mat4& viewMatrix, co
   }
 
   // Render point lights as spheres.
-  glUniform1i(geomUseDiffuseTextureId, false);
-  glUniform1i(geomUseNormalTextureId, false);
-  for (std::vector<Light*>::const_iterator lightIt = lights.begin(); lightIt != lights.end(); lightIt++) {
-    Light *light = *lightIt;
-    if (!light->isEnabled() || light->getType() != Light::POINT) continue;
+  if (RENDER_LIGHTS_AS_SPHERES) {
+    glUniform1i(geomUseDiffuseTextureId, false);
+    glUniform1i(geomUseNormalTextureId, false);
+    for (std::vector<Light*>::const_iterator lightIt = lights.begin(); lightIt != lights.end(); lightIt++) {
+      Light *light = *lightIt;
+      if (!light->isEnabled() || (light->getType() != Light::POINT && light->getType() != Light::SPOT)) continue;
 
-    // Set model matrix to move model to point light's position.
-    glm::mat4 sphereModelMatrix = glm::translate(glm::mat4(1.0), light->getPosition()) * pointLightMesh->getModelMatrix();
-    glm::mat4 MVP = VP * sphereModelMatrix;
-    glUniformMatrix4fv(geomModelMatrixId, 1, GL_FALSE, &sphereModelMatrix[0][0]);
-    glUniformMatrix4fv(geomMVPId, 1, GL_FALSE, &MVP[0][0]);
+      // Set model matrix to move model to point light's position.
+      glm::mat4 sphereModelMatrix = glm::translate(glm::mat4(1.0), light->getPosition()) * pointLightMesh->getModelMatrix();
+      glm::mat4 MVP = VP * sphereModelMatrix;
+      glUniformMatrix4fv(geomModelMatrixId, 1, GL_FALSE, &sphereModelMatrix[0][0]);
+      glUniformMatrix4fv(geomMVPId, 1, GL_FALSE, &MVP[0][0]);
 
-    // Use light's diffuse as emissive material.
-    glUniform3f(geomMaterialKdId, 0, 0, 0);
-    glUniform3f(geomMaterialKsId, 0, 0, 0);
-    glm::vec3 emissiveLight = light->getColour();
-    emissiveLight *= 5.0;
-    glUniform3f(geomMaterialEmissiveId, emissiveLight.x, emissiveLight.y, emissiveLight.z);
+      // Use light's diffuse as emissive material.
+      glUniform3f(geomMaterialKdId, 0, 0, 0);
+      glUniform3f(geomMaterialKsId, 0, 0, 0);
+      glm::vec3 emissiveLight = light->getColour();
+      emissiveLight *= 5.0;
+      glUniform3f(geomMaterialEmissiveId, emissiveLight.x, emissiveLight.y, emissiveLight.z);
 
-    pointLightMesh->renderGL();
+      pointLightMesh->renderGL();
+    }
   }
 
 
@@ -868,44 +888,44 @@ void Viewer::run() {
     // Moving lights.
 
     // Flashlight.
-    //lights[0]->getPosition() = cameraPosition;
     lights[0]->getPosition() = cameraPosition + glm::vec3(0, -01.6f, 0);
     lights[0]->setEnabled(controller->isFlashlightOn());
     // TODO: Why backwards about x?
     lights[0]->getDirection() = glm::vec3(glm::inverse(viewMatrix) * glm::vec4(0, 0, -1, 0));
 
-    // Monkey box.
-    lights.back()->getPosition() = glm::vec3(std::cos(3.0*currentTime)/2.0, 3.0, std::sin(3.0*currentTime)/2.0); // Point.
+    //lights.back()->getPosition() = glm::vec3(std::cos(3.0*currentTime)/2.0, 3.0, std::sin(3.0*currentTime)/2.0); // Point.
 
 
 
-    // Note that this technique won't generally work for multiple mirrors without cube maps, because mirror view is only rendered one direction.
-    for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
-      Mesh* mesh = *it;
-      Material* material = mesh->getMaterial();
-      if (material == NULL || !material->isMirror()) continue;
+    if (settings->isSet(Settings::MIRRORS)) {
+      // Note that this technique won't generally work for multiple mirrors without cube maps, because mirror view is only rendered one direction.
+      for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
+        Mesh* mesh = *it;
+        Material* material = mesh->getMaterial();
+        if (material == NULL || !material->isMirror()) continue;
 
-      Mirror* mirror = static_cast<Mirror*>(material);
+        Mirror* mirror = static_cast<Mirror*>(material);
 
-      const glm::vec3 *mirrorQuad = mesh->getFirstFourVertices();
-      const glm::vec3 mirrorVertex = mirrorQuad[0];
-      const glm::vec3 mirrorNormal = mesh->getFirstNormal();
-      const glm::mat4 mirroredViewMatrix = controller->getMirroredViewMatrix(mirrorVertex, mirrorNormal);
+        const glm::vec3 *mirrorQuad = mesh->getFirstFourVertices();
+        const glm::vec3 mirrorVertex = mirrorQuad[0];
+        const glm::vec3 mirrorNormal = mesh->getFirstNormal();
+        const glm::mat4 mirroredViewMatrix = controller->getMirroredViewMatrix(mirrorVertex, mirrorNormal);
 
-      // TODO: This is a hack - make it work generally by scaling using original UVs...
-      const glm::mat4 uvVP = projectionMatrix * mirroredViewMatrix * mesh->getModelMatrix();
-      std::vector<glm::vec2> newUVs;
-      for (int i = 0; i < 4; i++) {
-        glm::vec4 projUV = uvVP * glm::vec4(mirrorQuad[i], 1);
-        projUV = projUV / projUV[3];
-        // Important Note: These are now pre-computed as perspective-corrected, so hardware perspective correction needs to be turned off when interpolating these!
-        newUVs.push_back(glm::vec2(projUV[0] * 0.5f + 0.5f, projUV[1] * 0.5f + 0.5f));
+        // TODO: This is a hack - make it work generally by scaling using original UVs...
+        const glm::mat4 uvVP = projectionMatrix * mirroredViewMatrix * mesh->getModelMatrix();
+        std::vector<glm::vec2> newUVs;
+        for (int i = 0; i < 4; i++) {
+          glm::vec4 projUV = uvVP * glm::vec4(mirrorQuad[i], 1);
+          projUV = projUV / projUV[3];
+          // Important Note: These are now pre-computed as perspective-corrected, so hardware perspective correction needs to be turned off when interpolating these!
+          newUVs.push_back(glm::vec2(projUV[0] * 0.5f + 0.5f, projUV[1] * 0.5f + 0.5f));
+        }
+        mesh->setUVs(newUVs);
+
+        renderScene(mirror->getMirrorFBO(), mirroredViewMatrix, projectionMatrix, cameraPosition, false, currentTime, deltaTime, mirrorVertex, mirrorNormal);
+
+        mirror->update();
       }
-      mesh->setUVs(newUVs);
-
-      renderScene(mirror->getMirrorFBO(), mirroredViewMatrix, projectionMatrix, cameraPosition, false, currentTime, deltaTime, mirrorVertex, mirrorNormal);
-
-      mirror->update();
     }
 
     renderScene(0, viewMatrix, projectionMatrix, cameraPosition, doPostProcessing, currentTime, deltaTime, glm::vec3(0), glm::vec3(0));

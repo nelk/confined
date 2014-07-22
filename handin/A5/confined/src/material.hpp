@@ -6,8 +6,8 @@
 
 class Material {
 public:
-  Material(const glm::vec3& ka, const glm::vec3& kd, const glm::vec3& ks, float shininess)
-    : ka(ka), kd(kd), ks(ks), shininess(shininess), diffuseTexture(0), normalTexture(0) {}
+  Material(const glm::vec3& ka, const glm::vec3& kd, const glm::vec3& ks, const glm::vec3& ke, float shininess)
+    : ka(ka), kd(kd), ks(ks), ke(ke), shininess(shininess), diffuseTexture(0), normalTexture(0) {}
 
   ~Material() {
     if (diffuseTexture != 0) {
@@ -26,16 +26,20 @@ public:
     setTexture(normalTexture, w, h, data);
   }
 
-  glm::vec3 getAmbience() {
+  glm::vec3& getAmbience() {
     return ka;
   }
 
-  glm::vec3 getDiffuse() {
+  glm::vec3& getDiffuse() {
     return kd;
   }
 
-  glm::vec3 getSpecular() {
+  glm::vec3& getSpecular() {
     return ks;
+  }
+
+  glm::vec3& getEmissive() {
+    return ke;
   }
 
   float getShininess() {
@@ -78,7 +82,7 @@ protected:
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, w, h, 0, GL_BGR, GL_UNSIGNED_BYTE, data);
   }
 
-  glm::vec3 ka, kd, ks;
+  glm::vec3 ka, kd, ks, ke;
   float shininess;
   GLuint diffuseTexture;
   GLuint normalTexture;

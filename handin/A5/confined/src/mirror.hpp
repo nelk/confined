@@ -9,7 +9,7 @@
 
 class Mirror: public Material {
 public:
-  Mirror(const glm::vec3& ka, const glm::vec3& kd, const glm::vec3& ks, float shininess);
+  Mirror(const glm::vec3& ka, const glm::vec3& kd, const glm::vec3& ks, const glm::vec3& ke, float shininess);
 
   ~Mirror();
 

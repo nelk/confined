@@ -2,13 +2,14 @@
 #include "settings.hpp"
 
 const std::string Settings::settingNames[] = {
-  "LIGHT_DIFFUSE",
-  "LIGHT_SPECULAR",
-  "SHADOW_MAP",
-  "NORMAL_MAP",
-  "TEXTURE_MAP",
+  "Diffuse Lighting",
+  "Specular Lighting",
+  "Shadow Maps",
+  "Normal Maps",
+  "Texture Maps",
   "SSAO",
-  "BLUR",
-  "MOTION_BLUR"
+  "Blur",
+  "Motion Blur",
+  "Mirrors"
 };
 

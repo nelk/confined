@@ -3,16 +3,16 @@
 #include <glm/glm.hpp>
 #include <FreeImage.h>
 #include <iostream>
+#include <list>
 
 #include "mirror.hpp"
 
 Mesh::Mesh(
-    std::string name,
     std::vector<glm::vec3>& vertices,
     std::vector<glm::vec2>& uvs,
     std::vector<glm::vec3>& normals,
     std::vector<unsigned short>& indices,
-    Material* material): name(name), material(material) {
+    Material* material): name(""), material(material) {
 
   modelMatrix = glm::mat4(1.0);
 
@@ -109,8 +109,6 @@ Mesh::Mesh(
     firstFourVertices[i] = vertices[i];
   }
   firstNormal = normals[0];
-
-  std::cout << "Created Mesh '" << name << "' with " << numIndices << " indices" << std::endl;
 }
 
 Mesh::~Mesh() {
@@ -298,10 +296,12 @@ std::vector<Mesh*> loadScene(const char* fileName, bool invertNormals) {
     aiColor3D ka(0, 0, 0);
     aiColor3D kd(0, 0, 0);
     aiColor3D ks(0, 0, 0);
+    aiColor3D ke(0, 0, 0);
     float shininess = 0.0;
     m->Get(AI_MATKEY_COLOR_AMBIENT, ka);
     m->Get(AI_MATKEY_COLOR_DIFFUSE, kd);
     m->Get(AI_MATKEY_COLOR_SPECULAR, ks);
+    m->Get(AI_MATKEY_COLOR_EMISSIVE, ke);
     m->Get(AI_MATKEY_SHININESS, shininess);
     //AI_MATKEY_COLOR_REFLECTIVE
 
@@ -317,12 +317,14 @@ std::vector<Mesh*> loadScene(const char* fileName, bool invertNormals) {
         glm::vec3(ka.r, ka.g, ka.b),
         glm::vec3(kd.r, kd.g, kd.b),
         glm::vec3(ks.r, ks.g, ks.b),
+        glm::vec3(ke.r, ke.g, ke.b),
         shininess);
     } else {
       materials[matId] = new Material(
         glm::vec3(ka.r, ka.g, ka.b),
         glm::vec3(kd.r, kd.g, kd.b),
         glm::vec3(ks.r, ks.g, ks.b),
+        glm::vec3(ke.r, ke.g, ke.b),
         shininess);
     }
 
@@ -387,8 +389,27 @@ std::vector<Mesh*> loadScene(const char* fileName, bool invertNormals) {
       indices.push_back(mesh->mFaces[i].mIndices[2]);
     }
 
-    // TODO: Names not working.
-    meshes.push_back(new Mesh(std::string(mesh->mName.C_Str()), vertices, uvs, normals, indices, material));
+    meshes.push_back(new Mesh(vertices, uvs, normals, indices, material));
+  }
+
+  // Name meshes by going down hierarchy.
+  std::list<aiNode*> nodeQueue;
+  nodeQueue.push_front(scene->mRootNode);
+  while (!nodeQueue.empty()) {
+    aiNode* node = nodeQueue.front();
+    nodeQueue.pop_front();
+    for (unsigned int i = 0; i < node->mNumChildren; i++) {
+      nodeQueue.push_back(node->mChildren[i]);
+    }
+    for (unsigned int meshIndex = 0; meshIndex < node->mNumMeshes; meshIndex++) {
+      unsigned int meshId = node->mMeshes[meshIndex];
+      meshes[meshId]->setName(std::string(node->mName.C_Str()));
+    }
+  }
+
+  std::cout << "Loaded " << meshes.size() << " meshes." << std::endl;
+  for (unsigned int i = 0; i < meshes.size(); i++) {
+    std::cout << meshes[i]->getName() << ": " << meshes[i]->getNumIndices() << " indices" << std::endl;
   }
 
   // TODO: Don't leak materials.

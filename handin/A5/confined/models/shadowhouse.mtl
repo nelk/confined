@@ -1,5 +1,5 @@
 # Blender MTL File: 'shadowhouse.blend'
-# Material Count: 9
+# Material Count: 14
 
 newmtl BrickMaterial
 Ns 164.705882
@@ -10,6 +10,15 @@ Ni 1.000000
 d 1.000000
 illum 2
 map_Kd textures/alternatingbricks.png
+
+newmtl CandeFlameMaterial
+Ns 96.078431
+Ka 0.000000 0.000000 0.000000
+Kd 0.681667 0.473003 0.000000
+Ks 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 1
 
 newmtl FloorMaterial
 Ns 180.392157
@@ -30,6 +39,43 @@ Ni 1.000000
 d 1.000000
 illum 2
 map_Kd textures/grass.png
+
+newmtl Material.001
+Ns 92.156863
+Ka 0.000000 0.000000 0.000000
+Kd 0.000000 0.000000 0.000000
+Ks 0.065574 0.065574 0.065574
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl Material.002
+Ns 92.156863
+Ka 0.000000 0.000000 0.000000
+Kd 0.800000 0.719728 0.276898
+Ks 0.500000 0.500000 0.500000
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl Material.003
+Ns 92.156863
+Ka 0.000000 0.000000 0.000000
+Kd 0.324523 0.187419 0.000000
+Ks 1.000000 1.000000 1.000000
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl Material.004
+Ns 92.156863
+Ka 0.000000 0.000000 0.000000
+Kd 0.512000 0.512000 0.512000
+Ks 0.352459 0.352459 0.352459
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd Candlestick/seamless-wood-texture-free-17.jpg
 
 newmtl MirrorMaterial
 Ns 96.078431
