@@ -20,6 +20,8 @@ out vec3 eyeDirectionCameraspace;
 uniform mat4 MVP;
 uniform mat4 V;
 uniform mat4 M;
+// TODO: lerp two states.
+//uniform float vertexMixer; // 0 - fully first, 1 - fully second.
 
 void main(){
   gl_Position = MVP * vec4(vertexPositionModelspace, 1);

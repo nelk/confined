@@ -79,6 +79,6 @@ private:
   glm::vec3 firstNormal;
 };
 
-std::vector<Mesh*> loadScene(const char* fileName, bool invertNormals = false);
+std::vector<Mesh*> loadScene(std::string fileName, bool invertNormals = false);
 
 #endif

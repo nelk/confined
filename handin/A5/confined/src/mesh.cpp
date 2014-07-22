@@ -277,13 +277,13 @@ void MessageFunction(FREE_IMAGE_FORMAT fif, const char *msg) {
   std::cerr << (int)fif << ": " << msg << std::endl;
 }
 
-std::vector<Mesh*> loadScene(const char* fileName, bool invertNormals) {
+std::vector<Mesh*> loadScene(std::string fileName, bool invertNormals) {
 
-  FreeImage_SetOutputMessage(MessageFunction); 
+  FreeImage_SetOutputMessage(MessageFunction);
 
   std::vector<Mesh*> meshes;
   Assimp::Importer importer;
-  const aiScene* scene = importer.ReadFile(fileName, aiProcess_JoinIdenticalVertices | aiProcess_Triangulate);
+  const aiScene* scene = importer.ReadFile(fileName.c_str(), aiProcess_JoinIdenticalVertices | aiProcess_Triangulate);
   if (!scene) {
     std::cerr << importer.GetErrorString() << std::endl;
     return meshes;
@@ -411,6 +411,8 @@ std::vector<Mesh*> loadScene(const char* fileName, bool invertNormals) {
   for (unsigned int i = 0; i < meshes.size(); i++) {
     std::cout << meshes[i]->getName() << ": " << meshes[i]->getNumIndices() << " indices" << std::endl;
   }
+
+  //std::cout << scene->mNumAnimations << " animations" << std::endl;
 
   // TODO: Don't leak materials.
   return meshes;

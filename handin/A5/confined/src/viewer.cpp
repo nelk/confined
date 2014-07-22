@@ -1,7 +1,10 @@
 #include <cstdlib>
 #include <vector>
 #include <iostream>
+#include <sstream>
+#include <iomanip>
 #include <ctime>
+#include <cmath>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -147,8 +150,13 @@ bool Viewer::initGL() {
 
   meshes = loadScene("models/shadowhouse.obj");
   std::vector<Mesh*> pointLightMeshes = loadScene("models/sphere.obj", false);
-  characterMeshes = loadScene("models/minecraft_rigs/steve.obj");
-  meshes.insert(meshes.end(), characterMeshes.begin(), characterMeshes.end());
+  for (int i = 0; i < 20; i++) {
+    std::stringstream fname;
+    fname << "models/minecraft_rigs/steve_animate_";
+    fname << std::setfill('0') << std::setw(6) << i << ".obj";
+    characterMeshes.push_back(loadScene(fname.str()));
+  }
+
   if (pointLightMeshes.size() == 1) {
     pointLightMesh = pointLightMeshes[0];
     pointLightMesh->getModelMatrix() = glm::scale(glm::mat4(1.0), glm::vec3(0.1, 0.1, 0.1));
@@ -420,7 +428,7 @@ void Viewer::bindRenderTarget(GLuint renderTargetFBO) {
   checkGLErrors("bindRenderTarget end");
 }
 
-void Viewer::renderScene(GLuint renderTargetFBO, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const glm::vec3& cameraPosition, bool postProcess, double currentTime, double deltaTime, const glm::vec3& halfspacePosition, const glm::vec3& halfspaceNormal) {
+void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMeshes, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const glm::vec3& cameraPosition, bool postProcess, double currentTime, double deltaTime, const glm::vec3& halfspacePosition, const glm::vec3& halfspaceNormal) {
 
   // Handle for MVP uniform (shadow depth pass).
   static GLuint depthMatrixId = glGetUniformLocation(depthProgramId, "depthMVP");
@@ -525,7 +533,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, const glm::mat4& viewMatrix, co
   glUniform3fv(geomHalfspaceNormalId, 1, &halfspaceNormal[0]);
 
 
-  for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
+  for (std::vector<Mesh*>::const_iterator it = thisFrameMeshes.begin(); it != thisFrameMeshes.end(); it++) {
     Mesh* mesh = *it;
 
     glm::mat4 modelMatrix = mesh->getModelMatrix();
@@ -684,7 +692,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, const glm::mat4& viewMatrix, co
         }
         depthVP = depthProjectionMatrix * depthViewMatrix;
 
-        for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
+        for (std::vector<Mesh*>::const_iterator it = thisFrameMeshes.begin(); it != thisFrameMeshes.end(); it++) {
           glm::mat4 depthMVP = depthVP * (*it)->getModelMatrix();
           glUniformMatrix4fv(depthMatrixId, 1, GL_FALSE, &depthMVP[0][0]);
 
@@ -884,11 +892,17 @@ void Viewer::run() {
     const glm::mat4& viewMatrix = controller->getViewMatrix();
     const glm::vec3& cameraPosition = controller->getPosition();
 
+    // Find all meshes to render this frame.
+    std::vector<Mesh*> thisFrameMeshes(meshes);
+    int characterAnimId = static_cast<int>(round(currentTime * 20.0f)) % 20;
+    thisFrameMeshes.insert(thisFrameMeshes.begin(), characterMeshes[characterAnimId].begin(), characterMeshes[characterAnimId].end());
+
     // Move character.
     glm::mat4 characterModelMatrix = glm::inverse(viewMatrix);
-    for (std::vector<Mesh*>::iterator it = characterMeshes.begin(); it != characterMeshes.end(); it++) {
+    for (std::vector<Mesh*>::iterator it = characterMeshes[characterAnimId].begin(); it != characterMeshes[characterAnimId].end(); it++) {
       (*it)->getModelMatrix() = characterModelMatrix;
     }
+
 
     // Moving lights.
 
@@ -927,24 +941,25 @@ void Viewer::run() {
         }
         mesh->setUVs(newUVs);
 
-        renderScene(mirror->getMirrorFBO(), mirroredViewMatrix, projectionMatrix, cameraPosition, false, currentTime, deltaTime, mirrorVertex, mirrorNormal);
+        renderScene(mirror->getMirrorFBO(), thisFrameMeshes, mirroredViewMatrix, projectionMatrix, cameraPosition, false, currentTime, deltaTime, mirrorVertex, mirrorNormal);
 
         mirror->update();
       }
     }
 
-    renderScene(0, viewMatrix, projectionMatrix, cameraPosition, doPostProcessing, currentTime, deltaTime, glm::vec3(0), glm::vec3(0));
+    // Main render of scene.
+    renderScene(0, thisFrameMeshes, viewMatrix, projectionMatrix, cameraPosition, doPostProcessing, currentTime, deltaTime, glm::vec3(0), glm::vec3(0));
 
-    std::vector<Mesh*> allMirrors;
-    for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
-      Material* m = (*it)->getMaterial();
-      if (m != NULL && m->isMirror()) {
-        allMirrors.push_back(*it);
-      }
-    }
 
     // ============ Debug Rendering =============
     if (RENDER_DEBUG_IMAGES) {
+      std::vector<Mesh*> allMirrors;
+      for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
+        Material* m = (*it)->getMaterial();
+        if (m != NULL && m->isMirror()) {
+          allMirrors.push_back(*it);
+        }
+      }
 
       glUseProgram(quadProgramId);
 

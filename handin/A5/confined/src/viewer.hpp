@@ -29,7 +29,7 @@ public:
    * Render scene with deferred pipeline.
    * Set renderTarget=0 to render to screen.
    */
-  void renderScene(GLuint renderTargetFBO, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const glm::vec3& cameraPosition, bool postProcess, double currentTime, double deltaTime, const glm::vec3& halfspacePosition, const glm::vec3& halfspaceNormal);
+  void renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMeshes, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const glm::vec3& cameraPosition, bool postProcess, double currentTime, double deltaTime, const glm::vec3& halfspacePosition, const glm::vec3& halfspaceNormal);
 
   void bindRenderTarget(GLuint renderTargetFBO);
 
@@ -57,7 +57,7 @@ private:
   Controller* controller;
   std::vector<Mesh*> meshes;
   Mesh* pointLightMesh;
-  std::vector<Mesh*> characterMeshes;
+  std::vector<std::vector<Mesh*> > characterMeshes; // TODO: Make MeshAnimation type or something.
   std::vector<Light*> lights;
 
   glm::mat4 shadowmapBiasMatrix;
