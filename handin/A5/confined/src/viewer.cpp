@@ -12,6 +12,7 @@
 #include "shader.hpp"
 #include "mesh.hpp"
 #include "mirror.hpp"
+#include "sound.hpp"
 
 #include "viewer.hpp"
 #include "controller.hpp"
@@ -127,6 +128,22 @@ void Viewer::updateSize(int width, int height) {
 }
 
 bool Viewer::initGL() {
+  // Initialize OpenAL.
+  if (!Sound::initialize()) {
+    std::cerr << "Couldn't initialize OpenAL" << std::endl;
+    return false;
+  }
+
+  thunderSound = Sound::load("sound/thunder_mono.wav");
+  if (thunderSound == NULL) {
+    std::cerr << "Couldn't load sound/thunder_mono.wav" << std::endl;
+    return false;
+  }
+  thunderSound->setPosition(glm::vec3(0, 1, 0));
+  thunderSound->setVelocity(glm::vec3(0, 0, 0));
+  thunderSound->setDirection(glm::vec3(0, 0, -1));
+
+
   glfwMakeContextCurrent(window);
 
   // Initialize GLEW
@@ -557,7 +574,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
       glUniform1i(geomDiffuseTexId, 0);
 
       // Avoid hardware perspective divide if pre-divided for mirrors.
-      glUniform1i(geomUseNoPerspectiveUVId, material->isMirror());
+      glUniform1i(geomUseNoPerspectiveUVId, material->isMirror() && settings->isSet(Settings::MIRRORS));
 
       // Bind normal texture if it exists.
       glUniform1i(geomUseNormalTextureId, settings->isSet(Settings::NORMAL_MAP) && material->hasNormalTexture());
@@ -878,6 +895,7 @@ void Viewer::run() {
   double lastTime = glfwGetTime();
   long fpsDisplayCounter = 0;
   double lastFPSTime = lastTime;
+  lastThunderPlay = 0;
 
   do {
     double currentTime = glfwGetTime();
@@ -892,9 +910,17 @@ void Viewer::run() {
     const glm::mat4& viewMatrix = controller->getViewMatrix();
     const glm::vec3& cameraPosition = controller->getPosition();
 
+    // Thunder loop.
+    if (currentTime - lastThunderPlay > 10.0) {
+      thunderSound->play();
+      lastThunderPlay = currentTime;
+      Sound::checkErrors();
+    }
+
+
     // Find all meshes to render this frame.
     std::vector<Mesh*> thisFrameMeshes(meshes);
-    int characterAnimId = static_cast<int>(round(currentTime * 20.0f)) % 20;
+    int characterAnimId = 0;//static_cast<int>(round(currentTime * 20.0f)) % 20;
     thisFrameMeshes.insert(thisFrameMeshes.begin(), characterMeshes[characterAnimId].begin(), characterMeshes[characterAnimId].end());
 
     // Move character.
@@ -1049,6 +1075,9 @@ Viewer::~Viewer() {
 
   delete settings;
   settings = NULL;
+
+  delete thunderSound;
+  thunderSound = NULL;
 
   glDeleteProgram(depthProgramId);
   glDeleteProgram(quadProgramId);

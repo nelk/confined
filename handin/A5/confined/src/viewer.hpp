@@ -8,6 +8,7 @@
 #include "controller.hpp"
 #include "mesh.hpp"
 #include "light.hpp"
+#include "sound.hpp"
 
 #define DEFAULT_WIDTH 1024
 #define DEFAULT_HEIGHT 768
@@ -53,8 +54,12 @@ public:
 private:
   int width, height;
   GLFWwindow* window;
+
   Settings* settings;
   Controller* controller;
+  Sound* thunderSound;
+  double lastThunderPlay;
+
   std::vector<Mesh*> meshes;
   Mesh* pointLightMesh;
   std::vector<std::vector<Mesh*> > characterMeshes; // TODO: Make MeshAnimation type or something.

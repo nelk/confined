@@ -107,10 +107,12 @@ void main(){
   vec3 material_emissive = texture2D(emissiveTexture, texUV).rgb;
 
   // Don't write pixels that weren't actually drawn onto this texture.
+  /*
   if (material_kd == vec3(0, 0, 0) && material_emissive == vec3(0, 0, 0)) {
     colour = vec3(0, 0, 0);
     return;
   }
+  */
 
   vec3 material_ks;
   float material_shininess;

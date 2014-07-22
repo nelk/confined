@@ -78,7 +78,11 @@ Mesh::Mesh(
 
       float oneOverR = deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x;
       if (oneOverR == 0) {
-        std::cerr << "Error: NaN tangents computed!" << std::endl;
+        static bool nanErrorOutput = false;
+        if (!nanErrorOutput) {
+          nanErrorOutput = true;
+          std::cerr << "Error: NaN tangents computed!" << std::endl;
+        }
         continue;
       }
       float r = 1.0f / oneOverR;

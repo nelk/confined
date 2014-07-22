@@ -1,7 +1,7 @@
 SOURCES = $(wildcard common/*.cpp) $(wildcard src/*.cpp)
 OBJECTS = $(SOURCES:.cpp=.o)
 DEPENDS = $(SOURCES:.cpp=.d)
-LDFLAGS = -rdynamic -lGLEW -lGLU -lGL -lSM -lICE -lXext -lglfw3 -lXrandr -lrt -ldl -pthread -lXi -lX11 -lXxf86vm -lm -lassimp -lfreeimage
+LDFLAGS = -rdynamic -lGLEW -lGLU -lGL -lSM -lICE -lXext -lglfw3 -lXrandr -lrt -ldl -pthread -lXi -lX11 -lXxf86vm -lm -lassimp -lfreeimage -lopenal -lalut
 CPPFLAGS = -Isrc #-Iexternal/glm-0.9.4.0/glm -Iexternal/glfw-3.0.3/include -Iexternal/glew-1.9.0/include
 CXXFLAGS = $(CPPFLAGS) -W -Wall -g
 CXX = g++

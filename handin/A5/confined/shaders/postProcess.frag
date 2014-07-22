@@ -62,7 +62,7 @@ void main(){
       vec2 offset = blurVector * (float(i) / float(numMotionSamples - 1) - 0.5);
 
       // Sample & add to result.
-      colour += texture2D(tex, UV + offset).rgb;
+      colour += texture2D(tex, UV + offset + crazyOffset).rgb;
     }
 
     colour /= float(numMotionSamples);

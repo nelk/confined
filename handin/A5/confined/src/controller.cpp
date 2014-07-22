@@ -4,6 +4,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "controller.hpp"
+#include "sound.hpp"
 
 Controller::Controller(Viewer* viewer, Settings* settings)
   : viewer(viewer), settings(settings), lastTime(0), position(0, 0, 0), velocity(0, 0, 0), horizontalAngle(0), verticalAngle(0), skipMovements(2), flashlight(true) {
@@ -173,6 +174,13 @@ void Controller::update() {
     position + direction, // Lookat position.
     up                    // Up.
   );
+
+
+  // Sound: update listener state.
+  Sound::setListenerPosition(position);
+  Sound::setListenerVelocity(glm::vec3(0, 0, 0));
+  Sound::setListenerOrientation(direction, up);
+
 
   lastTime = currentTime;
 }
