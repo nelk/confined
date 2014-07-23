@@ -419,7 +419,7 @@ bool Viewer::initialize() {
 
 
   // Scene-specific setup:
-  glm::vec3 startPosition(0, 3, -40);
+  glm::vec3 startPosition(0, 3.5, -40);
   controller->setHorizontalAngle(0);
   controller->setPosition(startPosition);
   controller->setHasFlashlight(false);
@@ -437,8 +437,10 @@ bool Viewer::initialize() {
   lights.back()->setEnabled(false);
 
   // Lamp
-  lights.push_back(Light::pointLight(glm::vec3(0.2, 0.2, 0.2), glm::vec3(0.0, 3.0, 0.0)));
-  lights.back()->setEnabled(false);
+  moveLamp = Light::pointLight(glm::vec3(0.8, 0.8, 0.8), glm::vec3(0.0, 6.0, 0.0));
+  moveLamp->getFalloff() = glm::vec3(1.0, 0.01, 0.01);
+  lights.push_back(moveLamp);
+  moveLamp->setEnabled(false);
 
   lightningLight = Light::pointLight(glm::vec3(1, 1, 1), glm::vec3(-70, 20, 30));
     //Light::directionalLight(glm::vec3(1, 1, 1), glm::vec3(1, -1, 0));
@@ -460,8 +462,7 @@ bool Viewer::initialize() {
       mesh->getMaterial()->getEmissive() = glm::vec3(1, 1, 1);
       glm::vec3* vecs = mesh->getFirstFourVertices();
       lights.push_back(Light::pointLight(candleColour, vecs[0]));
-      lights.back()->getAmbience() = glm::vec3(0.01, 0.01, 0.01);
-        //glm::vec3(0.1, 0.1, 0.1);
+      lights.back()->getAmbience() = glm::vec3(0.03, 0.03, 0.03);
       lights.back()->getFalloff() = glm::vec3(1.0, 0.002, 0.008);
     } else if (mesh->getName().substr(0, 9) == "Lightbulb") {
       mesh->getMaterial()->getEmissive() = glm::vec3(1, 1, 1);
@@ -567,6 +568,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
   static GLuint postProcessPickingTexId = glGetUniformLocation(postProcessProgramId, "pickingTexture");
   static GLuint postProcessUseBlurId = glGetUniformLocation(postProcessProgramId, "useBlur");
   static GLuint postProcessUseMotionBlurId = glGetUniformLocation(postProcessProgramId, "useMotionBlur");
+  static GLuint postProcessShudderId = glGetUniformLocation(postProcessProgramId, "shudder");
   static GLuint postProcessCurrentTimeId = glGetUniformLocation(postProcessProgramId, "currentTime");
   static GLuint postProcessNewToOldMatrixId = glGetUniformLocation(postProcessProgramId, "newToOldMatrix");
   static GLuint postProcessFPSCorrectionId = glGetUniformLocation(postProcessProgramId, "fpsCorrection");
@@ -960,6 +962,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
     // Settings.
     glUniform1i(postProcessUseBlurId, settings->isSet(Settings::BLUR));
     glUniform1i(postProcessUseMotionBlurId, settings->isSet(Settings::MOTION_BLUR));
+    glUniform1i(postProcessShudderId, currentTime - startShudderTime < 0.4);
     glUniform1f(postProcessCurrentTimeId, currentTime);
 
     glm::mat4 newToOldMatrix = lastVP * glm::inverse(VP);
@@ -1047,11 +1050,17 @@ void Viewer::run() {
     // TODO: Why backwards about x?
     lights[0]->getDirection() = glm::vec3(glm::inverse(viewMatrix) * glm::vec4(0, 0, -1, 0));
 
-    //lights.back()->getPosition() = glm::vec3(std::cos(3.0*currentTime)/2.0, 3.0, std::sin(3.0*currentTime)/2.0); // Point.
+    moveLamp->getPosition() = glm::vec3(17 + 5.0*std::cos(3.0*currentTime), 4.0, 19.6 + 5.0*std::sin(3.0*currentTime)); // Point.
 
     // Gun light.
     gunLight->getPosition() = cameraPosition;
-    gunLight->setEnabled(controller->isShooting());
+    if (controller->isShooting()) {
+      startShudderTime = currentTime;
+      gunLight->setEnabled(true);
+      moveLamp->setEnabled(!moveLamp->isEnabled());
+    } else {
+      gunLight->setEnabled(false);
+    }
 
     if (settings->isSet(Settings::MIRRORS)) {
       // Note that this technique won't generally work for multiple mirrors without cube maps, because mirror view is only rendered one direction.

@@ -71,9 +71,11 @@ private:
   std::vector<Light*> lights;
   Light* lightningLight;
   Light* gunLight;
+  Light* moveLamp;
 
   uint16_t lastPickedMesh;
   double startCharAnimTime;
+  double startShudderTime;
 
   glm::mat4 shadowmapBiasMatrix;
   glm::vec3 ssaoKernel[4];

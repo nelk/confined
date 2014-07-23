@@ -9,6 +9,7 @@ uniform sampler2D pickingTexture;
 
 uniform bool useBlur;
 uniform bool useMotionBlur;
+uniform bool shudder;
 uniform float currentTime;
 uniform mat4 newToOldMatrix;
 uniform float fpsCorrection = 1.0;
@@ -40,7 +41,9 @@ void main(){
   // Faster Wobble.
   //crazyOffset = vec2(sin(30.0*UV.y) * sin(20.0*currentTime)/180.0, 0);
   // Shudder.
-  //crazyOffset = vec2(sin(120.0*currentTime)/250.0, 0);
+  if (shudder) {
+    crazyOffset = vec2(sin(120.0*currentTime)/250.0, 0);
+  }
   // Feed.
   //crazyOffset = vec2(0, currentTime);
 
