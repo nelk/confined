@@ -5,6 +5,7 @@
 #include <GL/glew.h>
 #include <GL/gl.h>
 
+#include "texture.hpp"
 #include "material.hpp"
 
 class Mirror: public Material {
@@ -27,7 +28,7 @@ public:
 
   virtual void update();
 
-  GLuint getMirrorTexture() {
+  Texture* getMirrorTexture() {
     return mirrorTexture;
   }
 
@@ -37,7 +38,7 @@ public:
 
 private:
   bool reflective;
-  GLuint mirrorTexture;
+  Texture* mirrorTexture;
 
   GLuint mirrorFBO;
   GLuint mirrorRBO;

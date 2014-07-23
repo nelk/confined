@@ -24,6 +24,7 @@ public:
   void pause();
   void rewind();
   void stop();
+  void setGain(float f);
 
   void setPosition(const glm::vec3& p);
   void setVelocity(const glm::vec3& v);

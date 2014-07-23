@@ -1,11 +1,11 @@
 
 #include "mesh.hpp"
 #include <glm/glm.hpp>
-#include <FreeImage.h>
 #include <iostream>
 #include <list>
 
 #include "mirror.hpp"
+#include "texture.hpp"
 
 Mesh::Mesh(
     std::vector<glm::vec3>& vertices,
@@ -251,39 +251,18 @@ bool loadTexture(aiTextureType aiType, const aiMaterial* m, Material *material) 
     return false;
   }
 
-  FIBITMAP* bitmap = FreeImage_Load(FreeImage_GetFileType(prefixedTexFileName.c_str(), 0), prefixedTexFileName.c_str());
-  FIBITMAP *pImage = FreeImage_ConvertTo24Bits(bitmap);
-
-  const int texWidth = FreeImage_GetWidth(bitmap);
-  const int texHeight = FreeImage_GetHeight(bitmap);
-
-  //unsigned char raw[32*texWidth*texHeight];
-  /*
-  BYTE* raw = (BYTE*)malloc(32*texWidth*texHeight*sizeof(BYTE));
-  FreeImage_ConvertToRawBits(raw, pImage, texWidth*texHeight, 32, 1, 1, 1, false);
-
-  material->setDiffuseTexture(texWidth, texHeight, (void*) raw);
-  */
+  Texture* texture = Texture::loadOrGet(prefixedTexFileName);
 
   if (aiType == aiTextureType_DIFFUSE) {
-    material->setDiffuseTexture(texWidth, texHeight, (void*) FreeImage_GetBits(pImage));
+    material->setDiffuseTexture(texture);
   } else if (aiType == aiTextureType_HEIGHT) {
-    material->setNormalTexture(texWidth, texHeight, (void*) FreeImage_GetBits(pImage));
+    material->setNormalTexture(texture);
   }
 
-  //free(raw);
-  FreeImage_Unload(pImage);
-  FreeImage_Unload(bitmap);
   return true;
 }
 
-void MessageFunction(FREE_IMAGE_FORMAT fif, const char *msg) {
-  std::cerr << (int)fif << ": " << msg << std::endl;
-}
-
 std::vector<Mesh*> loadScene(std::string fileName, bool invertNormals) {
-
-  FreeImage_SetOutputMessage(MessageFunction);
 
   std::vector<Mesh*> meshes;
   Assimp::Importer importer;

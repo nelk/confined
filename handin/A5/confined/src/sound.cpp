@@ -128,6 +128,10 @@ void Sound::stop() {
   alSourceStop(source);
 }
 
+void Sound::setGain(float f) {
+  alSourcef(source, AL_GAIN, f);
+}
+
 void Sound::rewind() {
   alSourceRewind(source);
 }

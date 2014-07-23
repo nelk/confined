@@ -9,6 +9,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "texture.hpp"
 #include "shader.hpp"
 #include "mesh.hpp"
 #include "mirror.hpp"
@@ -17,8 +18,8 @@
 #include "viewer.hpp"
 #include "controller.hpp"
 
-#define MIN_REQUIRED_COLOUR_ATTACHMENTS 2
-#define RENDER_DEBUG_IMAGES false
+#define MIN_REQUIRED_COLOUR_ATTACHMENTS 6
+#define RENDER_DEBUG_IMAGES true
 #define RENDER_LIGHTS_AS_SPHERES false
 #define SHADOWMAP_WIDTH 2048
 #define SHADOWMAP_HEIGHT 2048
@@ -142,6 +143,7 @@ bool Viewer::initGL() {
   thunderSound->setPosition(glm::vec3(0, 1, 0));
   thunderSound->setVelocity(glm::vec3(0, 0, 0));
   thunderSound->setDirection(glm::vec3(0, 0, -1));
+  thunderSound->setGain(1.0); // TODO, increase volume.
 
 
   glfwMakeContextCurrent(window);
@@ -161,6 +163,10 @@ bool Viewer::initGL() {
   if (maxAttachments < MIN_REQUIRED_COLOUR_ATTACHMENTS) {
     std::cerr << "Only " << maxAttachments << " supported FBO Colour Attachments, but this program requires " << MIN_REQUIRED_COLOUR_ATTACHMENTS << std::endl;
   }
+
+
+  // Initialize textures.
+  Texture::initialize();
 
   glGenVertexArrays(1, &vertexArrayId);
   glBindVertexArray(vertexArrayId);
@@ -511,7 +517,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
   static GLuint postProcessFPSCorrectionId = glGetUniformLocation(postProcessProgramId, "fpsCorrection");
 
 
-  static glm::mat4 lastVP = glm::mat4(1.0);
+  static glm::mat4 lastVP = projectionMatrix * viewMatrix;
 
 
   // ======= Deferred rendering stage 1: Render geometry into textures. ===========
@@ -568,19 +574,27 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
       glUniform3f(geomMaterialEmissiveId, material->getEmissive().x, material->getEmissive().y, material->getEmissive().z);
 
       // Bind diffuse texture if it exists.
-      glUniform1i(geomUseDiffuseTextureId, settings->isSet(Settings::TEXTURE_MAP) && material->hasDiffuseTexture());
-      glActiveTexture(GL_TEXTURE0);
-      glBindTexture(GL_TEXTURE_2D, material->getDiffuseTexture());
-      glUniform1i(geomDiffuseTexId, 0);
+      if (material->hasDiffuseTexture() && settings->isSet(Settings::TEXTURE_MAP)) {
+        glUniform1i(geomUseDiffuseTextureId, true);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, material->getDiffuseTexture()->getTextureId());
+        glUniform1i(geomDiffuseTexId, 0);
+      } else {
+        glUniform1i(geomUseDiffuseTextureId, false);
+      }
 
       // Avoid hardware perspective divide if pre-divided for mirrors.
       glUniform1i(geomUseNoPerspectiveUVId, material->isMirror() && settings->isSet(Settings::MIRRORS));
 
       // Bind normal texture if it exists.
-      glUniform1i(geomUseNormalTextureId, settings->isSet(Settings::NORMAL_MAP) && material->hasNormalTexture());
-      glActiveTexture(GL_TEXTURE1);
-      glBindTexture(GL_TEXTURE_2D, material->getNormalTexture());
-      glUniform1i(geomNormalTexId, 1);
+      if (material->hasNormalTexture() && settings->isSet(Settings::NORMAL_MAP)) {
+        glUniform1i(geomUseNormalTextureId, true);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, material->getNormalTexture()->getTextureId());
+        glUniform1i(geomNormalTexId, 1);
+      } else {
+        glUniform1i(geomUseNormalTextureId, false);
+      }
     }
     mesh->renderGL();
   }
@@ -719,11 +733,8 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
         if (light->getType() != Light::POINT) break;
       }
 
-      // TODO: Debug angles/perspectives of point light - seems a little off for some directions.
-      // TODO: Fix shadow stripes!
       if (light->getType() == Light::POINT) {
         // TODO: Figure out why we need to shift by -1 here.
-        //depthVP = glm::translate(glm::mat4(1.0), glm::vec3(-lightPos.x - 1, -lightPos.y - 1, -lightPos.z - 1));
         depthVP = glm::translate(glm::mat4(1.0), glm::vec3(-lightPos.x - 1, -lightPos.y - 1, -lightPos.z - 1));
       }
 
@@ -941,9 +952,9 @@ void Viewer::run() {
     //lights.back()->getPosition() = glm::vec3(std::cos(3.0*currentTime)/2.0, 3.0, std::sin(3.0*currentTime)/2.0); // Point.
 
 
-
     if (settings->isSet(Settings::MIRRORS)) {
       // Note that this technique won't generally work for multiple mirrors without cube maps, because mirror view is only rendered one direction.
+      // Can probably get this to work with two mirrors facing each other...
       for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
         Mesh* mesh = *it;
         Material* material = mesh->getMaterial();
@@ -1002,14 +1013,14 @@ void Viewer::run() {
       // Draw mirror 1 ----------------
       if (allMirrors.size() >= 1) {
         glViewport(0, 0, width/4, height/4);
-        glBindTexture(GL_TEXTURE_2D, static_cast<Mirror*>(allMirrors[0]->getMaterial())->getMirrorTexture());
+        glBindTexture(GL_TEXTURE_2D, static_cast<Mirror*>(allMirrors[0]->getMaterial())->getMirrorTexture()->getTextureId());
         drawQuad();
       }
 
       // Draw mirror 2 ----------------
       if (allMirrors.size() >= 2) {
         glViewport(width/4, 0, width/4, height/4);
-        glBindTexture(GL_TEXTURE_2D, static_cast<Mirror*>(allMirrors[1]->getMaterial())->getMirrorTexture());
+        glBindTexture(GL_TEXTURE_2D, static_cast<Mirror*>(allMirrors[1]->getMaterial())->getMirrorTexture()->getTextureId());
         drawQuad();
       }
 
