@@ -394,6 +394,16 @@ std::vector<Mesh*> loadScene(std::string fileName, bool invertNormals) {
     }
   }
 
+
+  // Prune "hidden" meshes.
+  for (std::vector<Mesh*>::iterator it = meshes.begin(); it != meshes.end(); it++) {
+    Mesh* mesh = *it;
+    if (mesh->getName().substr(0, 6) == "Hidden") {
+      it = meshes.erase(it);
+      delete mesh;
+    }
+  }
+
   std::cout << "Loaded " << meshes.size() << " meshes." << std::endl;
   for (unsigned int i = 0; i < meshes.size(); i++) {
     std::cout << meshes[i]->getName() << ": " << meshes[i]->getNumIndices() << " indices" << std::endl;

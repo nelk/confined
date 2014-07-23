@@ -7,11 +7,12 @@
 #include "sound.hpp"
 
 Controller::Controller(Viewer* viewer, Settings* settings)
-  : viewer(viewer), settings(settings), lastTime(0), position(0, 0, 0), velocity(0, 0, 0), horizontalAngle(0), verticalAngle(0), skipMovements(2), flashlight(true) {
+  : viewer(viewer), settings(settings), lastTime(0), position(0, 0, 0), velocity(0, 0, 0), horizontalAngle(0), verticalAngle(0), skipMovements(2), flashlight(false), hasFlashlight(false), clicking(false) {
 
   flashlightSound = Sound::load("sound/click.wav");
+  //gunSound = Sound::load("sound/gunshot.wav");
   stepSound = Sound::load("sound/step.wav");
-  stepSound->setGain(0.6);
+  stepSound->setGain(0.4);
 }
 
 Controller::~Controller() {
@@ -165,13 +166,13 @@ void Controller::update() {
     position -= glm::vec3(0, 1, 0) * deltaTime * SPEED;
   }
 
-  if (isWalking && currentTime - lastStepSoundTime >= 0.2) {
+  if (isWalking && currentTime - lastStepSoundTime >= 0.25) {
     lastStepSoundTime = currentTime;
     stepSound->play();
   }
 
   // Flashlight (F).
-  if (checkKeyJustPressed(GLFW_KEY_F)) {
+  if (hasFlashlight && checkKeyJustPressed(GLFW_KEY_F)) {
     flashlight = !flashlight;
     flashlightSound->play();
   }
@@ -194,6 +195,14 @@ void Controller::update() {
     position + direction, // Lookat position.
     up                    // Up.
   );
+
+
+  // Mouse clicking.
+  if (glfwGetMouseButton(window, 0) == GLFW_PRESS) {
+    clicking = true;
+  } else {
+    clicking = false;
+  }
 
 
   // Sound: update listener state.

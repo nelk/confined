@@ -58,12 +58,20 @@ private:
   Settings* settings;
   Controller* controller;
   Sound* thunderSound;
+  Sound* backgroundMusic;
+  Sound* getItemSound;
   double lastThunderPlay;
 
   std::vector<Mesh*> meshes;
   Mesh* pointLightMesh;
   std::vector<std::vector<Mesh*> > characterMeshes; // TODO: Make MeshAnimation type or something.
+  std::vector<Mesh*> flashlightMeshes;
+  std::vector<Mesh*> gunMeshes;
+
   std::vector<Light*> lights;
+  Light* lightningLight;
+
+  uint16_t lastPickedMesh;
 
   glm::mat4 shadowmapBiasMatrix;
   glm::vec3 ssaoKernel[4];

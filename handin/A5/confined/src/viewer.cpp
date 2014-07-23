@@ -150,6 +150,18 @@ bool Viewer::initialize() {
   thunderSound->setDirection(glm::vec3(0, 0, -1));
   thunderSound->setGain(1.0); // TODO, increase volume.
 
+  backgroundMusic = Sound::load("sound/creep.wav");
+  if (backgroundMusic == NULL) {
+    std::cerr << "Couldn't load sound/creep.wav" << std::endl;
+    return false;
+  }
+  backgroundMusic->setGain(0.6);
+
+  getItemSound = Sound::load("sound/getitem.wav");
+  if (getItemSound == NULL) {
+    std::cerr << "Couldn't load sound/getitem.wav" << std::endl;
+    return false;
+  }
 
   glfwMakeContextCurrent(window);
 
@@ -176,7 +188,7 @@ bool Viewer::initialize() {
   glGenVertexArrays(1, &vertexArrayId);
   glBindVertexArray(vertexArrayId);
 
-  meshes = loadScene("models/shadowhouse_large.obj");
+  meshes = loadScene("models/shadowhouse_large.obj", false);
   std::vector<Mesh*> pointLightMeshes = loadScene("models/sphere.obj", false);
   for (int i = 0; i < 20; i++) {
     std::stringstream fname;
@@ -184,6 +196,13 @@ bool Viewer::initialize() {
     fname << std::setfill('0') << std::setw(6) << i << ".obj";
     characterMeshes.push_back(loadScene(fname.str()));
   }
+
+  flashlightMeshes = loadScene("models/flashlight.obj");
+  for (std::vector<Mesh*>::iterator it = flashlightMeshes.begin(); it != flashlightMeshes.end(); it++) {
+    Mesh* mesh = *it;
+    mesh->getModelMatrix() = glm::translate(glm::mat4(1.0), glm::vec3(21, 2, -11));
+  }
+  meshes.insert(meshes.end(), flashlightMeshes.begin(), flashlightMeshes.end());
 
   if (pointLightMeshes.size() == 1) {
     pointLightMesh = pointLightMeshes[0];
@@ -392,9 +411,11 @@ bool Viewer::initialize() {
 
 
   // Scene-specific setup:
-  glm::vec3 startPosition(0, 3, -10);
+  glm::vec3 startPosition(0, 3, -40);
   controller->setHorizontalAngle(0);
   controller->setPosition(startPosition);
+  controller->setHasFlashlight(false);
+  controller->setHasGun(false);
 
   // Flashlight.
   lights.push_back(Light::spotLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0, 0, 0), glm::vec3(0.0, 0.0, -1.0), 18.0));
@@ -411,6 +432,11 @@ bool Viewer::initialize() {
   lights.push_back(Light::pointLight(glm::vec3(0.2, 0.2, 0.2), glm::vec3(0.0, 3.0, 0.0)));
   lights.back()->setEnabled(false);
 
+  lightningLight = Light::pointLight(glm::vec3(1, 1, 1), glm::vec3(-70, 20, 30));
+    //Light::directionalLight(glm::vec3(1, 1, 1), glm::vec3(1, -1, 0));
+  lightningLight->setEnabled(false);
+  lights.push_back(lightningLight);
+
   // Test spotlight.
   //lights.push_back(Light::spotLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0.0, 1.0, -1.0), glm::vec3(0.0, 0.0, 1.0), 15.0));
 
@@ -424,6 +450,8 @@ bool Viewer::initialize() {
       lights.push_back(Light::pointLight(candleColour, vecs[0]));
       lights.back()->getAmbience() = glm::vec3(0.1, 0.1, 0.1);
       lights.back()->getFalloff() = glm::vec3(1.0, 0.002, 0.008);
+    } else if (mesh->getName().substr(0, 9) == "Lightbulb") {
+      mesh->getMaterial()->getEmissive() = glm::vec3(1, 1, 1);
     }
   }
 
@@ -560,7 +588,11 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
 
-  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+  if (lightningLight->isEnabled()) {
+    glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
+  } else {
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+  }
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   const glm::mat4 VP = projectionMatrix * viewMatrix;
@@ -644,12 +676,12 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
   }
 
   // Picking - just get id of middle pixel!
-  uint16_t pickedMeshId = 0;
-  if (doPicking && settings->isSet(Settings::HIGHLIGHT_PICK)) {
+  lastPickedMesh = 0;
+  if (doPicking) {
     glBindFramebuffer(GL_FRAMEBUFFER, deferredShadingFramebuffer);
     glBindTexture(GL_TEXTURE_2D, pickingTexture);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pickingTexture, 0);
-    glReadPixels(width/2, height/2, 1, 1, GL_RED, GL_UNSIGNED_INT, &pickedMeshId);
+    glReadPixels(width/2, height/2, 1, 1, GL_RED, GL_UNSIGNED_INT, &lastPickedMesh);
   }
 
 
@@ -921,7 +953,11 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
     glUniformMatrix4fv(postProcessNewToOldMatrixId, 1, GL_FALSE, &newToOldMatrix[0][0]);
     float fpsCorrection = TARGET_FRAME_DELTA / deltaTime;
     glUniform1f(postProcessFPSCorrectionId, fpsCorrection);
-    glUniform1i(postProcessSelectedMeshIdId, pickedMeshId);
+    if (settings->isSet(Settings::HIGHLIGHT_PICK)) {
+      glUniform1i(postProcessSelectedMeshIdId, lastPickedMesh);
+    } else {
+      glUniform1i(postProcessSelectedMeshIdId, 0);
+    }
 
     drawQuad();
 
@@ -932,6 +968,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
 void Viewer::run() {
   static GLuint texId = glGetUniformLocation(quadProgramId, "texture");
 
+  backgroundMusic->loop();
   controller->reset();
 
   glBindVertexArray(vertexArrayId);
@@ -955,10 +992,16 @@ void Viewer::run() {
     const glm::vec3& cameraPosition = controller->getPosition();
 
     // Thunder loop.
+    static int tl = 0;
+    static float tls[] = {8.0, 8.1, 8.8, 9.1, 9.8, 9.9};
+    if (tl < 6 && currentTime - lastThunderPlay > tls[tl]) {
+      tl++;
+      lightningLight->setEnabled(!lightningLight->isEnabled());
+    }
     if (currentTime - lastThunderPlay > 10.0) {
       thunderSound->play();
       lastThunderPlay = currentTime;
-      Sound::checkErrors();
+      tl = 0;
     }
 
 
@@ -1021,6 +1064,30 @@ void Viewer::run() {
 
     // Main render of scene.
     renderScene(0, thisFrameMeshes, viewMatrix, projectionMatrix, cameraPosition, doPostProcessing, currentTime, deltaTime, glm::vec3(0), glm::vec3(0), true);
+
+
+    // Picking up items.
+    if (controller->isClicking()) {
+      if (lastPickedMesh != 0) {
+        bool gotFlashlight = false;
+        for (std::vector<Mesh*>::iterator it = flashlightMeshes.begin(); it != flashlightMeshes.end(); it++) {
+          Mesh* mesh = *it;
+          if (mesh->getId() == lastPickedMesh) {
+            gotFlashlight = true;
+            break;
+          }
+        }
+        if (gotFlashlight) {
+          controller->setHasFlashlight(true);
+          getItemSound->play();
+          std::vector<Mesh*>::iterator newEnd = meshes.end();
+          for (std::vector<Mesh*>::iterator it = flashlightMeshes.begin(); it != flashlightMeshes.end(); it++) {
+            newEnd = std::remove(meshes.begin(), newEnd, *it);
+          }
+          meshes.erase(newEnd, meshes.end());
+        }
+      }
+    }
 
 
     // ============ Debug Rendering =============

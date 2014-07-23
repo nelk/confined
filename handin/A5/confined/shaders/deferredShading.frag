@@ -191,7 +191,7 @@ void main(){
       l = normalize(lightPositionCameraspace - vertexPositionCameraspace.xyz);
 
       directLightToEyeIntensity =
-        step(vertexPositionCameraspace.z, lightPositionCameraspace.z)
+        step(vertexPositionCameraspace.z, lightPositionCameraspace.z - 0.3)
         * (
           //0.2*dot(normalize(lightPositionCameraspace), -E)
           //+

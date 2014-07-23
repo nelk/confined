@@ -7,7 +7,7 @@
 #include "viewer.hpp"
 #include "sound.hpp"
 
-#define SPEED 5.0f
+#define SPEED 8.0f
 #define MOUSE_SPEED 0.001f
 #define GRAVITY 1.0f
 
@@ -29,7 +29,19 @@ public:
   void setVerticalAngle(float a);
 
   bool isFlashlightOn() {
-    return flashlight;
+    return hasFlashlight && flashlight;
+  }
+
+  void setHasFlashlight(bool f) {
+    hasFlashlight = f;
+  }
+
+  void setHasGun(bool f) {
+    hasGun = f;
+  }
+
+  bool isClicking() {
+    return clicking;
   }
 
 private:
@@ -48,9 +60,13 @@ private:
   int skipMovements;
   std::map<int, bool> keysPressed;
   bool flashlight;
+  bool hasFlashlight;
+  bool hasGun;
   double lastStepSoundTime;
+  bool clicking;
 
   Sound* flashlightSound;
+  Sound* gunSound;
   Sound* stepSound;
 };
 
