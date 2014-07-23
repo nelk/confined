@@ -9,10 +9,10 @@
 class Texture {
 public:
   static void initialize();
-  static Texture* loadOrGet(std::string fname);
+  static Texture* loadOrGet(std::string fname, bool useMipmaps);
   static void freeLoadedTextures();
 
-  Texture(std::string fname, int width, int height, void* data);
+  Texture(std::string fname, int width, int height, void* data, bool useMipmaps);
   Texture(GLuint texId, int width, int height);
   ~Texture();
 

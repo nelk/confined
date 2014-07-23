@@ -16,7 +16,7 @@ void Texture::initialize() {
   FreeImage_SetOutputMessage(fiMessageFunction);
 }
 
-Texture* Texture::loadOrGet(std::string fname) {
+Texture* Texture::loadOrGet(std::string fname, bool useMipmaps) {
   if (loadedTextures.find(fname) != loadedTextures.end()) {
     return loadedTextures[fname];
   }
@@ -33,7 +33,7 @@ Texture* Texture::loadOrGet(std::string fname) {
   FreeImage_ConvertToRawBits(raw, pImage, texWidth*texHeight, 32, 1, 1, 1, false);
   */
 
-  Texture* texture = new Texture(fname, texWidth, texHeight, (void*) FreeImage_GetBits(pImage));
+  Texture* texture = new Texture(fname, texWidth, texHeight, (void*) FreeImage_GetBits(pImage), useMipmaps);
 
   loadedTextures[fname] = texture;
 
@@ -57,14 +57,17 @@ void Texture::freeLoadedTextures() {
   loadedTextures.clear();
 }
 
-Texture::Texture(std::string fname, int width, int height, void* data): name(fname), width(width), height(height) {
+Texture::Texture(std::string fname, int width, int height, void* data, bool useMipmaps): name(fname), width(width), height(height) {
   texId = 0;
   glGenTextures(1, &texId);
   glBindTexture(GL_TEXTURE_2D, texId);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, useMipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   // Note: Assuming texture was BGR.
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, data);
+  if (useMipmaps) {
+    glGenerateMipmap(GL_TEXTURE_2D);
+  }
 }
 
 Texture::Texture(GLuint texId, int width, int height): texId(texId), name(""), width(width), height(height) {}

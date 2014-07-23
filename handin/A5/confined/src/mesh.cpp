@@ -255,7 +255,7 @@ bool loadTexture(aiTextureType aiType, const aiMaterial* m, Material *material) 
     return false;
   }
 
-  Texture* texture = Texture::loadOrGet(prefixedTexFileName);
+  Texture* texture = Texture::loadOrGet(prefixedTexFileName, aiType == aiTextureType_DIFFUSE);
 
   if (aiType == aiTextureType_DIFFUSE) {
     material->setDiffuseTexture(texture);
