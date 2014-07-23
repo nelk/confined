@@ -204,6 +204,13 @@ bool Viewer::initialize() {
   }
   meshes.insert(meshes.end(), flashlightMeshes.begin(), flashlightMeshes.end());
 
+  gunMeshes = loadScene("models/gun.obj");
+  for (std::vector<Mesh*>::iterator it = gunMeshes.begin(); it != gunMeshes.end(); it++) {
+    Mesh* mesh = *it;
+    mesh->getModelMatrix() = glm::translate(glm::mat4(1.0), glm::vec3(-22, 0.3, -23));
+  }
+  meshes.insert(meshes.end(), gunMeshes.begin(), gunMeshes.end());
+
   if (pointLightMeshes.size() == 1) {
     pointLightMesh = pointLightMeshes[0];
     pointLightMesh->getModelMatrix() = glm::scale(glm::mat4(1.0), glm::vec3(0.1, 0.1, 0.1));
@@ -437,6 +444,10 @@ bool Viewer::initialize() {
   lightningLight->setEnabled(false);
   lights.push_back(lightningLight);
 
+  gunLight = Light::pointLight(glm::vec3(1, 1, 1), glm::vec3(0, 0, 0));
+  gunLight->setEnabled(false);
+  lights.push_back(gunLight);
+
   // Test spotlight.
   //lights.push_back(Light::spotLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0.0, 1.0, -1.0), glm::vec3(0.0, 0.0, 1.0), 15.0));
 
@@ -448,7 +459,8 @@ bool Viewer::initialize() {
       mesh->getMaterial()->getEmissive() = glm::vec3(1, 1, 1);
       glm::vec3* vecs = mesh->getFirstFourVertices();
       lights.push_back(Light::pointLight(candleColour, vecs[0]));
-      lights.back()->getAmbience() = glm::vec3(0.1, 0.1, 0.1);
+      lights.back()->getAmbience() = glm::vec3(0.01, 0.01, 0.01);
+        //glm::vec3(0.1, 0.1, 0.1);
       lights.back()->getFalloff() = glm::vec3(1.0, 0.002, 0.008);
     } else if (mesh->getName().substr(0, 9) == "Lightbulb") {
       mesh->getMaterial()->getEmissive() = glm::vec3(1, 1, 1);
@@ -1029,6 +1041,9 @@ void Viewer::run() {
 
     //lights.back()->getPosition() = glm::vec3(std::cos(3.0*currentTime)/2.0, 3.0, std::sin(3.0*currentTime)/2.0); // Point.
 
+    // Gun light.
+    gunLight->getPosition() = cameraPosition;
+    gunLight->setEnabled(controller->isShooting());
 
     if (settings->isSet(Settings::MIRRORS)) {
       // Note that this technique won't generally work for multiple mirrors without cube maps, because mirror view is only rendered one direction.
@@ -1067,7 +1082,7 @@ void Viewer::run() {
 
 
     // Picking up items.
-    if (controller->isClicking()) {
+    if (controller->isSelecting()) {
       if (lastPickedMesh != 0) {
         bool gotFlashlight = false;
         for (std::vector<Mesh*>::iterator it = flashlightMeshes.begin(); it != flashlightMeshes.end(); it++) {
@@ -1082,6 +1097,25 @@ void Viewer::run() {
           getItemSound->play();
           std::vector<Mesh*>::iterator newEnd = meshes.end();
           for (std::vector<Mesh*>::iterator it = flashlightMeshes.begin(); it != flashlightMeshes.end(); it++) {
+            newEnd = std::remove(meshes.begin(), newEnd, *it);
+          }
+          meshes.erase(newEnd, meshes.end());
+        }
+
+
+        bool gotGun = false;
+        for (std::vector<Mesh*>::iterator it = gunMeshes.begin(); it != gunMeshes.end(); it++) {
+          Mesh* mesh = *it;
+          if (mesh->getId() == lastPickedMesh) {
+            gotGun = true;
+            break;
+          }
+        }
+        if (gotGun) {
+          controller->setHasGun(true);
+          getItemSound->play();
+          std::vector<Mesh*>::iterator newEnd = meshes.end();
+          for (std::vector<Mesh*>::iterator it = gunMeshes.begin(); it != gunMeshes.end(); it++) {
             newEnd = std::remove(meshes.begin(), newEnd, *it);
           }
           meshes.erase(newEnd, meshes.end());

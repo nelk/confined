@@ -70,6 +70,7 @@ private:
 
   std::vector<Light*> lights;
   Light* lightningLight;
+  Light* gunLight;
 
   uint16_t lastPickedMesh;
 

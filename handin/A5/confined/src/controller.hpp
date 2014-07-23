@@ -40,12 +40,17 @@ public:
     hasGun = f;
   }
 
-  bool isClicking() {
-    return clicking;
+  bool isSelecting() {
+    return selecting;
+  }
+
+  bool isShooting() {
+    return hasGun && shooting;
   }
 
 private:
   bool checkKeyJustPressed(int k);
+  bool checkMouseJustPressed(int i);
 
   Viewer* viewer;
   Settings* settings;
@@ -59,11 +64,13 @@ private:
   float verticalAngle;
   int skipMovements;
   std::map<int, bool> keysPressed;
+  std::map<int, bool> mousePressed;
   bool flashlight;
   bool hasFlashlight;
   bool hasGun;
   double lastStepSoundTime;
-  bool clicking;
+  bool selecting;
+  bool shooting;
 
   Sound* flashlightSound;
   Sound* gunSound;

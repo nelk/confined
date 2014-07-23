@@ -7,10 +7,10 @@
 #include "sound.hpp"
 
 Controller::Controller(Viewer* viewer, Settings* settings)
-  : viewer(viewer), settings(settings), lastTime(0), position(0, 0, 0), velocity(0, 0, 0), horizontalAngle(0), verticalAngle(0), skipMovements(2), flashlight(false), hasFlashlight(false), clicking(false) {
+  : viewer(viewer), settings(settings), lastTime(0), position(0, 0, 0), velocity(0, 0, 0), horizontalAngle(0), verticalAngle(0), skipMovements(2), flashlight(false), hasFlashlight(false), selecting(false), shooting(false) {
 
   flashlightSound = Sound::load("sound/click.wav");
-  //gunSound = Sound::load("sound/gunshot.wav");
+  gunSound = Sound::load("sound/gun.wav");
   stepSound = Sound::load("sound/step.wav");
   stepSound->setGain(0.4);
 }
@@ -72,6 +72,20 @@ bool Controller::checkKeyJustPressed(int k) {
   bool isPressed = glfwGetKey(viewer->getWindow(), k) == GLFW_PRESS;
 
   keysPressed[k] = isPressed;
+  return !wasPressed && isPressed;
+}
+
+bool Controller::checkMouseJustPressed(int i) {
+  bool wasPressed;
+  if (mousePressed.find(i) == mousePressed.end()) {
+    wasPressed = false;
+  } else {
+    wasPressed = mousePressed[i];
+  }
+
+  bool isPressed = glfwGetMouseButton(viewer->getWindow(), i) == GLFW_PRESS;
+
+  mousePressed[i] = isPressed;
   return !wasPressed && isPressed;
 }
 
@@ -198,12 +212,8 @@ void Controller::update() {
 
 
   // Mouse clicking.
-  if (glfwGetMouseButton(window, 0) == GLFW_PRESS) {
-    clicking = true;
-  } else {
-    clicking = false;
-  }
-
+  shooting = checkMouseJustPressed(0);
+  selecting = checkMouseJustPressed(1);
 
   // Sound: update listener state.
   Sound::setListenerPosition(position);
@@ -214,6 +224,9 @@ void Controller::update() {
   flashlightSound->setPosition(position + glm::vec3(0, -0.5, 0));
   stepSound->setPosition(position + glm::vec3(0, -1, 0));
 
+  if (isShooting()) {
+    gunSound->play();
+  }
 
   lastTime = currentTime;
 }
