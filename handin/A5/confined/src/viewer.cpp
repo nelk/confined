@@ -19,7 +19,7 @@
 #include "controller.hpp"
 
 #define MIN_REQUIRED_COLOUR_ATTACHMENTS 6
-#define RENDER_DEBUG_IMAGES true
+#define RENDER_DEBUG_IMAGES false
 #define RENDER_LIGHTS_AS_SPHERES false
 #define SHADOWMAP_WIDTH 2048
 #define SHADOWMAP_HEIGHT 2048
@@ -59,14 +59,6 @@ bool checkGLFramebuffer() {
 }
 
 Viewer::Viewer(): width(DEFAULT_WIDTH), height(DEFAULT_HEIGHT) {
-
-  settings = new Settings();
-  controller = new Controller(this, settings);
-
-  // Initial settings (all start on).
-  settings->set(Settings::SSAO, false);
-  settings->set(Settings::BLUR, false);
-  settings->set(Settings::HIGHLIGHT_PICK, false);
 
   glfwWindowHint(GLFW_SAMPLES, 4);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -132,12 +124,21 @@ void Viewer::updateSize(int width, int height) {
   }
 }
 
-bool Viewer::initGL() {
+bool Viewer::initialize() {
   // Initialize OpenAL.
   if (!Sound::initialize()) {
     std::cerr << "Couldn't initialize OpenAL" << std::endl;
     return false;
   }
+
+  settings = new Settings();
+  controller = new Controller(this, settings);
+
+  // Initial settings (all start on).
+  settings->set(Settings::SSAO, false);
+  settings->set(Settings::BLUR, false);
+  settings->set(Settings::HIGHLIGHT_PICK, false);
+
 
   thunderSound = Sound::load("sound/thunder_mono.wav");
   if (thunderSound == NULL) {
@@ -175,7 +176,7 @@ bool Viewer::initGL() {
   glGenVertexArrays(1, &vertexArrayId);
   glBindVertexArray(vertexArrayId);
 
-  meshes = loadScene("models/shadowhouse.obj");
+  meshes = loadScene("models/shadowhouse_large.obj");
   std::vector<Mesh*> pointLightMeshes = loadScene("models/sphere.obj", false);
   for (int i = 0; i < 20; i++) {
     std::stringstream fname;
@@ -399,9 +400,7 @@ bool Viewer::initGL() {
   lights.push_back(Light::spotLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0, 0, 0), glm::vec3(0.0, 0.0, -1.0), 18.0));
   //lights.push_back(Light::pointLight(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0, 3, 0)));
   lights.back()->getFalloff() = glm::vec3(1.0, 0.01, 0.0005);
-  //lights.back()->getAmbience() = glm::vec3(0.04, 0.04, 0.04);
-  lights.back()->getAmbience() = glm::vec3(0.2, 0.2, 0.2);
-  //lights.back()->setEnabled(false);
+  lights.back()->getAmbience() = glm::vec3(0.1, 0.1, 0.1);
 
   // "Sun"
   lights.push_back(Light::directionalLight(glm::vec3(0.7, 0.7, 0.7), glm::vec3(0.1, -1.0, 0.0)));
@@ -965,11 +964,13 @@ void Viewer::run() {
 
     // Find all meshes to render this frame.
     std::vector<Mesh*> thisFrameMeshes(meshes);
-    int characterAnimId = 0;//static_cast<int>(round(currentTime * 20.0f)) % 20;
+    int characterAnimId = static_cast<int>(round(currentTime * 20.0f)) % 20;
     thisFrameMeshes.insert(thisFrameMeshes.begin(), characterMeshes[characterAnimId].begin(), characterMeshes[characterAnimId].end());
 
     // Move character.
     glm::mat4 characterModelMatrix = glm::inverse(viewMatrix);
+      //glm::rotate(glm::translate(glm::mat4(1.0), glm::vec3(0, 8, 0)), (float)currentTime*8.0f, glm::vec3(0, 1, 0));
+
     for (std::vector<Mesh*>::iterator it = characterMeshes[characterAnimId].begin(); it != characterMeshes[characterAnimId].end(); it++) {
       (*it)->getModelMatrix() = characterModelMatrix;
     }
@@ -1061,7 +1062,6 @@ void Viewer::run() {
       }
       */
 
-      /*
       // Draw diffuse ----------------
       glViewport(0, 0, height/4, height/4);
       glBindTexture(GL_TEXTURE_2D, deferredDiffuseTexture);
@@ -1093,10 +1093,9 @@ void Viewer::run() {
       //drawQuad();
 
       // Draw picking texture ------------
-      glViewport(0, 0, width/4, height/4);
-      glBindTexture(GL_TEXTURE_2D, pickingTexture);
-      drawQuad();
-      */
+      //glViewport(0, 0, width/4, height/4);
+      //glBindTexture(GL_TEXTURE_2D, pickingTexture);
+      //drawQuad();
     }
     // =========== End Debug =================
 

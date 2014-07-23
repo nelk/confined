@@ -35,8 +35,6 @@ Texture* Texture::loadOrGet(std::string fname, bool useMipmaps) {
 
   Texture* texture = new Texture(fname, texWidth, texHeight, (void*) FreeImage_GetBits(pImage), useMipmaps);
 
-  loadedTextures[fname] = texture;
-
   //free(raw);
   FreeImage_Unload(pImage);
   FreeImage_Unload(bitmap);
@@ -46,7 +44,9 @@ Texture* Texture::loadOrGet(std::string fname, bool useMipmaps) {
     return 0;
   }
 
+  loadedTextures[fname] = texture;
   std::cout << "Loaded Texture " << fname << std::endl;
+
   return texture;
 }
 

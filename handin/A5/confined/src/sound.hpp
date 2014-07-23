@@ -21,6 +21,7 @@ public:
   ~Sound();
 
   void play();
+  void loop();
   void pause();
   void rewind();
   void stop();

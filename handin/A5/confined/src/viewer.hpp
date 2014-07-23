@@ -23,7 +23,7 @@ public:
   Viewer();
   ~Viewer();
 
-  bool initGL();
+  bool initialize();
   void run();
 
   /**

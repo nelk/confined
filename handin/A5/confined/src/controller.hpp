@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include "settings.hpp"
 #include "viewer.hpp"
+#include "sound.hpp"
 
 #define SPEED 5.0f
 #define MOUSE_SPEED 0.001f
@@ -15,6 +16,7 @@ class Viewer;
 class Controller {
 public:
   Controller(Viewer* viewer, Settings* settings);
+  ~Controller();
 
   glm::mat4 getViewMatrix();
   glm::mat4 getMirroredViewMatrix(const glm::vec3& mirrorPosition, const glm::vec3& mirrorNormal);
@@ -46,6 +48,10 @@ private:
   int skipMovements;
   std::map<int, bool> keysPressed;
   bool flashlight;
+  double lastStepSoundTime;
+
+  Sound* flashlightSound;
+  Sound* stepSound;
 };
 
 #endif

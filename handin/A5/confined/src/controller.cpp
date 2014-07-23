@@ -8,6 +8,15 @@
 
 Controller::Controller(Viewer* viewer, Settings* settings)
   : viewer(viewer), settings(settings), lastTime(0), position(0, 0, 0), velocity(0, 0, 0), horizontalAngle(0), verticalAngle(0), skipMovements(2), flashlight(true) {
+
+  flashlightSound = Sound::load("sound/click.wav");
+  stepSound = Sound::load("sound/step.wav");
+  stepSound->setGain(0.6);
+}
+
+Controller::~Controller() {
+  delete flashlightSound;
+  delete stepSound;
 }
 
 void Controller::reset() {
@@ -122,25 +131,30 @@ void Controller::update() {
   }
 
   // Keyboard movement.
+  bool isWalking = false;
   // Forwards.
   if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS
       || glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
     position += flatDirection * deltaTime * SPEED;
+    isWalking = true;
   }
   // Backwards.
   if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS
       || glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
     position -= flatDirection * deltaTime * SPEED;
+    isWalking = true;
   }
   // Right.
   if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS
       || glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
     position += right * deltaTime * SPEED;
+    isWalking = true;
   }
   // Left.
   if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS
       || glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS){
     position -= right * deltaTime * SPEED;
+    isWalking = true;
   }
   // Up.
   if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
@@ -151,9 +165,15 @@ void Controller::update() {
     position -= glm::vec3(0, 1, 0) * deltaTime * SPEED;
   }
 
+  if (isWalking && currentTime - lastStepSoundTime >= 0.2) {
+    lastStepSoundTime = currentTime;
+    stepSound->play();
+  }
+
   // Flashlight (F).
   if (checkKeyJustPressed(GLFW_KEY_F)) {
     flashlight = !flashlight;
+    flashlightSound->play();
   }
 
   // Settings toggled by key press.
@@ -180,6 +200,10 @@ void Controller::update() {
   Sound::setListenerPosition(position);
   Sound::setListenerVelocity(glm::vec3(0, 0, 0));
   Sound::setListenerOrientation(direction, up);
+
+  // Sound: update attaches source states.
+  flashlightSound->setPosition(position + glm::vec3(0, -0.5, 0));
+  stepSound->setPosition(position + glm::vec3(0, -1, 0));
 
 
   lastTime = currentTime;

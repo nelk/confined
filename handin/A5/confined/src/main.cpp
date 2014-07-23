@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
   }
 
   Viewer viewer;
-  bool result = viewer.initGL();
+  bool result = viewer.initialize();
   if (!result) {
     exit(1);
   }

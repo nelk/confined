@@ -120,11 +120,17 @@ void Sound::play() {
   alSourcePlay(source);
 }
 
+void Sound::loop() {
+  alSourcei(source, AL_LOOPING, AL_TRUE);
+  play();
+}
+
 void Sound::pause() {
   alSourcePause(source);
 }
 
 void Sound::stop() {
+  alSourcei(source, AL_LOOPING, AL_FALSE);
   alSourceStop(source);
 }
 
