@@ -1,7 +1,7 @@
 sum is: /usr/bin/sum
 
 
-2014-07-23 19:10   Checksum for A5 for ayklen on ubuntu1204-006   Page 1
+2014-07-23 19:13   Checksum for A5 for ayklen on ubuntu1204-006   Page 1
 
 
 A5:
@@ -18,84 +18,23 @@ total 952
 
 A5/confined:
 total 28
+13867343 drwxrwxr-x 5 ayklen ayklen 4096 Jul 23 19:13 models/
 24434741 drwxrwxr-x 6 ayklen ayklen 4096 Jul 23 19:09 ../
 13867340 drwxrwxr-x 6 ayklen ayklen 4096 Jul 23 19:02 ./
 17854112 drwxrwxr-x 2 ayklen ayklen 4096 Jul 23 19:02 src/
 17854107 drwxrwxr-x 2 ayklen ayklen 4096 Jul 23 18:58 sound/
 17854095 drwxrwxr-x 2 ayklen ayklen 4096 Jul 23 18:58 shaders/
-13867343 drwxrwxr-x 5 ayklen ayklen 4096 Jul 23 18:58 models/
 13867342 -rw-r--r-- 1 ayklen ayklen  850 Jul 23 18:58 Makefile
 13867341 -rw-r--r-- 1 ayklen ayklen    7 Jul 23 11:10 .gitignore
 
-A5/confined/src:
-total 160
-13867340 drwxrwxr-x 6 ayklen ayklen  4096 Jul 23 19:02 ../
-17854112 drwxrwxr-x 2 ayklen ayklen  4096 Jul 23 19:02 ./
-79362304 -rw-r--r-- 1 ayklen ayklen  2798 Jul 23 18:58 viewer.hpp
-79362303 -rw-r--r-- 1 ayklen ayklen 53451 Jul 23 18:58 viewer.cpp
-79362302 -rw-r--r-- 1 ayklen ayklen 14264 Jul 23 18:58 mesh.cpp
-79362301 -rw-r--r-- 1 ayklen ayklen  1608 Jul 23 18:58 controller.hpp
-17854113 -rw-r--r-- 1 ayklen ayklen  6452 Jul 23 18:58 controller.cpp
-76677747 -rw-r--r-- 1 ayklen ayklen   600 Jul 23 11:10 texture.hpp
-76677746 -rw-r--r-- 1 ayklen ayklen  2310 Jul 23 11:10 texture.cpp
-12225976 -rw-r--r-- 1 ayklen ayklen   830 Jul 23 11:10 sound.hpp
-12225972 -rw-r--r-- 1 ayklen ayklen  3282 Jul 23 11:10 sound.cpp
-46346516 -rw-r--r-- 1 ayklen ayklen   171 Jul 23 11:10 shader.hpp
-46346515 -rw-r--r-- 1 ayklen ayklen  3288 Jul 23 11:10 shader.cpp
-46346514 -rw-r--r-- 1 ayklen ayklen   712 Jul 23 11:10 settings.hpp
-46346513 -rw-r--r-- 1 ayklen ayklen   243 Jul 23 11:10 settings.cpp
-46346512 -rw-r--r-- 1 ayklen ayklen   748 Jul 23 11:10 mirror.hpp
-46346511 -rw-r--r-- 1 ayklen ayklen  2570 Jul 23 11:10 mirror.cpp
-46346510 -rw-r--r-- 1 ayklen ayklen  1629 Jul 23 11:10 mesh.hpp
-46346508 -rw-r--r-- 1 ayklen ayklen  1207 Jul 23 11:10 material.hpp
-46346507 -rw-r--r-- 1 ayklen ayklen   463 Jul 23 11:10 main.cpp
-46346506 -rw-r--r-- 1 ayklen ayklen  1257 Jul 23 11:10 light.hpp
-46346505 -rw-r--r-- 1 ayklen ayklen   796 Jul 23 11:10 light.cpp
-
-A5/confined/sound:
-total 2316
-13867340 drwxrwxr-x 6 ayklen ayklen    4096 Jul 23 19:02 ../
-67221844 -rw-r--r-- 1 ayklen ayklen  713270 Jul 23 18:58 gun.wav
-17854107 drwxrwxr-x 2 ayklen ayklen    4096 Jul 23 18:58 ./
-67221843 -rw-r--r-- 1 ayklen ayklen   42540 Jul 23 18:58 getitem.wav
-17854111 -rw-r--r-- 1 ayklen ayklen 1499614 Jul 23 11:10 thunder_mono.wav
-17854109 -rw-r--r-- 1 ayklen ayklen   19826 Jul 23 11:10 step.wav
-
-
-
-
-
-
-
-2014-07-23 19:10   Checksum for A5 for ayklen on ubuntu1204-006   Page 2
-
-
-17854108 -rw-r--r-- 1 ayklen ayklen   56796 Jul 23 11:10 click.wav
-
-A5/confined/shaders:
-total 60
-13867340 drwxrwxr-x 6 ayklen ayklen  4096 Jul 23 19:02 ../
-17854104 -rw-r--r-- 1 ayklen ayklen  2830 Jul 23 18:58 postProcess.frag
-17854095 drwxrwxr-x 2 ayklen ayklen  4096 Jul 23 18:58 ./
-17854096 -rw-r--r-- 1 ayklen ayklen 11799 Jul 23 18:58 deferredShading.frag
-17854106 -rw-r--r-- 1 ayklen ayklen  1244 Jul 23 11:10 shader.vert
-17854105 -rw-r--r-- 1 ayklen ayklen  4195 Jul 23 11:10 shader.frag
-17854103 -rw-r--r-- 1 ayklen ayklen   213 Jul 23 11:10 passthrough.vert
-17854102 -rw-r--r-- 1 ayklen ayklen   161 Jul 23 11:10 justTexture.frag
-17854101 -rw-r--r-- 1 ayklen ayklen  1265 Jul 23 11:10 geomTextures.vert
-17854100 -rw-r--r-- 1 ayklen ayklen  2404 Jul 23 11:10 geomTextures.frag
-17854099 -rw-r--r-- 1 ayklen ayklen   293 Jul 23 11:10 depthShadow.vert
-17854098 -rw-r--r-- 1 ayklen ayklen    34 Jul 23 11:10 depthShadow.frag
-17854097 -rw-r--r-- 1 ayklen ayklen   242 Jul 23 11:10 deferredShading.vert
-
 A5/confined/models:
-total 8420
+total 8404
+80321185 -rw-r--r-- 1 ayklen ayklen 1850940 Jul 23 19:13 shadowhouse_large.blend
+13867343 drwxrwxr-x 5 ayklen ayklen    4096 Jul 23 19:13 ./
 13867340 drwxrwxr-x 6 ayklen ayklen    4096 Jul 23 19:02 ../
 74248072 drwxrwxr-x 2 ayklen ayklen    4096 Jul 23 18:58 textures/
 80321187 -rw-r--r-- 1 ayklen ayklen 1417634 Jul 23 18:58 shadowhouse_large.obj
-13867343 drwxrwxr-x 5 ayklen ayklen    4096 Jul 23 18:58 ./
 80321186 -rw-r--r-- 1 ayklen ayklen    3614 Jul 23 18:58 shadowhouse_large.mtl
-80321185 -rw-r--r-- 1 ayklen ayklen 1867080 Jul 23 18:58 shadowhouse_large.blend
 13867346 drwxrwxr-x 3 ayklen ayklen    4096 Jul 23 18:58 minecraft_rigs/
 80321184 -rw-r--r-- 1 ayklen ayklen   87497 Jul 23 18:58 gun.obj
 80321183 -rw-r--r-- 1 ayklen ayklen     227 Jul 23 18:58 gun.mtl
@@ -115,31 +54,31 @@ total 8420
 
 A5/confined/models/textures:
 total 3024
+13867343 drwxrwxr-x 5 ayklen ayklen    4096 Jul 23 19:13 ../
 74248081 -rw-r--r-- 1 ayklen ayklen 1213807 Jul 23 18:58 wallpaper1.jpg
 74248072 drwxrwxr-x 2 ayklen ayklen    4096 Jul 23 18:58 ./
 74248080 -rw-r--r-- 1 ayklen ayklen  206896 Jul 23 18:58 vintageplank_normal.jpg
 74248079 -rw-r--r-- 1 ayklen ayklen  109189 Jul 23 18:58 vintageplank.jpg
 74248078 -rw-r--r-- 1 ayklen ayklen   44175 Jul 23 18:58 untitled.png
-13867343 drwxrwxr-x 5 ayklen ayklen    4096 Jul 23 18:58 ../
+
+
+
+
+
+
+
+2014-07-23 19:13   Checksum for A5 for ayklen on ubuntu1204-006   Page 2
+
+
 74248077 -rw-r--r-- 1 ayklen ayklen  556293 Jul 23 11:10 grass_normal.png
 74248076 -rw-r--r-- 1 ayklen ayklen  199639 Jul 23 11:10 grass_displacement.png
 74248075 -rw-r--r-- 1 ayklen ayklen  441037 Jul 23 11:10 grass.png
 74248074 -rw-r--r-- 1 ayklen ayklen  132372 Jul 23 11:10 alternatingbricks_normal.png
 74248073 -rw-r--r-- 1 ayklen ayklen  128824 Jul 23 11:10 alternatingbricks.png
 
-
-
-
-
-
-
-2014-07-23 19:10   Checksum for A5 for ayklen on ubuntu1204-006   Page 3
-
-
-
 A5/confined/models/minecraft_rigs:
 total 16868
-13867343 drwxrwxr-x 5 ayklen ayklen    4096 Jul 23 18:58 ../
+13867343 drwxrwxr-x 5 ayklen ayklen    4096 Jul 23 19:13 ../
 78949270 -rw-r--r-- 1 ayklen ayklen  255449 Jul 23 18:58 steve_animate_000020.obj
 13867346 drwxrwxr-x 3 ayklen ayklen    4096 Jul 23 18:58 ./
 78949269 -rw-r--r-- 1 ayklen ayklen     239 Jul 23 18:58 steve_animate_000020.mtl
@@ -187,29 +126,90 @@ total 16868
 13385031 -rw-r--r-- 1 ayklen ayklen 5686300 Jul 23 11:10 steve_animate.blend
 13867349 -rw-r--r-- 1 ayklen ayklen  251683 Jul 23 11:10 steve.obj
 13867348 -rw-r--r-- 1 ayklen ayklen     243 Jul 23 11:10 steve.mtl
+
+
+
+
+
+
+
+2014-07-23 19:13   Checksum for A5 for ayklen on ubuntu1204-006   Page 3
+
+
 13867347 -rw-r--r-- 1 ayklen ayklen 5664724 Jul 23 11:10 steve.blend
 
 A5/confined/models/minecraft_rigs/textures:
 total 56
 13867346 drwxrwxr-x 3 ayklen ayklen  4096 Jul 23 18:58 ../
-
-
-
-
-
-
-
-2014-07-23 19:10   Checksum for A5 for ayklen on ubuntu1204-006   Page 4
-
-
 13385037 -rw-r--r-- 1 ayklen ayklen 44175 Jul 23 11:10 steve.png
 13385035 drwxrwxr-x 2 ayklen ayklen  4096 Jul 23 11:10 ./
 
 A5/confined/models/Candlestick:
 total 268
-13867343 drwxrwxr-x 5 ayklen ayklen   4096 Jul 23 18:58 ../
+13867343 drwxrwxr-x 5 ayklen ayklen   4096 Jul 23 19:13 ../
 13867345 -rw-r--r-- 1 ayklen ayklen 258328 Jul 23 11:10 CandlestickRender1.png
 13867344 drwxrwxr-x 2 ayklen ayklen   4096 Jul 23 11:10 ./
+
+A5/confined/src:
+total 160
+13867340 drwxrwxr-x 6 ayklen ayklen  4096 Jul 23 19:02 ../
+17854112 drwxrwxr-x 2 ayklen ayklen  4096 Jul 23 19:02 ./
+79362304 -rw-r--r-- 1 ayklen ayklen  2798 Jul 23 18:58 viewer.hpp
+79362303 -rw-r--r-- 1 ayklen ayklen 53451 Jul 23 18:58 viewer.cpp
+79362302 -rw-r--r-- 1 ayklen ayklen 14264 Jul 23 18:58 mesh.cpp
+79362301 -rw-r--r-- 1 ayklen ayklen  1608 Jul 23 18:58 controller.hpp
+17854113 -rw-r--r-- 1 ayklen ayklen  6452 Jul 23 18:58 controller.cpp
+76677747 -rw-r--r-- 1 ayklen ayklen   600 Jul 23 11:10 texture.hpp
+76677746 -rw-r--r-- 1 ayklen ayklen  2310 Jul 23 11:10 texture.cpp
+12225976 -rw-r--r-- 1 ayklen ayklen   830 Jul 23 11:10 sound.hpp
+12225972 -rw-r--r-- 1 ayklen ayklen  3282 Jul 23 11:10 sound.cpp
+46346516 -rw-r--r-- 1 ayklen ayklen   171 Jul 23 11:10 shader.hpp
+46346515 -rw-r--r-- 1 ayklen ayklen  3288 Jul 23 11:10 shader.cpp
+46346514 -rw-r--r-- 1 ayklen ayklen   712 Jul 23 11:10 settings.hpp
+46346513 -rw-r--r-- 1 ayklen ayklen   243 Jul 23 11:10 settings.cpp
+46346512 -rw-r--r-- 1 ayklen ayklen   748 Jul 23 11:10 mirror.hpp
+46346511 -rw-r--r-- 1 ayklen ayklen  2570 Jul 23 11:10 mirror.cpp
+46346510 -rw-r--r-- 1 ayklen ayklen  1629 Jul 23 11:10 mesh.hpp
+46346508 -rw-r--r-- 1 ayklen ayklen  1207 Jul 23 11:10 material.hpp
+46346507 -rw-r--r-- 1 ayklen ayklen   463 Jul 23 11:10 main.cpp
+46346506 -rw-r--r-- 1 ayklen ayklen  1257 Jul 23 11:10 light.hpp
+46346505 -rw-r--r-- 1 ayklen ayklen   796 Jul 23 11:10 light.cpp
+
+A5/confined/sound:
+total 2316
+13867340 drwxrwxr-x 6 ayklen ayklen    4096 Jul 23 19:02 ../
+67221844 -rw-r--r-- 1 ayklen ayklen  713270 Jul 23 18:58 gun.wav
+17854107 drwxrwxr-x 2 ayklen ayklen    4096 Jul 23 18:58 ./
+67221843 -rw-r--r-- 1 ayklen ayklen   42540 Jul 23 18:58 getitem.wav
+17854111 -rw-r--r-- 1 ayklen ayklen 1499614 Jul 23 11:10 thunder_mono.wav
+17854109 -rw-r--r-- 1 ayklen ayklen   19826 Jul 23 11:10 step.wav
+17854108 -rw-r--r-- 1 ayklen ayklen   56796 Jul 23 11:10 click.wav
+
+A5/confined/shaders:
+total 60
+13867340 drwxrwxr-x 6 ayklen ayklen  4096 Jul 23 19:02 ../
+17854104 -rw-r--r-- 1 ayklen ayklen  2830 Jul 23 18:58 postProcess.frag
+17854095 drwxrwxr-x 2 ayklen ayklen  4096 Jul 23 18:58 ./
+17854096 -rw-r--r-- 1 ayklen ayklen 11799 Jul 23 18:58 deferredShading.frag
+17854106 -rw-r--r-- 1 ayklen ayklen  1244 Jul 23 11:10 shader.vert
+
+
+
+
+
+
+
+2014-07-23 19:13   Checksum for A5 for ayklen on ubuntu1204-006   Page 4
+
+
+17854105 -rw-r--r-- 1 ayklen ayklen  4195 Jul 23 11:10 shader.frag
+17854103 -rw-r--r-- 1 ayklen ayklen   213 Jul 23 11:10 passthrough.vert
+17854102 -rw-r--r-- 1 ayklen ayklen   161 Jul 23 11:10 justTexture.frag
+17854101 -rw-r--r-- 1 ayklen ayklen  1265 Jul 23 11:10 geomTextures.vert
+17854100 -rw-r--r-- 1 ayklen ayklen  2404 Jul 23 11:10 geomTextures.frag
+17854099 -rw-r--r-- 1 ayklen ayklen   293 Jul 23 11:10 depthShadow.vert
+17854098 -rw-r--r-- 1 ayklen ayklen    34 Jul 23 11:10 depthShadow.frag
+17854097 -rw-r--r-- 1 ayklen ayklen   242 Jul 23 11:10 deferredShading.vert
 
 A5/proposal:
 total 392
@@ -265,7 +265,7 @@ total 88
 
 
 
-2014-07-23 19:10   Checksum for A5 for ayklen on ubuntu1204-006   Page 5
+2014-07-23 19:13   Checksum for A5 for ayklen on ubuntu1204-006   Page 5
 
 
 60939532 -rw-r--r-- 1 ayklen ayklen   105 Jul 23 11:10 albedo.frag
@@ -331,7 +331,7 @@ A5/confined/Makefile                    56586     1
 
 
 
-2014-07-23 19:10   Checksum for A5 for ayklen on ubuntu1204-006   Page 6
+2014-07-23 19:13   Checksum for A5 for ayklen on ubuntu1204-006   Page 6
 
 
 A5/confined/models                      
@@ -397,7 +397,7 @@ A5/confined/models/minecraft_rigs/steve.obj43043   246
 
 
 
-2014-07-23 19:10   Checksum for A5 for ayklen on ubuntu1204-006   Page 7
+2014-07-23 19:13   Checksum for A5 for ayklen on ubuntu1204-006   Page 7
 
 
 A5/confined/models/minecraft_rigs/textures
@@ -405,7 +405,7 @@ A5/confined/models/minecraft_rigs/textures/steve.png43740    44
 A5/confined/models/monkeybox.mtl        36290     1
 A5/confined/models/monkeybox.obj        26938    75
 A5/confined/models/shadowhouse.blend    41363  1681
-A5/confined/models/shadowhouse_large.blend24449  1824
+A5/confined/models/shadowhouse_large.blend61656  1808
 A5/confined/models/shadowhouse_large.mtl00144     4
 A5/confined/models/shadowhouse_large.obj03542  1385
 A5/confined/models/shadowhouse.mtl      18842     3
@@ -463,7 +463,7 @@ A5/confined/src/shader.hpp              54475     1
 
 
 
-2014-07-23 19:10   Checksum for A5 for ayklen on ubuntu1204-006   Page 8
+2014-07-23 19:13   Checksum for A5 for ayklen on ubuntu1204-006   Page 8
 
 
 A5/confined/src/sound.cpp               39469     4
@@ -529,7 +529,7 @@ A5/example_src/testshader/specular.frag 32513     1
 
 
 
-2014-07-23 19:10   Checksum for A5 for ayklen on ubuntu1204-006   Page 9
+2014-07-23 19:13   Checksum for A5 for ayklen on ubuntu1204-006   Page 9
 
 
 A5/example_src/testshader/specular.vert 37176     1
