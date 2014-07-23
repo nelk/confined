@@ -5,16 +5,34 @@ layout(location = 0) out vec3 colour;
 
 uniform sampler2D tex;
 uniform sampler2D depthTexture;
+uniform sampler2D pickingTexture;
 
 uniform bool useBlur;
 uniform bool useMotionBlur;
 uniform float currentTime;
 uniform mat4 newToOldMatrix;
 uniform float fpsCorrection = 1.0;
+uniform int selectedMeshId;
 
 in vec2 UV;
 
+bool isSelected(vec2 UVCoord) {
+  return selectedMeshId != 0 && abs(texture2D(pickingTexture, UVCoord).r * 65536.0 - selectedMeshId) < 0.01;
+}
+
 void main(){
+  // Reasonable viewing spectrum for pick ids.
+  // colour = texture2D(pickingTexture, UV).rgb * 65536.0/50.0;
+
+  // Crosshair.
+  vec2 texSize = textureSize(tex, 0);
+  vec2 crossHairWidth = 2/texSize;
+  vec2 crossHairLength = 20/texSize;
+  if ((abs(UV.x - 0.5) <= crossHairWidth.x && abs(UV.y - 0.5) <= crossHairLength.y) || (abs(UV.y - 0.5) <= crossHairWidth.y && abs(UV.x - 0.5) <= crossHairLength.x)) {
+    colour = vec3(0, 0, 0);
+    return;
+  }
+
   // Craziness.
   vec2 crazyOffset = vec2(0, 0);
   // Wobble.
@@ -66,6 +84,10 @@ void main(){
     }
 
     colour /= float(numMotionSamples);
+  }
+
+  if (isSelected(UV)) {
+    colour += vec3(0.2, 0.2, 0.0);
   }
 }
 

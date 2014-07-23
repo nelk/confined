@@ -21,7 +21,7 @@
 #define MIN_REQUIRED_COLOUR_ATTACHMENTS 6
 #define RENDER_DEBUG_IMAGES true
 #define RENDER_LIGHTS_AS_SPHERES false
-#define SHADOWMAP_WIDTH 2048
+#define SHADOWMAP_WIDTH 2048 // TODO: Decrease size.
 #define SHADOWMAP_HEIGHT 2048
 #define TARGET_FPS 60
 #define TARGET_FRAME_DELTA 0.01666667
@@ -66,6 +66,7 @@ Viewer::Viewer(): width(DEFAULT_WIDTH), height(DEFAULT_HEIGHT) {
   // Initial settings (all start on).
   settings->set(Settings::SSAO, false);
   settings->set(Settings::BLUR, false);
+  settings->set(Settings::HIGHLIGHT_PICK, false);
 
   glfwWindowHint(GLFW_SAMPLES, 4);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -107,6 +108,9 @@ void Viewer::updateSize(int width, int height) {
 
   glBindTexture(GL_TEXTURE_2D, deferredNormalTexture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, width, height, 0, GL_RGB, GL_FLOAT, 0);
+
+  glBindTexture(GL_TEXTURE_2D, pickingTexture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R16, width, height, 0, GL_RED, GL_INT, 0);
 
   glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
@@ -218,6 +222,13 @@ bool Viewer::initGL() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, width, height, 0, GL_RGB, GL_FLOAT, 0);
 
+  // Picking texture.
+  glGenTextures(1, &pickingTexture);
+  glBindTexture(GL_TEXTURE_2D, pickingTexture);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R16, width, height, 0, GL_RED, GL_INT, 0);
+
   glGenTextures(1, &deferredDepthTexture);
   glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
@@ -234,6 +245,8 @@ bool Viewer::initGL() {
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, deferredSpecularTexture, 0);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, deferredEmissiveTexture, 0);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, deferredNormalTexture, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, pickingTexture, 0);
+  // Note: Adding here? Make sure to add to glDrawBuffers.
 
   if (!checkGLFramebuffer()) return false;
 
@@ -451,7 +464,7 @@ void Viewer::bindRenderTarget(GLuint renderTargetFBO) {
   checkGLErrors("bindRenderTarget end");
 }
 
-void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMeshes, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const glm::vec3& cameraPosition, bool postProcess, double currentTime, double deltaTime, const glm::vec3& halfspacePosition, const glm::vec3& halfspaceNormal) {
+void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMeshes, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const glm::vec3& cameraPosition, bool postProcess, double currentTime, double deltaTime, const glm::vec3& halfspacePosition, const glm::vec3& halfspaceNormal, bool doPicking) {
 
   // Handle for MVP uniform (shadow depth pass).
   static GLuint depthMatrixId = glGetUniformLocation(depthProgramId, "depthMVP");
@@ -464,6 +477,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
   static GLuint geomHalfspacePointId = glGetUniformLocation(geomTexturesProgramId, "halfspacePoint");
   static GLuint geomHalfspaceNormalId = glGetUniformLocation(geomTexturesProgramId, "halfspaceNormal");
   static GLuint geomUseNoPerspectiveUVId = glGetUniformLocation(geomTexturesProgramId, "useNoPerspectiveUVs");
+  static GLuint geomMeshIdId = glGetUniformLocation(geomTexturesProgramId, "meshId");
 
   // Handles for material properties (geometry pass).
   //GLuint material_ka = glGetUniformLocation(geomTexturesProgramId, "material_ka");
@@ -510,11 +524,13 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
 
   static GLuint postProcessTexId = glGetUniformLocation(postProcessProgramId, "tex");
   static GLuint postProcessDepthTexId = glGetUniformLocation(postProcessProgramId, "depthTexture");
+  static GLuint postProcessPickingTexId = glGetUniformLocation(postProcessProgramId, "pickingTexture");
   static GLuint postProcessUseBlurId = glGetUniformLocation(postProcessProgramId, "useBlur");
   static GLuint postProcessUseMotionBlurId = glGetUniformLocation(postProcessProgramId, "useMotionBlur");
   static GLuint postProcessCurrentTimeId = glGetUniformLocation(postProcessProgramId, "currentTime");
   static GLuint postProcessNewToOldMatrixId = glGetUniformLocation(postProcessProgramId, "newToOldMatrix");
   static GLuint postProcessFPSCorrectionId = glGetUniformLocation(postProcessProgramId, "fpsCorrection");
+  static GLuint postProcessSelectedMeshIdId = glGetUniformLocation(postProcessProgramId, "selectedMeshId");
 
 
   static glm::mat4 lastVP = projectionMatrix * viewMatrix;
@@ -535,11 +551,12 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, deferredSpecularTexture, 0);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, deferredEmissiveTexture, 0);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, deferredNormalTexture, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, pickingTexture, 0);
 
-  // Set to render both colour attachments.
+  // Set to render all colour attachments.
   glBindFramebuffer(GL_FRAMEBUFFER, deferredShadingFramebuffer);
-  GLenum drawBuffers[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
-  glDrawBuffers(4, drawBuffers);
+  GLenum drawBuffers[5] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4};
+  glDrawBuffers(5, drawBuffers);
 
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
@@ -564,6 +581,9 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
 
     glUniformMatrix4fv(geomModelMatrixId, 1, GL_FALSE, &modelMatrix[0][0]);
     glUniformMatrix4fv(geomMVPId, 1, GL_FALSE, &MVP[0][0]);
+
+    // Bind mesh id for picking.
+    glUniform1i(geomMeshIdId, mesh->getId());
 
     Material* material = mesh->getMaterial();
     if (material != NULL) {
@@ -622,6 +642,15 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
 
       pointLightMesh->renderGL();
     }
+  }
+
+  // Picking - just get id of middle pixel!
+  uint16_t pickedMeshId = 0;
+  if (doPicking && settings->isSet(Settings::HIGHLIGHT_PICK)) {
+    glBindFramebuffer(GL_FRAMEBUFFER, deferredShadingFramebuffer);
+    glBindTexture(GL_TEXTURE_2D, pickingTexture);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pickingTexture, 0);
+    glReadPixels(width/2, height/2, 1, 1, GL_RED, GL_UNSIGNED_INT, &pickedMeshId);
   }
 
 
@@ -879,6 +908,10 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
     glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
     glUniform1i(postProcessDepthTexId, 1);
 
+    glActiveTexture(GL_TEXTURE0 + 2);
+    glBindTexture(GL_TEXTURE_2D, pickingTexture);
+    glUniform1i(postProcessPickingTexId, 2);
+
 
     // Settings.
     glUniform1i(postProcessUseBlurId, settings->isSet(Settings::BLUR));
@@ -889,6 +922,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
     glUniformMatrix4fv(postProcessNewToOldMatrixId, 1, GL_FALSE, &newToOldMatrix[0][0]);
     float fpsCorrection = TARGET_FRAME_DELTA / deltaTime;
     glUniform1f(postProcessFPSCorrectionId, fpsCorrection);
+    glUniform1i(postProcessSelectedMeshIdId, pickedMeshId);
 
     drawQuad();
 
@@ -978,26 +1012,18 @@ void Viewer::run() {
         }
         mesh->setUVs(newUVs);
 
-        renderScene(mirror->getMirrorFBO(), thisFrameMeshes, mirroredViewMatrix, projectionMatrix, cameraPosition, false, currentTime, deltaTime, mirrorVertex, mirrorNormal);
+        renderScene(mirror->getMirrorFBO(), thisFrameMeshes, mirroredViewMatrix, projectionMatrix, cameraPosition, false, currentTime, deltaTime, mirrorVertex, mirrorNormal, false);
 
         mirror->update();
       }
     }
 
     // Main render of scene.
-    renderScene(0, thisFrameMeshes, viewMatrix, projectionMatrix, cameraPosition, doPostProcessing, currentTime, deltaTime, glm::vec3(0), glm::vec3(0));
+    renderScene(0, thisFrameMeshes, viewMatrix, projectionMatrix, cameraPosition, doPostProcessing, currentTime, deltaTime, glm::vec3(0), glm::vec3(0), true);
 
 
     // ============ Debug Rendering =============
     if (RENDER_DEBUG_IMAGES) {
-      std::vector<Mesh*> allMirrors;
-      for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
-        Material* m = (*it)->getMaterial();
-        if (m != NULL && m->isMirror()) {
-          allMirrors.push_back(*it);
-        }
-      }
-
       glUseProgram(quadProgramId);
 
       // Render to the screen
@@ -1009,6 +1035,16 @@ void Viewer::run() {
       glDisable(GL_DEPTH_TEST);
       glActiveTexture(GL_TEXTURE0);
       glUniform1i(texId, 0);
+
+      /*
+      // Debug draw mirrors.
+      std::vector<Mesh*> allMirrors;
+      for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
+        Material* m = (*it)->getMaterial();
+        if (m != NULL && m->isMirror()) {
+          allMirrors.push_back(*it);
+        }
+      }
 
       // Draw mirror 1 ----------------
       if (allMirrors.size() >= 1) {
@@ -1023,6 +1059,7 @@ void Viewer::run() {
         glBindTexture(GL_TEXTURE_2D, static_cast<Mirror*>(allMirrors[1]->getMaterial())->getMirrorTexture()->getTextureId());
         drawQuad();
       }
+      */
 
       /*
       // Draw diffuse ----------------
@@ -1054,6 +1091,11 @@ void Viewer::run() {
       //glViewport(height/4, height*3/4, height/4, height/4);
       //glBindTexture(GL_TEXTURE_CUBE_MAP, shadowmapCubeDepthTexture);
       //drawQuad();
+
+      // Draw picking texture ------------
+      glViewport(0, 0, width/4, height/4);
+      glBindTexture(GL_TEXTURE_2D, pickingTexture);
+      drawQuad();
       */
     }
     // =========== End Debug =================
@@ -1107,7 +1149,7 @@ Viewer::~Viewer() {
   glDeleteTextures(1, &deferredDepthTexture);
   glDeleteTextures(1, &ssaoNoiseTexture);
   glDeleteTextures(1, &accumRenderTexture);
-  //glDeleteTextures(1, &texture);
+  glDeleteTextures(1, &pickingTexture);
 
   glDeleteBuffers(1, &quadVertexBuffer);
   glDeleteVertexArrays(1, &vertexArrayId);

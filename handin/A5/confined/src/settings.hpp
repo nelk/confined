@@ -15,6 +15,7 @@ public:
     BLUR,
     MOTION_BLUR,
     MIRRORS,
+    HIGHLIGHT_PICK,
     NUM_SETTINGS
   };
 

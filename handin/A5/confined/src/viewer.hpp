@@ -30,7 +30,7 @@ public:
    * Render scene with deferred pipeline.
    * Set renderTarget=0 to render to screen.
    */
-  void renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMeshes, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const glm::vec3& cameraPosition, bool postProcess, double currentTime, double deltaTime, const glm::vec3& halfspacePosition, const glm::vec3& halfspaceNormal);
+  void renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMeshes, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const glm::vec3& cameraPosition, bool postProcess, double currentTime, double deltaTime, const glm::vec3& halfspacePosition, const glm::vec3& halfspaceNormal, bool doPicking);
 
   void bindRenderTarget(GLuint renderTargetFBO);
 
@@ -73,15 +73,22 @@ private:
   GLuint depthProgramId;
   GLuint quadProgramId;
   GLuint postProcessProgramId;
-
-  // Deferred Shading objects.
   GLuint geomTexturesProgramId;
   GLuint deferredShadingProgramId;
+
+  // Deferred Shading textures.
   GLuint deferredDiffuseTexture;
   GLuint deferredSpecularTexture;
   GLuint deferredEmissiveTexture;
   GLuint deferredNormalTexture;
   GLuint deferredDepthTexture;
+
+  // Other textures.
+  GLuint shadowmapDepthTexture;
+  GLuint shadowmapCubeDepthTexture;
+  GLuint ssaoNoiseTexture;
+  GLuint accumRenderTexture;
+  GLuint pickingTexture;
 
   GLuint vertexArrayId;
   GLuint deferredShadingFramebuffer;
@@ -91,10 +98,6 @@ private:
   GLuint quadVertexBuffer;
   GLuint depthRenderBuffers[2]; // TODO: Remove second one.
 
-  GLuint shadowmapDepthTexture;
-  GLuint shadowmapCubeDepthTexture;
-  GLuint ssaoNoiseTexture;
-  GLuint accumRenderTexture;
 };
 
 bool checkGLFramebuffer();

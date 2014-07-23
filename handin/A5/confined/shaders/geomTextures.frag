@@ -13,7 +13,8 @@ layout(location = 0) out vec3 outDiffuse;
 layout(location = 1) out vec4 outSpecular; // Includes shininess in alpha (0-100).
 layout(location = 2) out vec3 outEmissive;
 layout(location = 3) out vec3 outNormal;
-layout(location = 4) out float gl_FragDepth;
+layout(location = 4) out float outPicking;
+out float gl_FragDepth;
 
 // Texture samplers.
 uniform sampler2D diffuseTexture;
@@ -28,7 +29,9 @@ uniform vec3 material_emissive;
 
 uniform vec3 halfspacePoint; // Model space.
 uniform vec3 halfspaceNormal; // (0, 0, 0) means don't do test.
-uniform bool useNoPerspectiveUVs = false;;
+uniform bool useNoPerspectiveUVs = false;
+
+uniform int meshId;
 
 void main() {
   // Check if in halfspace.
@@ -70,6 +73,8 @@ void main() {
     outNormal = normalize(normalCameraspace);
   }
   outNormal = (outNormal + 1.0)/2.0; // Shift to fit into texture colour.
+
+  outPicking = meshId/65536.0;
 
   gl_FragDepth = gl_FragCoord.z;
 }

@@ -10,6 +10,7 @@ const std::string Settings::settingNames[] = {
   "SSAO",
   "Blur",
   "Motion Blur",
-  "Mirrors"
+  "Mirrors",
+  "Highlight Pick"
 };
 

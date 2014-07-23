@@ -36,6 +36,10 @@ public:
   );
   ~Mesh();
 
+  uint32_t getId() {
+    return meshId;
+  }
+
   void setName(std::string name) {
     this->name = name;
   }
@@ -69,6 +73,9 @@ public:
   void setUVs(std::vector<glm::vec2>& uvs);
 
 private:
+  static uint32_t meshIdCounter;
+
+  uint32_t meshId;
   std::string name;
   GLuint buffers[NUM_BUFS];
   int numIndices;

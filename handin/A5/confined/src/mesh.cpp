@@ -7,12 +7,16 @@
 #include "mirror.hpp"
 #include "texture.hpp"
 
+uint32_t Mesh::meshIdCounter = 1;
+
 Mesh::Mesh(
     std::vector<glm::vec3>& vertices,
     std::vector<glm::vec2>& uvs,
     std::vector<glm::vec3>& normals,
     std::vector<unsigned short>& indices,
     Material* material): name(""), material(material) {
+
+  meshId = meshIdCounter++;
 
   modelMatrix = glm::mat4(1.0);
 
