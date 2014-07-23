@@ -133,6 +133,7 @@ bool Viewer::initialize() {
 
   settings = new Settings();
   controller = new Controller(this, settings);
+  startCharAnimTime = 0;
 
   // Initial settings (all start on).
   settings->set(Settings::SSAO, false);
@@ -1017,9 +1018,16 @@ void Viewer::run() {
     }
 
 
+    if (controller->isJumping()) {
+      startCharAnimTime = currentTime;
+    }
+
     // Find all meshes to render this frame.
     std::vector<Mesh*> thisFrameMeshes(meshes);
-    int characterAnimId = static_cast<int>(round(currentTime * 20.0f)) % 20;
+    int characterAnimId = 0;
+    if (currentTime < startCharAnimTime + 1.0) {
+      characterAnimId = static_cast<int>(round((currentTime - startCharAnimTime) * 20.0f)) % 20;
+    }
     thisFrameMeshes.insert(thisFrameMeshes.begin(), characterMeshes[characterAnimId].begin(), characterMeshes[characterAnimId].end());
 
     // Move character.

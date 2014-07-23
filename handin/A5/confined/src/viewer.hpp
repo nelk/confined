@@ -73,6 +73,7 @@ private:
   Light* gunLight;
 
   uint16_t lastPickedMesh;
+  double startCharAnimTime;
 
   glm::mat4 shadowmapBiasMatrix;
   glm::vec3 ssaoKernel[4];

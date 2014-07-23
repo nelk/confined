@@ -48,6 +48,10 @@ public:
     return hasGun && shooting;
   }
 
+  bool isJumping() {
+    return jumping;
+  }
+
 private:
   bool checkKeyJustPressed(int k);
   bool checkMouseJustPressed(int i);
@@ -71,6 +75,7 @@ private:
   double lastStepSoundTime;
   bool selecting;
   bool shooting;
+  bool jumping;
 
   Sound* flashlightSound;
   Sound* gunSound;

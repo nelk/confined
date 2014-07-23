@@ -7,7 +7,7 @@
 #include "sound.hpp"
 
 Controller::Controller(Viewer* viewer, Settings* settings)
-  : viewer(viewer), settings(settings), lastTime(0), position(0, 0, 0), velocity(0, 0, 0), horizontalAngle(0), verticalAngle(0), skipMovements(2), flashlight(false), hasFlashlight(false), selecting(false), shooting(false) {
+  : viewer(viewer), settings(settings), lastTime(0), position(0, 0, 0), velocity(0, 0, 0), horizontalAngle(0), verticalAngle(0), skipMovements(2), flashlight(false), hasFlashlight(false), selecting(false), shooting(false), jumping(false) {
 
   flashlightSound = Sound::load("sound/click.wav");
   gunSound = Sound::load("sound/gun.wav");
@@ -141,9 +141,7 @@ void Controller::update() {
   glm::vec3 up = glm::cross(right, direction);
 
   // TODO: Jumping.
-  if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-    velocity = glm::vec3(0, 10.0f, 0);
-  }
+  jumping = checkKeyJustPressed(GLFW_KEY_SPACE);
 
   // Keyboard movement.
   bool isWalking = false;
