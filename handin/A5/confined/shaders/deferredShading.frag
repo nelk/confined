@@ -65,13 +65,6 @@ vec2 offsetTable[4] = vec2[](
   vec2(0.5, -1.5)
 );
 
-// Returns a random number based on a vec3 and an int.
-float random(vec3 seed, int i){
-  vec4 seed4 = vec4(seed, i);
-  float dot_product = dot(seed4, vec4(12.9898, 78.233, 45.164, 94.673));
-  return fract(sin(dot_product) * 43758.5453);
-}
-
 float SSAO(mat3 kernelBasis, vec3 originPos, float cmpDepth, float radius) {
   float occlusion = 0.0;
   for (int i = 0; i < 4; i++) {
@@ -227,110 +220,76 @@ void main(){
   } else {
     vec4 shadowCoord = shadowmapDepthBiasVP * vertexPositionWorldspace;
 
-    // Fixed bias.
-    //float bias = 0.005;
-
     // Variable bias (based off of gradient).
     float bias = 0.005 * tan(acos(cosTheta));
     bias = clamp(bias, 0, 0.01);
 
-    /*vec2 offset = vec2(fract(texUV.x * 0.5) > 0.25,*/
-                       /*fract(texUV.y * 0.5) > 0.25);  // mod*/
-    /*offset.y += offset.x;  // y ^= x in floating point*/
-    /*if (offset.y > 1.1)*/
-      /*offset.y = 0;*/
-
     // Sample the shadow map n times.
     int num_samples = 1; // TODO: Up samples for some light types.
     for (int i = 0; i < num_samples; i++){
-      // use either :
-      //  - Always the same samples.
-      //    Gives a fixed pattern in the shadow, but no noise
-      int index = i;
-      //  - A random sample, based on the pixel's screen location.
-      //    No banding, but the shadow moves with the camera, which looks weird.
-      //int index = int(16.0 * random(gl_FragCoord.xyy, i)) % 16;
-      //  - A random sample, based on the pixel's position in world space.
-      //    The position is rounded to the millimeter to avoid too much aliasing
-      //int index = int(16.0 * random(floor(vertexPositionWorldspace.xyz * 1000.0), i)) % 16;
+      vec2 offset = vec2(0, 0);
+      if (num_samples > 1) {
+        offset = poissonDisk[i]/700.0;
+      }
 
-      // Lose visibility for each sample that is hidden in shadow.
-      //visibility -= sample_shadow_coverage * (1.0 - texture(shadowMap, vec3(shadowCoord.xy + poissonDisk[index] / 700.0, (shadowCoord.z - bias) / shadowCoord.w)));
+      switch (lightType) {
+        case 0: // Directional light.
+          visibility += texture(shadowMap, vec3(shadowCoord.xy + offset, (shadowCoord.z - bias)/shadowCoord.w));
+          break;
 
+        case 1: // Spot light.
+          float coneAngle = acos(dot(-normalize(vertexPositionToLightPositionWorldspace), normalize(lightDirectionWorldspace)));
 
-    //vec2 windowOffset = vec2(i%4*3-1.5, i/4*3-1.5);
-    //shadowCoefficient += texture(shadowMap, vec3(shadowCoord.xy + (offset + windowOffset) / 2048.0, (shadowCoord.z - bias)/shadowCoord.w));
-    //shadowCoefficient += texture(shadowMap, vec3(shadowCoord.xy + (offset + offsetTable[index]) / 700.0, (shadowCoord.z - bias)/shadowCoord.w));
-
-    switch (lightType) {
-      case 0: // Directional light.
-        visibility += texture(shadowMap, vec3(shadowCoord.xy + poissonDisk[index] / 700.0, (shadowCoord.z - bias)/shadowCoord.w));
-        break;
-
-      case 1: // Spot light.
-        float coneAngle = acos(dot(-normalize(vertexPositionToLightPositionWorldspace), normalize(lightDirectionWorldspace)));
-
-  /*
-        // Hard circle.
-        if (coneAngle <= lightSpreadRadians) {
-          visibility += texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
-        }
-  */
-
-        // Quadratic falloff by angle.
-        float distFrac = coneAngle/lightSpreadRadians;
-        if (distFrac <= 1.0) {
-          visibility += /*step(-1.0, -distFrac) * */ (1 - distFrac/2.5) * (1 - distFrac) * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
-          //lightFalloffModified.z += distFrac;
-        }
-
-        // Exponential light decay by angle.
-        //visibility += (2 - pow(2, coneAngle/lightSpreadRadians)) * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
-
-        // Staged falloff.
-  /*
-        float distFrac = coneAngle/lightSpreadRadians;
-        if (distFrac <= 1.0) {
-          visibility += texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));;
-          if (distFrac < 0.3) {
-            // Nothing extra.
-          } else if (distFrac < 0.7) {
-            lightFalloffModified.x += 1.0;
-            //lightFalloffModified.y += 1.0;
-            //lightFalloffModified.z += 1.0;
-          } else {
-            lightFalloffModified.x += 2.0;
-            //lightFalloffModified.y += 2.0;
-            //lightFalloffModified.z += 3.0;
+          /*
+          // Hard circle.
+          if (coneAngle <= lightSpreadRadians) {
+            visibility += texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
           }
-        }
-  */
-        break;
+          */
 
-      case 2: // Point light.
-        // Turn world space vector to depth value to compare with shadow map ortho depth.
-        vec3 absvec = abs(vertexPositionToLightPositionWorldspace);
-        vec3 v = vertexPositionToLightPositionWorldspace;
-        float lzc = max(abs(v.x), max(abs(v.y), abs(v.z)));
-        float f = 500;
-        float n = 1.0;
-        float nzc = (f+n)/(f-n) - (2*f*n)/(f-n)/lzc;
-        float v2dv = (nzc + 1.0) * 0.5;
+          // Quadratic falloff by angle.
+          float distFrac = coneAngle/lightSpreadRadians;
+          if (distFrac <= 1.0) {
+            visibility += /*step(-1.0, -distFrac) * */ (1 - distFrac/2.5) * (1 - distFrac) * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w + offset, (shadowCoord.z - bias)/shadowCoord.w));
+          }
 
-        visibility += texture(shadowMapCube, vec4(shadowCoord.xyz/shadowCoord.w, v2dv - bias - 0.002));
+          // Exponential light decay by angle.
+          //visibility += (2 - pow(2, coneAngle/lightSpreadRadians)) * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));
 
-        break;
-    }
+          // Staged falloff.
+          /*
+          float distFrac = coneAngle/lightSpreadRadians;
+          if (distFrac <= 1.0) {
+            visibility += texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w));;
+            if (distFrac < 0.3) {
+              // Nothing extra.
+            } else if (distFrac < 0.7) {
+              lightFalloffModified.x += 1.0;
+              //lightFalloffModified.y += 1.0;
+              //lightFalloffModified.z += 1.0;
+            } else {
+              lightFalloffModified.x += 2.0;
+              //lightFalloffModified.y += 2.0;
+              //lightFalloffModified.z += 3.0;
+            }
+          }
+          */
+          break;
 
-      //visibility -= sample_shadow_coverage * (1.0 - texture(shadowMap, vec3(shadowCoord.xy + poissonDisk[index] / 700.0, (shadowCoord.z - bias) / shadowCoord.w))); // Best
+        case 2: // Point light.
+          // Turn world space vector to depth value to compare with shadow map ortho depth.
+          vec3 absvec = abs(vertexPositionToLightPositionWorldspace);
+          vec3 v = vertexPositionToLightPositionWorldspace;
+          float lzc = max(abs(v.x), max(abs(v.y), abs(v.z)));
+          float f = 500;
+          float n = 1.0;
+          float nzc = (f+n)/(f-n) - (2*f*n)/(f-n)/lzc;
+          float v2dv = (nzc + 1.0) * 0.5;
 
-      //visibility -= sample_shadow_coverage * (1.0 - shadowCoord.z/shadowCoord.w * texture(shadowMap, vec3(shadowCoord.xy/shadowCoord.w, (shadowCoord.z - bias)/shadowCoord.w)));
-      //visibility -= sample_shadow_coverage * (1.0 - textureProj(shadowMap, shadowCoord));
+          visibility += texture(shadowMapCube, vec4(shadowCoord.xyz/shadowCoord.w + vec3(offset, offset.x), v2dv - bias - 0.002));
 
-      /*float indexAngle = i*3.14/num_samples;*/
-      /*vec2 sampleOffset = vec2(cos(indexAngle), sin(indexAngle));*/
-      /*bool isShadowed = texture2D(shadowMap, shadowCoord.xy + sampleOffset / 400.0).r > (shadowCoord.z - bias) / shadowCoord.w;*/
-      /*visibility -= sample_shadow_coverage * (1.0 - float(isShadowed));*/
+          break;
+      }
     }
 
     visibility = visibility / num_samples;
