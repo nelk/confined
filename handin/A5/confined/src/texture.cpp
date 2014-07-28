@@ -76,3 +76,9 @@ Texture::~Texture() {
   glDeleteTextures(1, &texId);
 }
 
+void Texture::saveTextureToFile(unsigned char* pixels, int width, int height, std::string filename) {
+  FIBITMAP* img = FreeImage_ConvertFromRawBits(pixels, width, height, 3*width, 24, 0xFF0000, 0x00FF00, 0x0000FF, false);
+  FreeImage_Save(FIF_PNG, img, filename.c_str(), 0);
+  FreeImage_Unload(img);
+}
+

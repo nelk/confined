@@ -47,6 +47,8 @@ public:
     return controller;
   }
 
+  void takeScreenshot();
+
   void updateSize(int width, int height);
   void drawTextureWithQuadProgram(GLuint tex);
   void drawQuad();

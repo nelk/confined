@@ -201,7 +201,7 @@ bool Viewer::initialize() {
   flashlightMeshes = loadScene("models/flashlight.obj");
   for (std::vector<Mesh*>::iterator it = flashlightMeshes.begin(); it != flashlightMeshes.end(); it++) {
     Mesh* mesh = *it;
-    mesh->getModelMatrix() = glm::translate(glm::mat4(1.0), glm::vec3(21, 2, -11));
+    mesh->getModelMatrix() = glm::rotate(glm::translate(glm::mat4(1.0), glm::vec3(21, 2, -11)), 180.0f, glm::vec3(0, 1, 0));
   }
   meshes.insert(meshes.end(), flashlightMeshes.begin(), flashlightMeshes.end());
 
@@ -1064,7 +1064,7 @@ void Viewer::run() {
 
     if (settings->isSet(Settings::MIRRORS)) {
       // Note that this technique won't generally work for multiple mirrors without cube maps, because mirror view is only rendered one direction.
-      // Can probably get this to work with two mirrors facing each other...
+      // Can probably get this to work with two mirrors facing each other.
       for (std::vector<Mesh*>::const_iterator it = meshes.begin(); it != meshes.end(); it++) {
         Mesh* mesh = *it;
         Material* material = mesh->getMaterial();
@@ -1284,5 +1284,52 @@ Viewer::~Viewer() {
 
   // Cleans up and closes window.
   glfwTerminate();
+}
+
+void Viewer::takeScreenshot() {
+  unsigned char* pixels = new unsigned char[3*width*height];
+  uint32_t* picks = new uint32_t[width*height];
+
+  const std::string names[] = {"diffuse", "specular", "emissive", "normal",  "picking", "depth", "accum"};
+  const GLuint texes[] = {deferredDiffuseTexture, deferredSpecularTexture, deferredEmissiveTexture, deferredNormalTexture, pickingTexture, deferredDepthTexture, accumRenderTexture};
+
+  for (int i = 0; i < 7; i++) {
+    glBindFramebuffer(GL_FRAMEBUFFER, deferredShadingFramebuffer);
+    glBindTexture(GL_TEXTURE_2D, texes[i]);
+    if (i == 5) {
+      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texes[i], 0);
+    } else {
+      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texes[i], 0);
+    }
+
+
+    if (i == 4) {
+      glReadPixels(0, 0, width, height, GL_RED, GL_UNSIGNED_INT, picks);
+      for (int p = 0; p < width*height; p++) {
+        uint16_t pick = picks[p];
+        pick *= 1000;
+        pixels[3*p] = static_cast<unsigned char>(pick & 0xff);
+        pixels[3*p+1] = static_cast<unsigned char>(pick & 0xff);
+        pixels[3*p+2] = static_cast<unsigned char>(pick & 0xff);
+      }
+    } else if (i == 5) {
+      glReadPixels(0, 0, width, height, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, picks);
+      for (int p = 0; p < width*height; p++) {
+        uint32_t pick = picks[p];
+        unsigned char fpix = static_cast<unsigned char>(static_cast<float>(pick - 4190000000)/90000000.0f*256.0f);
+        pixels[3*p] = fpix;
+        pixels[3*p+1] = fpix;
+        pixels[3*p+2] = fpix;
+      }
+    } else {
+      glReadPixels(0, 0, width, height, GL_BGR, GL_UNSIGNED_BYTE, pixels);
+    }
+
+    Texture::saveTextureToFile(pixels, width, height, "screenshots/screen_" + names[i] + ".png");
+  }
+
+  delete pixels;
+  delete picks;
+  std::cout << "Screenshots saved!" << std::endl;
 }
 

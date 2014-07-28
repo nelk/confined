@@ -20,6 +20,8 @@ public:
     return texId;
   }
 
+  static void saveTextureToFile(unsigned char* pixels, int width, int height, std::string filename);
+
 private:
   static std::map<std::string, Texture*> loadedTextures;
 

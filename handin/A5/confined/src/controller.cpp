@@ -226,6 +226,10 @@ void Controller::update() {
     gunSound->play();
   }
 
+  if (checkKeyJustPressed(GLFW_KEY_P)) {
+    viewer->takeScreenshot();
+  }
+
   lastTime = currentTime;
 }
 
