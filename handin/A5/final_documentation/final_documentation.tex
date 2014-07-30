@@ -1,0 +1,218 @@
+\documentclass[oneside]{book}
+\usepackage{fullpage}
+\usepackage{graphicx}
+
+\title{\huge CS 448  Project Documentation: Confined}
+\author{Alex Klen \\ ayklen \\ 20372654}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\chapter{Introduction}
+  \section{Purpose}
+    The purpose of this project was to create a rendering pipeline utilizing modern OpenGL shader techniques and exhibit it with an interactive demo game.
+    The focus is on implementing several graphical features in an OpenGL shader pipeline. These features must not only be compatible, but they should together build a comprehensive rendering engine.
+    The demo should extensively use lights and dynamic shadows and run at an interactive frame rates.
+
+    This project was interesting and challenging because it involves using several advanced shader techniques at the same time. I learned how to effectively use GLSL on modern hardware to achieve quality light and shadow rendering at interactive frame rates, as well as how several other popular effects are achieved in shaders.
+
+  \section{Overview of Features}
+    Most of the rendering engine's features were objectives of the project, with a few extra features implemented as well. The features are covered in more depth and their technical aspects are discussed in Section \ref{technical-objectives}.
+
+    The interactive demo is navigating using first-person controls, similar to first-person shooter games.
+    Texture mapping and normal mapping allow high levels of detail on all the surfaces rendered with the pipeline. Textures are used as a polygon's diffuse colour if it is set. Normals for each fragment are perturbed by a tangent-space normal map to create realistic specular highlights.
+    Dynamic shadow maps make a huge impact to the quality of the rendered output - it gives the player depth cues, but also makes the environment much more interesting because movements cause drastic changes in how the environment appears.
+    Ambient occlusion is approximated with a technique called Screen Space Ambient Occlusion (SSAO) to improve the overall look of models. Instead of adding a constant ambient component to light partially shadowed areas and areas not in direct light, an occlusion factor is computed that approximates how much surrounding geometry covers each pixel. This causes depressions and crevices in models to be darker.
+
+    Keyframe animation was added to allow models to dynamically change between frames. It's tedious to simply apply model transformation matrices manually - keyframes can be exported from animation software.
+    Planar mirror reflection was added. It's a feature that's interesting to interact with - often to see if it works like a real-life mirror. It also allows the player to see what their character looks like in the demo and to see his animation.
+    Motion blur was added as a post-processing step that smears pixels proportional to camera rotations and translations in screen space. It improves the overall look of the game when the player is moving around. It also smooths out frame changes at lower frame rates.
+    Sound was added using OpenAL. Sound effects are synchronized with game interactions and when using a stereo headset they will sound like they are coming from the direction that they would be for the character in the game.
+
+    Picking using shaders is an extra feature. Since you know which fragment is being drawn for each mesh in one of the shaders, you can use this to cheaply pick meshes.
+
+    The rendering pipeline is implemented as a deferred rendering pipeline. This is to avoid directly shading each vertex with each light (see \ref{deferred-rendering}).
+
+    These features can all be enabled at once to provide an immersive experience. Most of them can be disabled by pressing a number key. This can help you see their effect on rendering much better. These settings are explained in Section \ref{settings}.
+
+
+\chapter{Manual}
+  \section{Running the Program}
+    \subsection{Operating System}
+      This program was written to run on linux. It uses a cross-platform library for windows and I/O, so can easily be adapted to work on other platforms, but this was never attempted during development.
+
+    \subsection{Dependencies}
+      In addition to libraries typically found on linux distributions, the following libraries are dependencies of this program:
+      \begin{itemize}
+        \item GLEW - OpenGL extension wrangling.
+        \item GLU - OpenGL utilities.
+        \item glfw3 - for cross-platform windows and keyboard and mouse I/O.
+        \item assimp - for importing external model files.
+        \item freeimage - for image loading, saving, and conversion.
+        \item openal - for sound.
+        \item alut - utilities for OpenAL.
+      \end{itemize}
+
+      These should be installed on the system prior to building the program.
+
+    \subsection{Building}
+      To build the program, simply use the `make' command.
+      Note that this program requires several libraries that are dynamically linked in the Makefile. They are outlined in the previous section.
+
+    \subsection{Running}
+      To run the program after building, simply run `./confined' from the command line.
+      There are no command-line parameters - see Section \ref{settings} for setting configurations, which are done during runtime.
+      To quit the program press `Q'.
+
+  \section{Controls}
+    \subsection{Looking Around - Mouse}
+      The base controls for this program are similar to other first-person games.
+      Simply move the mouse in two dimensions to change the angle you are looking in the 3D game world.
+      Note that when the game is running it will capture the mouse cursor. You can either quit the program by pressing `Q' or minimize its window to regain control of the mouse cursor.
+
+    \subsection{Movement - Keyboard}
+      To navigate the 3D environment, you can use either the `WASD' keys or the arrow keys. Using the `WASD' keys is recommended if you are right-handed since it's easier to use them with your left hand while you use the mouse with your right. `W' is up, `A' is left, `S' is down, and `D' is right. Moving forwards and backwards will move you towards or away from the direction you are facing. Moving left and right will make your character strafe sideways.
+
+      Mainly for debugging purposes, the keys `Q' and `E' make your character float up and down.
+
+    \subsection{Special Keys}
+      \begin{itemize}
+        \item The `Q' key will quit the program.
+        \item The `F' key will toggle your flashlight, if you have one.
+        \item The space bar will trigger a short hand wave animation by your character. You'll have to either be looking in the mirror or be looking at your shadow to see it.
+        \item The number keys toggle settings. See Section \ref{settings}.
+      \end{itemize}
+
+    \subsection{Taking Items and Shooting - Mouse Buttons}
+      Press the right mouse button while your cross hair is over an item to pick it up. The two items you can pick up are the flashlight and the gun.
+
+      Press the left mouse button after you have a gun to shoot it.
+
+  \section{Playing the Demo}
+    This project features a short demo to showcase the rendering engine. Following is a walkthrough of the demo.
+
+    When the game starts (after loading for a few seconds), you will see a wall ahead of you, but everything will be quite dark. Looking to the left, you see a door with light coming through it. You can step through the door and approach a table with several items on it. The light source is a glowing candle on the right side. There is a large, flat mirror that lets you see yourself in it. Also on the table is a red sphere and a flashlight. You can pick up the flashlight by right-clicking on it. After getting the flashlight, you can press `F' to turn it on. Now that you can see farther because of the flashlight, you'll notice there is a cube with a brick texture and another door in the room. Progressing through the door leads to a room with a large window. Lighting flashes through the window periodically, with thunder sounds following. At the end of the room is a monkey figure. If you check behind the monkey figure, there is a gun on the ground that can also be picked up. After picking up the gun, you can left-click to shoot (causing a sound effect and a flash of light). Shooting toggles a light in the previous room. This light robits around the brick-textured cube. If you're feeling adventurous, you can step through a wall or float out the window to get outside. The sky is pitch black, but the grass has a nice texture and normal map you can look at.
+
+  \section{Testing Features}
+    You can test each feature of the rendering engine in this demo. Textures were mapped on the floor, walls, mirror, cube, gun, and grass. Normal maps are evident in several places. When you look at the candle from a distance, you see yellowish specular highlights on the ground. You can also point the flashlight straight down to see the floor's normal map working. After enabling the orbiting light, when it comes between you and the cube you can see the specular highlights on the brick texture line up with the texture. Shadow maps should be evident throughout the walkthrough. To test animation you can look in the mirror and press the space bar.
+
+    SSAO must be turned on (it is off by default). You can do this by pressing the `5' key. You should also turn on blur by hitting `6' (see Section \ref{ssao}).
+    Motion blur is on by default, but you need to toggle it to see the difference it makes. You can toggle motion blur with the `7' key.
+
+  \section{Settings}\label{settings}
+    The number keys toggle the following features of the rendering pipeline.
+    \begin{enumerate}
+      \setcounter{enumi}{-1}
+      \item Diffuse Lighting
+      \item Specular Lighting
+      \item Shadow Maps
+      \item Normal Maps
+      \item Texture Maps
+      \item SSAO
+      \item Blur
+      \item Motion Blur
+      \item Mirrors
+      \item Highlight Pick
+    \end{enumerate}
+
+\chapter{Technical Details}
+  \section{Rendering Pipeline} \label{deferred-rendering}
+    \begin{figure}[h!]
+      \caption{Confined Rendering Pipeline}
+      \centering
+      \includegraphics[width=1.0\textwidth]{rendering_pipeline}
+    \end{figure}
+
+  \section{Technical Objectives}\label{technical-objectives}
+    %TODO - code map.
+    %TODO - all objectives.
+    %TODO - referenes in objective algorithm discussions.
+
+  \label{ssao}
+
+  \section{Technical Outline}
+    This project will require implementing several algorithms, all of which have to do with using shaders written in GLSL.
+    OpenGL 3.3+ will be used for its efficient buffers, custom rendering pipeline, and multiple render targets (required for deferred shading).
+
+    Although not an objective, implement deferred shading will greatly speed up dynamic lighting. Deferred shading is a method of shading that speeds up subsequent lighting and shadow depth passes by letting them perform per-pixel lighting calculations only instead of computing them for all geometry and all fragments \cite{ferkoreal}.
+    When forward-rendering, the vertex shader will compute lighting parameters (incident, normal, colours) which will be interpolated for each fragment. Deferred shading, however, computes geometric parameters for each pixel and writes them to a textures for later use. Subsequent shading passes can then sample these textures and operate per-fragment only. The benefit of this is clear when you consider shadow mapping with many lights, since when forward rendering you would need to run the shadow mapping algorithm over all geometry for each light and each fragment, whereas with deferred shading you only need to do it for each fragment. Although there are many shader passes the memory bandwidth of each is quite small.
+
+    A crucial objective is shadow mapping. This algorithm is well-known and consists of a first pass where geometry is rendered from the perspective of a dynamic light source, and only a depth buffer is written \cite{williams1978casting}. This is done for each light. Then a final pass can perform lighting calculations based off of whether the camera's perspective sees pixels that are farther or closer than the first surface each light sees is. This algorithm is compatible with shadow-mapping and in fact allows you to use many dynamic light sources because they only have to pass over each fragment. There are also extensions to shadow mapping that eliminate visual artifacts present in the basic implementation and allow more realistic penumbrae \cite{dimitrov2007cascaded} \cite{fernando2005percentage}.
+    The objective requires dynamic shadow maps to work - a light source shouldn't light geometry that is occluded. Several light source types can be implemented - namely directional lights (no position or falloff and parallel light rays), spot lights (position, direction, angle, and falloff), and point lights (position and falloff - lights in all directions). Shadow maps are the most challenging for point lights as a texture cube map will need to be used.
+
+    Another interesting objective is to apply an ambient occlusion (approximation) algorithm in shaders. There is more than one fast algorithm for this, but this project uses the quick algorithm named Screen Space Ambient Occlusion \cite{kajalinshaderx7}\cite{mittring2007finding}.
+
+    A few other objectives:
+    \begin{itemize}
+      \item
+        Bump/normal mapping, implemented in a way compatible with deferred shading (perturbed normals can be written in the first pass).
+
+      \item
+        Motion blur - a post processing effect - meaning the scene is rendered to a texture and then another set of shaders will process this texture to output the final result to screen. Motion blur means when you move your camera the scene will blur objects that appear to be moving quicker. There are a few techniques for this - I will try storing the previous viewing matrix and blurring based off of each pixel position's delta, with correction for frame rate.
+
+      \item
+        Planar mirror reflection - rendering to texture the scene once from the perspective of the reflected ray from the camera's perspective, and then rendering again from the camera's perspective after applying the rendered texture to the mirror.
+
+      \item
+        Basic keyframe animation - implemented by using multiple mesh files with the same corresponding data (can be exported by modelling applications) and performing interpolation between them.
+
+    \end{itemize}
+
+
+  \section{Implementation}
+  %TODO
+%Algorithms, data structures, and complexities,
+%• Modularity, data abstraction and encapsulation,
+%• Platform and system dependence or independence, global constants and configurability,
+%• Input/output syntax, Lua extensions if any, pre- and post-processing,
+%• Data and code sources, network and literature resources, system and local utilities, the
+%re-use and adaptation of existing code,
+%• Intercommunication, shell scripts, pipes, sockets, intermediate files, parallelism and task
+%delegation,
+%• Coding style, debugging approach and utilities, version management, testing and veri-
+%fying practices,
+%• Caveats, bugs, cautions, unexplored areas, assumptions, future possibilities.
+
+
+    %TODO - Acknowledgements.
+
+
+    % References.
+
+    %\begingroup
+    %\renewcommand{\section}[2]{}%
+    \nocite{*}
+    \bibliography{biblio}{}
+    \bibliographystyle{plain}
+    %\endgroup
+\newpage
+
+
+%\chapter{Objectives}
+
+%{\hfill{\bf Full UserID: ayklen}\hfill{\bf Student ID: 20372654}\hfill}
+
+%\begin{enumerate}
+  %\item[\_\_\_ 1:]  Modelled environment that shows off dynamic shadows with many light sources.
+
+  %\item[\_\_\_ 2:]  Interactive first-person controls and interaction with environment (UI).
+
+  %\item[\_\_\_ 3:]  Real-time Shadow Maps in shader for dynamic shadows. Standard implementation with comparisons against depth textures generated from the perspective of each light.
+
+  %\item[\_\_\_ 4:]  Texture Mapping in shader.
+
+  %\item[\_\_\_ 5:]  Bump/Normal Mapping in shader.
+
+  %\item[\_\_\_ 6:]  Motion blur implemented as a post-processing shader pass.
+
+  %\item[\_\_\_ 7:]  Ambient Occlusion approximation in shader using Screen Space Ambient Occlusion (SSAO). Decreases ambient light contribution for pixels that are occluded by sampled neighboring pixels (using depths and normals in screen space).
+
+  %\item[\_\_\_ 8:]  Sound synchronized with game.
+
+  %\item[\_\_\_ 9:]  Planar mirror reflection. Find reflected ray off of mirror surface, render scene to texture from ray's perspective, render scene from camera's perspective while applying texture to mirror geometry.
+
+  %\item[\_\_\_ 10:] Keyframe Animation.
+%\end{enumerate}
+
+\end{document}
