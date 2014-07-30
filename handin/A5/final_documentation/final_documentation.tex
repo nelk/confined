@@ -1,4 +1,4 @@
-\documentclass[oneside]{book}
+\documentclass{book}
 \usepackage{fullpage}
 \usepackage{graphicx}
 
@@ -13,7 +13,7 @@
   \section{Purpose}
     The purpose of this project was to create a rendering pipeline utilizing modern OpenGL shader techniques and exhibit it with an interactive demo game.
     The focus is on implementing several graphical features in an OpenGL shader pipeline. These features must not only be compatible, but they should together build a comprehensive rendering engine.
-    The demo should extensively use lights and dynamic shadows and run at an interactive frame rates.
+    The demo should extensively use lights and dynamic shadows and run at interactive frame rates.
 
     This project was interesting and challenging because it involves using several advanced shader techniques at the same time. I learned how to effectively use GLSL on modern hardware to achieve quality light and shadow rendering at interactive frame rates, as well as how several other popular effects are achieved in shaders.
 
@@ -27,28 +27,28 @@
 
     Most of the rendering engine's features were objectives of the project, with a few extra features implemented as well. The features are covered in more depth and their technical aspects are discussed in Section \ref{technical-objectives}.
 
-    The interactive demo is navigating using first-person controls, similar to first-person shooter games.
+    The interactive demo is navigated using first-person controls, similar to first-person shooter games.
     Texture mapping and normal mapping allow high levels of detail on all the surfaces rendered with the pipeline. Textures are used as a polygon's diffuse colour if it is set. Normals for each fragment are perturbed by a tangent-space normal map to create realistic specular highlights.
     Dynamic shadow maps make a huge impact to the quality of the rendered output - it gives the player depth cues, but also makes the environment much more interesting because movements cause drastic changes in how the environment appears.
     Ambient occlusion is approximated with a technique called Screen Space Ambient Occlusion (SSAO) to improve the overall look of models. Instead of adding a constant ambient component to light partially shadowed areas and areas not in direct light, an occlusion factor is computed that approximates how much surrounding geometry covers each pixel. This causes depressions and crevices in models to be darker.
 
     Keyframe animation was added to allow models to dynamically change between frames. It's tedious to simply apply model transformation matrices manually - keyframes can be exported from animation software.
     Planar mirror reflection was added. It's a feature that's interesting to interact with - often to see if it works like a real-life mirror. It also allows the player to see what their character looks like in the demo and to see his animation.
-    Motion blur was added as a post-processing step that smears pixels proportional to camera rotations and translations in screen space. It improves the overall look of the game when the player is moving around. It also smooths out frame changes at lower frame rates.
-    Sound was added using OpenAL. Sound effects are synchronized with game interactions and when using a stereo headset they will sound like they are coming from the direction that they would be for the character in the game.
+    Motion blur was added as a post-processing step that smears pixels proportional to camera rotations and translations in screen space. It improves the overall look of the game when the player is moving around and smooths out frame transitions at lower frame rates.
+    Sound was added using OpenAL - sound effects are synchronized with game interactions and when using a stereo headset they will sound like they are coming from the direction that they would be for the character in the game.
 
     Picking using shaders is an extra feature. Since you know which fragment is being drawn for each mesh in one of the shaders, you can use this to cheaply pick meshes.
 
     The rendering pipeline is implemented as a deferred rendering pipeline. This is to avoid directly shading each vertex with each light (see \ref{deferred-rendering}).
 
-    These features can all be enabled at once to provide an immersive experience. Most of them can be disabled by pressing a number key. This can help you see their effect on rendering much better. These settings are explained in Section \ref{settings}.
+    These features can all be enabled at once to provide an immersive experience. Most of them can be disabled by pressing a number key. Toggling the features on and off lets you clearly see their effect on rendering. These settings are explained in Section \ref{settings}.
 
 
 \chapter{Manual}
   \section{Running the Program}
     \subsection{Hardware}
       This program requires a graphics card that supports OpenGL 3.3+.
-      OpenGL 3.3+ is required for its efficient buffers, customizable rendering pipeline, and multiple render targets (required for deferred shading).
+      This version is required for its efficient buffers, customizable rendering pipeline, and multiple render targets (required for deferred shading).
       This project was developed with an NVIDIA GTS 360M.
 
     \subsection{Operating System}
@@ -74,14 +74,14 @@
 
     \subsection{Running}
       To run the program after building, simply run `./confined' from the command line.
-      There are no command-line parameters - see Section \ref{settings} for setting configurations, which are done during runtime.
-      To quit the program press `Q'.
+      There are no command-line parameters - see Section \ref{settings} for setting configurations, which are toggled during runtime.
+      To quit the program press escape.
 
   \section{Controls}
     \subsection{Looking Around - Mouse}
       The base controls for this program are similar to other first-person games.
       Simply move the mouse in two dimensions to change the angle you are looking in the 3D game world.
-      Note that when the game is running it will capture the mouse cursor. You can either quit the program by pressing `Q' or minimize its window to regain control of the mouse cursor.
+      Note that when the game is running it will capture the mouse cursor. You can either quit the program by pressing escape or minimize its window to regain control of the mouse cursor.
 
     \subsection{Movement - Keyboard}
       To navigate the 3D environment, you can use either the `WASD' keys or the arrow keys. Using the `WASD' keys is recommended if you are right-handed since it's easier to use them with your left hand while you use the mouse with your right. `W' is up, `A' is left, `S' is down, and `D' is right. Moving forwards and backwards will move you towards or away from the direction you are facing. Moving left and right will make your character strafe sideways.
@@ -90,7 +90,7 @@
 
     \subsection{Special Keys}
       \begin{itemize}
-        \item The `Q' key will quit the program.
+        \item The escape quits the program.
         \item The `F' key will toggle your flashlight, if you have one.
         \item The space bar will trigger a short hand wave animation by your character. You'll have to either be looking in the mirror or be looking at your shadow to see it.
         \item The number keys toggle settings. See Section \ref{settings}.
@@ -104,12 +104,12 @@
   \section{Playing the Demo}
     This project features a short demo to showcase the rendering engine. Following is a walkthrough of the demo.
 
-    When the game starts (after loading for a few seconds), you will see a wall ahead of you, but everything will be quite dark. Looking to the left, you see a door with light coming through it. You can step through the door and approach a table with several items on it. The light source is a glowing candle on the right side. There is a large, flat mirror that lets you see yourself in it. Also on the table is a red sphere and a flashlight. You can pick up the flashlight by right-clicking on it. After getting the flashlight, you can press `F' to turn it on. Now that you can see farther because of the flashlight, you'll notice there is a cube with a brick texture and another door in the room. Progressing through the door leads to a room with a large window. Lighting flashes through the window periodically, with thunder sounds following. At the end of the room is a monkey figure. If you check behind the monkey figure, there is a gun on the ground that can also be picked up. After picking up the gun, you can left-click to shoot (causing a sound effect and a flash of light). Shooting toggles a light in the previous room. This light robits around the brick-textured cube. If you're feeling adventurous, you can step through a wall or float out the window to get outside. The sky is pitch black, but the grass has a nice texture and normal map you can look at.
+    When the game starts (after loading for a few seconds), you will see a wall ahead of you, but everything will be quite dark. Looking to the left, you see a door with light coming through it. You can step through the door and approach a table with several items on it. The light source is a glowing candle on the right side. There is a large, flat mirror that lets you see yourself in it. Also on the table is a red sphere and a flashlight. You can pick up the flashlight by right-clicking on it. After getting the flashlight, you can press `F' to turn it on. Now that you can see farther because of the flashlight, you'll notice there is a cube with a brick texture and another door in the room. Progressing through the door leads to a room with a large window. Lighting flashes through the window periodically, with thunder sounds following. At the end of the room is a monkey figure. If you check behind the monkey figure, there is a gun on the ground that can also be picked up. After picking up the gun, you can left-click to shoot (causing a sound effect and a flash of light). Shooting toggles a light in the previous room. This light orbits around the brick-textured cube. If you're feeling adventurous, you can step through a wall or float out the window to get outside. The sky is pitch black, but the grass has a nice texture and normal map you can look at.
 
   \section{Testing Features}
-    You can test each feature of the rendering engine in this demo. Textures were mapped on the floor, walls, mirror, cube, gun, and grass. Normal maps are evident in several places. When you look at the candle from a distance, you see yellowish specular highlights on the ground. You can also point the flashlight straight down to see the floor's normal map working. After enabling the orbiting light, when it comes between you and the cube you can see the specular highlights on the brick texture line up with the texture. Shadow maps should be evident throughout the walkthrough. To test animation you can look in the mirror and press the space bar.
+    You can test each feature of the rendering engine in this demo. Textures were mapped on the floor, walls, mirror, cube, gun, and grass. Normal maps are evident in several places: when you look at the candle from a distance, you see yellowish specular highlights on the ground; you can also point the flashlight straight down to see the floor's normal map working. After enabling the orbiting light, when it comes between you and the cube you can see the specular highlights on the brick texture line up with the texture. Shadow maps should be evident throughout the walkthrough. To test animation you can look in the mirror and press the space bar.
 
-    SSAO must be turned on (it is off by default). You can do this by pressing the `5' key. You should also turn on blur by hitting `6' (see Section \ref{ssao}).
+    SSAO is off by default and can be toggled on using the `5' key. You should also turn on blur by hitting `6' (see Section \ref{ssao}).
     Motion blur is on by default, but you need to toggle it to see the difference it makes. You can toggle motion blur with the `7' key.
 
   \section{Settings}\label{settings}
@@ -148,11 +148,11 @@
 
       The Geometry Pass Shader is the first stage in deferred shading, and is responsible for taking scene data and creating 6 output render target textures. It takes a Vertex Buffer Object (VBO) that contains vertices, UV coordinates, normals, tangents, and bitangents of all scene geometry. This shader is run once on each mesh per frame. The shader also takes model, view, and perspective matrices so that it can convert vertices in model space to screen space. The Id of the mesh being drawn is also sent to the shader for picking. This shader outputs the 6 textures shown: diffuse, specular, normal, emissive, depth, and picking. The purpose of each texture should be self-explanatory.
 
-      Next, a loop is entered to perform the second stage of deferred shading. For each light in the scene, shadow maps are first generated and then deferred rendering for that light is accumulated to another texture. For the Shadow map Shader, only the vertices of meshes need to be sent to it, and it only outputs a single channel depth texture, which is a relatively quick operation. Next, this shadow map, along with the 6 textures generated in the first shader stage are passed to the Deferred Rendering Shader. This is the largest and most complicated shader. It performs all lighting, shading, and shadow calculations for each fragment. SSAO is also implemented in this shader. Note that the actual vertices sent to this shader are just a single quad. Everything is done per-fragment. The results of this texture are accumulated for each light into the rendered texture.
+      Next, a loop is entered to perform the second stage of deferred shading. For each light in the scene, shadow maps are first generated and then shading for that light is accumulated to another texture. For the Shadow map Shader, only the vertices of meshes need to be sent to it, and it only outputs a single channel depth texture, which is a relatively quick operation. Next, this shadow map, along with the 6 textures generated in the first shader stage are passed to the Deferred Rendering Shader as samplers. This is the largest and most complicated shader - it performs all lighting, shading, and shadow calculations for each fragment. SSAO is also implemented in this shader. Note that the actual vertices sent to this shader are just a single quad; everything is done per-fragment with the teaxture-sampled values of that fragment. The results of this texture are accumulated for each light into the rendered texture.
 
-      The last step is post-processing. Now that all light shading has been accumulated to a texture, we pass this texture, and our depth and picking textures, to the Post-Processing Shader. This shader also only takes a quad for vertices and operates only per-fragment. Motion blur is performed here, along with normal blur for SSAO, and debug highlighting for mesh picking (which is why the picking texture is needed). This shader outputs the final rendered image to the screen (or back buffer).
+      The last step is post-processing. Now that all light shading has been accumulated to a texture, we pass this texture along with our depth and picking textures to the Post-Processing Shader. This shader also only takes a quad for vertices and operates only per-fragment. Motion blur is performed here, along with regular blurring for SSAO, and debug highlighting for mesh picking (which is why the picking texture is needed). This shader outputs the final rendered image to the screen (or back buffer).
 
-      Not displayed is how mirrors are done. See Section \ref{mirrors} for more information.
+      Not shown is how mirrors are implemented; see Section \ref{mirrors} for information about mirrors.
 
 
   \section{Technical Details} \label{technical-objectives}
@@ -175,7 +175,7 @@
       I followed a helpful tutorial at http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-13-normal-mapping/.
 
     \subsection{Shadow Mapping} \label{shadow-mapping}
-      The regular shadow mapping algorithm is well-known and consists of a first pass where geometry is rendered from the perspective of a dynamic light source, and only a depth buffer is written \cite{williams1978casting}. This is done for each light. Then a second pass can perform lighting calculations based off of whether the camera's perspective sees pixels that are farther or closer than the first surface each light sees is.
+      The regular shadow mapping algorithm is well-known and consists of a first pass for each light where geometry is rendered from the perspective of a dynamic light source, and only a depth buffer is written \cite{williams1978casting}. Then a second pass can perform lighting calculations while checking for visibility by comparing the depth the camera's perspective sees points to the depth that each light sees them. If the depth the light sees is less, then something is obstructing the point and it should not be lit by the light.
 
       This algorithm is compatible with deferred-rendering and in fact allows you to use more dynamic light sources because they only have to perform shading for each fragment instead of for each vertex (see shaders/deferredShading.frag:235-291). See Figure \ref{brick-normal-map} for a screenshot of point light shadow mapping.
 
@@ -183,12 +183,12 @@
       \begin{enumerate}
         \item Directional Lights - no position or falloff and parallel light rays.
         \item Spot Lights - position, direction, angle, and falloff
-        \item Point Lights - position and falloff, lights in all directions.
+        \item Point Lights - position and falloff, casts shadows in all directions.
       \end{enumerate}
 
-      Shadow mapping was the most challenging to implement for point lights because a texture cube map will need to be used, which is created by doing 6 normal shadow map passes in each of the directions of a cube at the light source. However, GLSL has a cube map texture sampler to make it easy to sample the correct face of the cube.
+      Shadow mapping was the most challenging to implement for point lights because a texture cube map was required, which is created by performing 6 shadow map passes - one for each direction of a cube face at the light source. However, GLSL has a cube map texture sampler to make it easy to sample the correct face of the cube in the second pass.
 
-      There are multiple extensions to shadow mapping that eliminate visual artifacts present in the basic implementation and allow more realistic penumbrae, but they were outside the scope of this project \cite{dimitrov2007cascaded} \cite{fernando2005percentage}.
+      There are multiple extensions to shadow mapping that eliminate visual artifacts present in the basic implementation and allow more realistic penumbrae, but they were outside the scope of this project. Two of these are Cascading Shadow Maps and Percentage-Closer Soft Shadows \cite{dimitrov2007cascaded} \cite{fernando2005percentage}.
 
       I followed a helpful tutorial at http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-16-shadow-mapping/.
 
@@ -205,7 +205,7 @@
         \caption{SSAO turned on}
       \end{figure}
 
-      Ambient Occlusion means calculating an occlusion factor that can be applied to the ambient light term to improve lighting correctness. There is more than one fast algorithm for this, but this project uses the quick algorithm named Screen Space Ambient Occlusion \cite{kajalinshaderx7}\cite{mittring2007finding}.
+      Ambient Occlusion means calculating an occlusion factor that can be applied to the ambient light term to improve lighting correctness. There is more than one algorithm for this, but this project uses the quick algorithm named Screen Space Ambient Occlusion \cite{kajalinshaderx7}\cite{mittring2007finding}.
 
       The algorithm works by sampling the depth of neighbouring pixels to determine whether a fragment should receive more or less ambient light. From the depth and normal information of each fragment, a view-space position and normal can be computed. Sample positions within a hemisphere oriented along the fragment's normal are selected based off of a pre-computed kernel and rotated randomly based off of a noise texture. These sample points are projected onto screenspace and the depth texture is sampled to see whether these points are in front of the fragment being shaded. The fraction of sampled points that are in front of the fragment being shaded is used to decrease the ambient shading factor for this fragment. See shaders/deferredShading.frag:304-315,68-89.
 
@@ -213,20 +213,20 @@
 
 
     \subsection{Motion Blur} \label{motion-blur}
-      Motion blur is a an effect that blurs objects when move your camera. The amount of blur is proportinal to the speed of movement of the vectors/pixels on the screen.
+      Motion blur is a an effect that blurs objects when move your camera. The amount of blur is proportinal to the speed of movement of the points on the screen.
       I implemented a screen-space technique that runs in the post-processing shader. The technique is based off of this tutorial: http://john-chapman-graphics.blogspot.ca/2013/01/what-is-motion-blur-motion-pictures-are.html.
 
       The algorithm is to approximate where each pixel would have been in the last frame by storing the previous frame's view matrix, and blurring by sampling along the delta vector for each fragment. A matrix is computed and passed to the shader that maps the current frame's screenspace coordinates to the previous frame's screenspace coordinates. With this matrix a blur vector is computed by subtracting the two screenspace positions. Fragments are sampled along this blur vector and blended together to get the blurring effect. See shaders/postProcess.frag:69-86.
 
-      This technique is affected by frame rate, since if the frame rate is very high, then the previous view matrix will be almost the same and almost no blurring will occur. This can be fixed by calculating the frame rate and passing the shader a correction factor.
+      This technique is affected by frame rate, since if the frame rate is very high, then the previous view matrix will be only differ marginally and almost no blurring will occur. This can be fixed by calculating the frame rate and passing the shader a correction factor.
 
 
     \subsection{Planar Mirrors} \label{mirrors}
-      Planar mirror reflections are implemented by rendering the complete scene an extra time to texture, and then applying the texture to a quad when rendering from the camera's perspective. Each frame, before starting the rendering pipeline, the rendering pipeline is invoked for each mirror and rendered to a texture (see src/viewer.cpp:1068-1093 and src/mirror.cpp:58). For this invocation, instead of the camera's view, a reflection of the camera's viewing frustum about the mirror is used. The target texture is owned by the mirror, and it uses it as a source texture for subsequent renders. An important step is to set the UV coordinates of the quad that represents the mirror to the geometry of the quad projected in the reflected viewing frustum's perspective. I came up with this technique on my own (with some inspiration from posts on the internet). See Figure \ref{screenshot01} for a screenshot.
+      Planar mirror reflections were implemented by rendering the complete scene an extra time to texture, and then applying the texture to a quad when rendering from the camera's perspective. Each frame, before starting the main render, the rendering pipeline is invoked for each mirror and rendered to a texture (see src/viewer.cpp:1068-1093 and src/mirror.cpp:58). For this invocation, instead of the camera's view, a reflection of the camera's viewing frustum about the mirror is used. The target texture is owned by the mirror, and it uses it as a diffuse colour texture for subsequent renders. An important step is to set the UV coordinates of the quad that represents the mirror to the geometry of the quad projected in the reflected viewing frustum's perspective. I came up with this technique on my own (with some inspiration from posts on the internet). See Figure \ref{screenshot01} for a screenshot.
 
 
     \subsection{Shader Picking} \label{picking}
-      I use a simple picking technique that leverages the fact that a fragment shader can be told the Id of the mesh it is rendering, and that Id can be stored in a texture. Then to pick I simply read the center pixel of the picking texture and recover the Id of the mesh the player is looking at. See src/viewer.cpp:695-700.
+      I use a simple picking technique that leverages the fact that a fragment shader can be told the ID of the mesh it is rendering, and that ID can be stored in a texture. Then to pick I simply read the center pixel of the picking texture and recover the ID of the mesh the player is looking at. See src/viewer.cpp:695-700.
 
 
 
@@ -234,7 +234,7 @@
     \subsection{Algorithms}
       See Section \ref{technical-objectives} for descriptions and code pointers of the main algorithms I used.
 
-      SSAO runs in time (kernel size) * (num fragments). I used 4 for kernel size in my implementation, so SSAO is just fixed overhead.
+      SSAO runs in time (kernel size) * (num fragments). I used 4 for kernel size in my implementation, so SSAO has only fixed overhead.
       Motion Blur runs in (num blur samples) * (num fragments). I used 10 blur samples in my implementation.
 
       Normally, forward render pipelines require (num lights) * (num verts) * (shade time) + (num frags) to render multiple lights. Deferred rendering takes (num lights) * (num verts) * (shadowmap time) + (num frags) * (shade time). While this only differs by constants, outputting only the depth makes a large difference because depth buffers are highly optimized and smaller than colour buffers.
@@ -246,7 +246,7 @@
       All of the other algorithms run as a constant number of steps for each fragment (for example, normal mapping), with possible pre-processing costs.
 
     \subsection{Data Abstraction}
-      I treat meshes as a logical unit that is rendered through the pipeline at once. Each mesh is simply made of a few VBOs and textures. A useful next step would be to be add a better hierarchical model with logical nodes instead of having to set a modelling transform for each mesh individually.
+      I treat meshes as logical units that are rendered through parts of the pipeline one at a time. Each mesh is composed of a few VBOs and textures and represents some amount of geometry. A useful next step would be to be add a better hierarchical model with logical nodes instead of only meshes so that modelling transformations can be set to these nodes instead of every mesh.
 
       My viewer class is monolithic and handles all of interactions with shaders. Shaders should be created as objects with interfaces to bind data and invoke them in order to make the code more modular and less fragile.
 
@@ -254,24 +254,31 @@
       \begin{itemize}
         \item The system is configurable with defines in the code and runtime settings that can be toggled by the user.
 
-        \item There is a debugging mode that displays the textures relevant to the deferred rendering pipeline. I frequently used a helper method to check and print OpenGL errors if they occurred. Since the OpenGL API is very stateful and doesn't explicitly report many errors, finding bugs in a larger program is quite involved. Having a debug mode that wraps all calls with error checking would be a useful addition.
+        \item There is a debugging mode that displays the textures relevant to the deferred rendering pipeline. I frequently used a helper method to check and print OpenGL errors if they occurred. Since the OpenGL API is very stateful and doesn't explicitly report many errors, finding bugs in a larger program is quite involved. Having a debug mode that wraps all calls with error checking would be a useful addition for further development.
 
-        \item The code is my own, with ideas and algorithms based off of the referenced sources and linked blog posts in the relevant sections.
+        \item The code is all my own, with ideas and algorithms based off of the referenced sources and linked blog posts in the relevant sections.
 
-        \item I used git for version control, backups, transferring between my own computer and the lab computers, and to stay organized.
+        \item I used git for version control, backups, transferring between my own computer and the lab computers, and for staying organized.
 
         \item Testing and verification was all manual since testing graphical output automatically is difficult.
 
-        \item There is currently a bug that was introduced with hasty last-minute additions. When lighting goes off, the faces of spheres become darker.
-
-        \item I am planning to continue developing this rendering engine in the future. I have learned a lot about GLSL and modern OpenGL techniques. I would like to create a full game eventually. Next features would be skeletal animation and a physics engine.
+        \item There is currently a bug that was introduced with hasty last-minute additions. When lightning goes off, some faces of spheres become darker.
     \end{itemize}
 
+  \chapter{Conclusion}
+    \section{Future Possibilities}
+      I am planning to continue developing this rendering engine in the future. I have learned a lot about GLSL and modern OpenGL techniques. I've been interested in graphics and game development for many years, but have never put in the time to properly learn how to write shaders - I'm glad that this project accelerated my learning and that the course taught me the fundamentals.
 
-    \section{Acknowledgements}
-      I would like to acknowledge http://www.opengl-tutorial.org for teaching me a lot of what I know about OpenGL 3.3+ techniques. It was a great starting point for learning the basics.
+      I am planning to create a full game eventually - it will likely use this project as a starting point. Next steps for this project would be skeletal animation and a physics engine.
 
-      I would like to acknowledge john-chapman-graphics.blockspot.ca for providing me tutorials for some of the more advanced algorithms I implemented.
+      There is lots of room for improvement for the shadow mapping technique used in this project, as mentioned in Section \ref{shadow-mapping}. Cascading Shadow Maps is a popular technique that would allow shadow mapping larger areas with high-resolution shadows.
+
+      Shader performance for this project should be improved. This is important because it would allow more dynamic lights to be added - currently adding too many drops the frame rate too low.
+
+  \section{Acknowledgements}
+    I would like to acknowledge http://www.opengl-tutorial.org for teaching me a lot of what I know about OpenGL 3.3+ techniques. It was a great starting point for learning the basics.
+
+    I would like to acknowledge john-chapman-graphics.blockspot.ca for providing me tutorials for some of the more advanced algorithms I implemented.
 
     % References.
 
