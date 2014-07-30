@@ -231,20 +231,47 @@
 
 
   \section{Implementation}
-  %TODO
-%Algorithms, data structures, and complexities,
-%• Modularity, data abstraction and encapsulation,
-%• Platform and system dependence or independence, global constants and configurability,
-%• Data and code sources, network and literature resources, system and local utilities, the
-%re-use and adaptation of existing code,
-%delegation,
-%• Coding style, debugging approach and utilities, version management, testing and veri-
-%fying practices,
-%• Caveats, bugs, cautions, unexplored areas, assumptions, future possibilities.
+    \subsection{Algorithms}
+      See Section \ref{technical-objectives} for descriptions and code pointers of the main algorithms I used.
+
+      SSAO runs in time (kernel size) * (num fragments). I used 4 for kernel size in my implementation, so SSAO is just fixed overhead.
+      Motion Blur runs in (num blur samples) * (num fragments). I used 10 blur samples in my implementation.
+
+      Normally, forward render pipelines require (num lights) * (num verts) * (shade time) + (num frags) to render multiple lights. Deferred rendering takes (num lights) * (num verts) * (shadowmap time) + (num frags) * (shade time). While this only differs by constants, outputting only the depth makes a large difference because depth buffers are highly optimized and smaller than colour buffers.
+
+      My mirror algorithm is not scalable - it scales the number of pipeline invocations linearly with the number of mirrors.
+
+      Shader Picking adds no new overhead - it's a single texture lookup.
+
+      All of the other algorithms run as a constant number of steps for each fragment (for example, normal mapping), with possible pre-processing costs.
+
+    \subsection{Data Abstraction}
+      I treat meshes as a logical unit that is rendered through the pipeline at once. Each mesh is simply made of a few VBOs and textures. A useful next step would be to be add a better hierarchical model with logical nodes instead of having to set a modelling transform for each mesh individually.
+
+      My viewer class is monolithic and handles all of interactions with shaders. Shaders should be created as objects with interfaces to bind data and invoke them in order to make the code more modular and less fragile.
+
+    \subsection{Code and Development Considerations}
+      \begin{itemize}
+        \item The system is configurable with defines in the code and runtime settings that can be toggled by the user.
+
+        \item There is a debugging mode that displays the textures relevant to the deferred rendering pipeline. I frequently used a helper method to check and print OpenGL errors if they occurred. Since the OpenGL API is very stateful and doesn't explicitly report many errors, finding bugs in a larger program is quite involved. Having a debug mode that wraps all calls with error checking would be a useful addition.
+
+        \item The code is my own, with ideas and algorithms based off of the referenced sources and linked blog posts in the relevant sections.
+
+        \item I used git for version control, backups, transferring between my own computer and the lab computers, and to stay organized.
+
+        \item Testing and verification was all manual since testing graphical output automatically is difficult.
+
+        \item There is currently a bug that was introduced with hasty last-minute additions. When lighting goes off, the faces of spheres become darker.
+
+        \item I am planning to continue developing this rendering engine in the future. I have learned a lot about GLSL and modern OpenGL techniques. I would like to create a full game eventually. Next features would be skeletal animation and a physics engine.
+    \end{itemize}
 
 
-    %TODO - Acknowledgements.
+    \section{Acknowledgements}
+      I would like to acknowledge http://www.opengl-tutorial.org for teaching me a lot of what I know about OpenGL 3.3+ techniques. It was a great starting point for learning the basics.
 
+      I would like to acknowledge john-chapman-graphics.blockspot.ca for providing me tutorials for some of the more advanced algorithms I implemented.
 
     % References.
 
