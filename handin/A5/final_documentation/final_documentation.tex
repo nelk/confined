@@ -18,6 +18,13 @@
     This project was interesting and challenging because it involves using several advanced shader techniques at the same time. I learned how to effectively use GLSL on modern hardware to achieve quality light and shadow rendering at interactive frame rates, as well as how several other popular effects are achieved in shaders.
 
   \section{Overview of Features}
+    \begin{figure}[h!]
+      \centering
+      \includegraphics[width=1.0\textwidth]{../screenshot01.png}
+      \caption{Screenshot of Game - Looking at self in mirror.}
+      \label{screenshot01}
+    \end{figure}
+
     Most of the rendering engine's features were objectives of the project, with a few extra features implemented as well. The features are covered in more depth and their technical aspects are discussed in Section \ref{technical-objectives}.
 
     The interactive demo is navigating using first-person controls, similar to first-person shooter games.
@@ -39,6 +46,11 @@
 
 \chapter{Manual}
   \section{Running the Program}
+    \subsection{Hardware}
+      This program requires a graphics card that supports OpenGL 3.3+.
+      OpenGL 3.3+ is required for its efficient buffers, customizable rendering pipeline, and multiple render targets (required for deferred shading).
+      This project was developed with an NVIDIA GTS 360M.
+
     \subsection{Operating System}
       This program was written to run on linux. It uses a cross-platform library for windows and I/O, so can easily be adapted to work on other platforms, but this was never attempted during development.
 
@@ -117,47 +129,105 @@
     \end{enumerate}
 
 \chapter{Technical Details}
-  \section{Rendering Pipeline} \label{deferred-rendering}
-    \begin{figure}[h!]
-      \caption{Confined Rendering Pipeline}
-      \centering
-      \includegraphics[width=1.0\textwidth]{rendering_pipeline}
-    \end{figure}
+  \section{Rendering Pipeline}
+    \subsection{Deferred Rendering} \label{deferred-rendering}
+      Deferred shading is a method of shading that speeds up subsequent lighting and shadow depth passes by letting them perform per-pixel lighting calculations only, instead of computing them for all geometry and all fragments \cite{ferkoreal}.
 
-  \section{Technical Objectives}\label{technical-objectives}
-    %TODO - code map.
-    %TODO - all objectives.
-    %TODO - referenes in objective algorithm discussions.
+      When forward-rendering, the vertex shader will compute lighting parameters (incident, normal, colours) which will be interpolated for each fragment. Deferred shading, however, uses two passes. In the first it computes geometric parameters for each pixel and writes them to a textures for later use. Subsequent shading passes can then sample these textures and operate per-fragment only. The benefit of this is clear when you consider shadow mapping with many lights, since when forward rendering you would need to run the shadow mapping algorithm over all geometry for each light and each fragment, whereas with deferred shading you only need to do it for each fragment. Although there are many shader passes the memory bandwidth of each is quite small.
 
-  \label{ssao}
 
-  \section{Technical Outline}
-    This project will require implementing several algorithms, all of which have to do with using shaders written in GLSL.
-    OpenGL 3.3+ will be used for its efficient buffers, custom rendering pipeline, and multiple render targets (required for deferred shading).
+    \subsection{Confined's Rendering Pipeline}
+      \begin{figure}[h!]
+        \centering
+        \includegraphics[width=1.0\textwidth]{rendering_pipeline}
+        \caption{Rendering Pipeline}
+        \label{pipeline-img}
+      \end{figure}
 
-    Although not an objective, implement deferred shading will greatly speed up dynamic lighting. Deferred shading is a method of shading that speeds up subsequent lighting and shadow depth passes by letting them perform per-pixel lighting calculations only instead of computing them for all geometry and all fragments \cite{ferkoreal}.
-    When forward-rendering, the vertex shader will compute lighting parameters (incident, normal, colours) which will be interpolated for each fragment. Deferred shading, however, computes geometric parameters for each pixel and writes them to a textures for later use. Subsequent shading passes can then sample these textures and operate per-fragment only. The benefit of this is clear when you consider shadow mapping with many lights, since when forward rendering you would need to run the shadow mapping algorithm over all geometry for each light and each fragment, whereas with deferred shading you only need to do it for each fragment. Although there are many shader passes the memory bandwidth of each is quite small.
+      Figure \ref{pipeline-img} shows the overall structure and some details of the rendering pipeline.
 
-    A crucial objective is shadow mapping. This algorithm is well-known and consists of a first pass where geometry is rendered from the perspective of a dynamic light source, and only a depth buffer is written \cite{williams1978casting}. This is done for each light. Then a final pass can perform lighting calculations based off of whether the camera's perspective sees pixels that are farther or closer than the first surface each light sees is. This algorithm is compatible with shadow-mapping and in fact allows you to use many dynamic light sources because they only have to pass over each fragment. There are also extensions to shadow mapping that eliminate visual artifacts present in the basic implementation and allow more realistic penumbrae \cite{dimitrov2007cascaded} \cite{fernando2005percentage}.
-    The objective requires dynamic shadow maps to work - a light source shouldn't light geometry that is occluded. Several light source types can be implemented - namely directional lights (no position or falloff and parallel light rays), spot lights (position, direction, angle, and falloff), and point lights (position and falloff - lights in all directions). Shadow maps are the most challenging for point lights as a texture cube map will need to be used.
+      The Geometry Pass Shader is the first stage in deferred shading, and is responsible for taking scene data and creating 6 output render target textures. It takes a Vertex Buffer Object (VBO) that contains vertices, UV coordinates, normals, tangents, and bitangents of all scene geometry. This shader is run once on each mesh per frame. The shader also takes model, view, and perspective matrices so that it can convert vertices in model space to screen space. The Id of the mesh being drawn is also sent to the shader for picking. This shader outputs the 6 textures shown: diffuse, specular, normal, emissive, depth, and picking. The purpose of each texture should be self-explanatory.
 
-    Another interesting objective is to apply an ambient occlusion (approximation) algorithm in shaders. There is more than one fast algorithm for this, but this project uses the quick algorithm named Screen Space Ambient Occlusion \cite{kajalinshaderx7}\cite{mittring2007finding}.
+      Next, a loop is entered to perform the second stage of deferred shading. For each light in the scene, shadow maps are first generated and then deferred rendering for that light is accumulated to another texture. For the Shadow map Shader, only the vertices of meshes need to be sent to it, and it only outputs a single channel depth texture, which is a relatively quick operation. Next, this shadow map, along with the 6 textures generated in the first shader stage are passed to the Deferred Rendering Shader. This is the largest and most complicated shader. It performs all lighting, shading, and shadow calculations for each fragment. SSAO is also implemented in this shader. Note that the actual vertices sent to this shader are just a single quad. Everything is done per-fragment. The results of this texture are accumulated for each light into the rendered texture.
 
-    A few other objectives:
-    \begin{itemize}
-      \item
-        Bump/normal mapping, implemented in a way compatible with deferred shading (perturbed normals can be written in the first pass).
+      The last step is post-processing. Now that all light shading has been accumulated to a texture, we pass this texture, and our depth and picking textures, to the Post-Processing Shader. This shader also only takes a quad for vertices and operates only per-fragment. Motion blur is performed here, along with normal blur for SSAO, and debug highlighting for mesh picking (which is why the picking texture is needed). This shader outputs the final rendered image to the screen (or back buffer).
 
-      \item
-        Motion blur - a post processing effect - meaning the scene is rendered to a texture and then another set of shaders will process this texture to output the final result to screen. Motion blur means when you move your camera the scene will blur objects that appear to be moving quicker. There are a few techniques for this - I will try storing the previous viewing matrix and blurring based off of each pixel position's delta, with correction for frame rate.
+      Not displayed is how mirrors are done. See Section \ref{mirrors} for more information.
 
-      \item
-        Planar mirror reflection - rendering to texture the scene once from the perspective of the reflected ray from the camera's perspective, and then rendering again from the camera's perspective after applying the rendered texture to the mirror.
 
-      \item
-        Basic keyframe animation - implemented by using multiple mesh files with the same corresponding data (can be exported by modelling applications) and performing interpolation between them.
+  \section{Technical Details} \label{technical-objectives}
+    \subsection{Normal Mapping} \label{normal-mapping}
+      \begin{figure}[h!]
+        \centering
+        \includegraphics[width=1.0\textwidth]{normal_mapping_normal}
+        \caption{Normal Texture with Brick Normal Mapping}
+      \end{figure}
 
-    \end{itemize}
+      \begin{figure}[h!]
+        \centering
+        \includegraphics[width=1.0\textwidth]{normal_mapping_accum}
+        \caption{Render with Brick Normal Mapping}
+        \label{brick-normal-map}
+      \end{figure}
+
+      Normal mapping is when, usually in addition to a diffuse colour texture, you have a texture representing how normals should be perturbed at each pixel of the texture. The x, y, and z values of a normal are stored as the RGB values of the pixel. This technique lets you have very detailed bumps on a surface that would take millions of extra polygons to construct using only geometry. These normal vectors are stored in tangent space, and have to be converted to model space in order to be used for lighting calculations. I do this by pre-computing tangent and bitangent vectors on the CPU when loading models (see src/mesh.cpp:83-100). Then in the Geometry Pass Shader I compute a tangent-bitangent-normal matrix (TBN) to convert these to model space (see shaders/geomTextures.frag:64-71). These normals are then used to perform the regular shading calculations in the Deferred Rendering Shader (see shaders/deferredShading.frag:146).
+
+      I followed a helpful tutorial at http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-13-normal-mapping/.
+
+    \subsection{Shadow Mapping} \label{shadow-mapping}
+      The regular shadow mapping algorithm is well-known and consists of a first pass where geometry is rendered from the perspective of a dynamic light source, and only a depth buffer is written \cite{williams1978casting}. This is done for each light. Then a second pass can perform lighting calculations based off of whether the camera's perspective sees pixels that are farther or closer than the first surface each light sees is.
+
+      This algorithm is compatible with deferred-rendering and in fact allows you to use more dynamic light sources because they only have to perform shading for each fragment instead of for each vertex (see shaders/deferredShading.frag:235-291). See Figure \ref{brick-normal-map} for a screenshot of point light shadow mapping.
+
+      Three light source types were be implemented (see src/light.hpp).
+      \begin{enumerate}
+        \item Directional Lights - no position or falloff and parallel light rays.
+        \item Spot Lights - position, direction, angle, and falloff
+        \item Point Lights - position and falloff, lights in all directions.
+      \end{enumerate}
+
+      Shadow mapping was the most challenging to implement for point lights because a texture cube map will need to be used, which is created by doing 6 normal shadow map passes in each of the directions of a cube at the light source. However, GLSL has a cube map texture sampler to make it easy to sample the correct face of the cube.
+
+      There are multiple extensions to shadow mapping that eliminate visual artifacts present in the basic implementation and allow more realistic penumbrae, but they were outside the scope of this project \cite{dimitrov2007cascaded} \cite{fernando2005percentage}.
+
+      I followed a helpful tutorial at http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-16-shadow-mapping/.
+
+    \subsection{SSAO} \label{ssao}
+      \begin{figure}[h!]
+        \centering
+        \includegraphics[width=1.0\textwidth]{nossao}
+        \caption{SSAO turned off}
+      \end{figure}
+
+      \begin{figure}[h!]
+        \centering
+        \includegraphics[width=1.0\textwidth]{ssao}
+        \caption{SSAO turned on}
+      \end{figure}
+
+      Ambient Occlusion means calculating an occlusion factor that can be applied to the ambient light term to improve lighting correctness. There is more than one fast algorithm for this, but this project uses the quick algorithm named Screen Space Ambient Occlusion \cite{kajalinshaderx7}\cite{mittring2007finding}.
+
+      The algorithm works by sampling the depth of neighbouring pixels to determine whether a fragment should receive more or less ambient light. From the depth and normal information of each fragment, a view-space position and normal can be computed. Sample positions within a hemisphere oriented along the fragment's normal are selected based off of a pre-computed kernel and rotated randomly based off of a noise texture. These sample points are projected onto screenspace and the depth texture is sampled to see whether these points are in front of the fragment being shaded. The fraction of sampled points that are in front of the fragment being shaded is used to decrease the ambient shading factor for this fragment. See shaders/deferredShading.frag:304-315,68-89.
+
+      I followed a helpful tutorial at http://john-chapman-graphics.blogspot.ca/2013/01/ssao-tutorial.html?m=1.
+
+
+    \subsection{Motion Blur} \label{motion-blur}
+      Motion blur is a an effect that blurs objects when move your camera. The amount of blur is proportinal to the speed of movement of the vectors/pixels on the screen.
+      I implemented a screen-space technique that runs in the post-processing shader. The technique is based off of this tutorial: http://john-chapman-graphics.blogspot.ca/2013/01/what-is-motion-blur-motion-pictures-are.html.
+
+      The algorithm is to approximate where each pixel would have been in the last frame by storing the previous frame's view matrix, and blurring by sampling along the delta vector for each fragment. A matrix is computed and passed to the shader that maps the current frame's screenspace coordinates to the previous frame's screenspace coordinates. With this matrix a blur vector is computed by subtracting the two screenspace positions. Fragments are sampled along this blur vector and blended together to get the blurring effect. See shaders/postProcess.frag:69-86.
+
+      This technique is affected by frame rate, since if the frame rate is very high, then the previous view matrix will be almost the same and almost no blurring will occur. This can be fixed by calculating the frame rate and passing the shader a correction factor.
+
+
+    \subsection{Planar Mirrors} \label{mirrors}
+      Planar mirror reflections are implemented by rendering the complete scene an extra time to texture, and then applying the texture to a quad when rendering from the camera's perspective. Each frame, before starting the rendering pipeline, the rendering pipeline is invoked for each mirror and rendered to a texture (see src/viewer.cpp:1068-1093 and src/mirror.cpp:58). For this invocation, instead of the camera's view, a reflection of the camera's viewing frustum about the mirror is used. The target texture is owned by the mirror, and it uses it as a source texture for subsequent renders. An important step is to set the UV coordinates of the quad that represents the mirror to the geometry of the quad projected in the reflected viewing frustum's perspective. I came up with this technique on my own (with some inspiration from posts on the internet). See Figure \ref{screenshot01} for a screenshot.
+
+
+    \subsection{Shader Picking} \label{picking}
+      I use a simple picking technique that leverages the fact that a fragment shader can be told the Id of the mesh it is rendering, and that Id can be stored in a texture. Then to pick I simply read the center pixel of the picking texture and recover the Id of the mesh the player is looking at. See src/viewer.cpp:695-700.
+
 
 
   \section{Implementation}
@@ -165,10 +235,8 @@
 %Algorithms, data structures, and complexities,
 %• Modularity, data abstraction and encapsulation,
 %• Platform and system dependence or independence, global constants and configurability,
-%• Input/output syntax, Lua extensions if any, pre- and post-processing,
 %• Data and code sources, network and literature resources, system and local utilities, the
 %re-use and adaptation of existing code,
-%• Intercommunication, shell scripts, pipes, sockets, intermediate files, parallelism and task
 %delegation,
 %• Coding style, debugging approach and utilities, version management, testing and veri-
 %fying practices,
