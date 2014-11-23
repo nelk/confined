@@ -1,0 +1,25 @@
+# Max2Mtl Version 4.0 Mar 10th, 2001
+#
+# Multi/Sub fireplace (2) to come 
+#
+newmtl fireflame
+Ka  0.8 0.8 0.8
+Kd  0.4 0.4 0.4
+Ks  1.0 1.0 1.0
+d  1.0
+Ns  0.5
+illum 2
+map_Kd fireflm.jpg
+#
+newmtl firebrick
+Ka  1.0 1.0 1.0
+Kd  0.5 0.5 0.5
+Ks  0.0 0.0 0.0
+d  1.0
+Ns  0.5
+illum 2
+map_Kd firepl.jpg
+#
+# Multi/Sub fireplace done 
+#
+# EOF
