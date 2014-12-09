@@ -9,6 +9,8 @@
 #include "mesh.hpp"
 #include "light.hpp"
 #include "sound.hpp"
+#include "shader.hpp"
+#include "shader_instances.hpp"
 
 #define DEFAULT_WIDTH 1024
 #define DEFAULT_HEIGHT 768
@@ -87,7 +89,10 @@ private:
   GLuint depthProgramId;
   GLuint quadProgramId;
   GLuint postProcessProgramId;
-  GLuint geomTexturesProgramId;
+  //GLuint geomTexturesProgramId;
+
+  shaders::ShaderProgram<shaders::GeomTexturesVertShader, shaders::GeomTexturesFragShader> geomTexturesProgram;
+
   GLuint deferredShadingProgramId;
 
   // Deferred Shading textures.

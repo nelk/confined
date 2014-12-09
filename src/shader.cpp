@@ -10,6 +10,46 @@
 
 #include "shader.hpp"
 
+namespace shaders {
+
+GLuint Shader::loadShader(const char *filepath) {
+  GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
+  // Read the Vertex Shader code from the file
+  std::string VertexShaderCode;
+  std::ifstream VertexShaderStream(filepath, std::ios::in);
+  if(VertexShaderStream.is_open()){
+    std::string Line = "";
+    while(getline(VertexShaderStream, Line))
+      VertexShaderCode += "\n" + Line;
+    VertexShaderStream.close();
+  }else{
+    std::cerr << "Could not open " << filepath << std::endl;
+    return 0;
+  }
+
+  GLint Result = GL_FALSE;
+  int infoLogLength;
+
+  // Compile Vertex Shader.
+  std::cout << "Compiling shader: " << filepath << std::endl;
+  char const * VertexSourcePointer = VertexShaderCode.c_str();
+  glShaderSource(VertexShaderID, 1, &VertexSourcePointer, NULL);
+  glCompileShader(VertexShaderID);
+
+  // Check Vertex Shader
+  glGetShaderiv(VertexShaderID, GL_COMPILE_STATUS, &Result);
+  glGetShaderiv(VertexShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
+  if ( infoLogLength > 0 ){
+    std::vector<char> VertexShaderErrorMessage(infoLogLength+1);
+    glGetShaderInfoLog(VertexShaderID, infoLogLength, NULL, &VertexShaderErrorMessage[0]);
+    std::cerr << &VertexShaderErrorMessage[0] << std::endl;
+  }
+
+  return VertexShaderID;
+}
+
+
+// TODO: delete this.
 GLuint loadShaders(const char* vertex_file_path, const char* fragment_file_path) {
 
   // Create the shaders
@@ -94,4 +134,5 @@ GLuint loadShaders(const char* vertex_file_path, const char* fragment_file_path)
   return programId;
 }
 
+} // namespace shaders.
 

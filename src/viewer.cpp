@@ -33,8 +33,8 @@ void window_size_callback(GLFWwindow* window, int width, int height) {
   viewer->getController()->reset();
 }
 
-void window_focus_callback(GLFWwindow* window, int focussed) {
-  if (focussed == GL_TRUE) {
+void window_focus_callback(GLFWwindow* window, int focused) {
+  if (focused == GL_TRUE) {
     Viewer* viewer = (Viewer*)glfwGetWindowUserPointer(window);
     viewer->getController()->reset();
   }
@@ -369,17 +369,15 @@ bool Viewer::initialize() {
   glBufferData(GL_ARRAY_BUFFER, sizeof(quadVBuffer), quadVBuffer, GL_STATIC_DRAW);
 
   // Compile GLSL programs.
-  quadProgramId = loadShaders( "shaders/passthrough.vert", "shaders/justTexture.frag" );
+  quadProgramId = shaders::loadShaders("shaders/passthrough.vert", "shaders/justTexture.frag");
 
-  depthProgramId = loadShaders("shaders/depthShadow.vert", "shaders/depthShadow.frag" );
+  depthProgramId = shaders::loadShaders("shaders/depthShadow.vert", "shaders/depthShadow.frag");
 
-  geomTexturesProgramId = loadShaders("shaders/geomTextures.vert", "shaders/geomTextures.frag");
+  deferredShadingProgramId = shaders::loadShaders("shaders/deferredShading.vert", "shaders/deferredShading.frag");
 
-  deferredShadingProgramId = loadShaders("shaders/deferredShading.vert", "shaders/deferredShading.frag");
+  postProcessProgramId = shaders::loadShaders("shaders/passthrough.vert", "shaders/postProcess.frag");
 
-  postProcessProgramId = loadShaders("shaders/passthrough.vert", "shaders/postProcess.frag");
-
-  if (quadProgramId == 0 || depthProgramId == 0 || geomTexturesProgramId == 0 || deferredShadingProgramId == 0 || postProcessProgramId == 0) {
+  if (quadProgramId == 0 || depthProgramId == 0 || deferredShadingProgramId == 0 || postProcessProgramId == 0) {
     return false;
   }
 
@@ -510,27 +508,11 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
   // Handle for MVP uniform (shadow depth pass).
   static GLuint depthMatrixId = glGetUniformLocation(depthProgramId, "depthMVP");
 
-  // Handles for Geometry pass.
-  static GLuint geomMVPId = glGetUniformLocation(geomTexturesProgramId, "MVP");
-  static GLuint geomViewMatrixId = glGetUniformLocation(geomTexturesProgramId, "V");
-  static GLuint geomModelMatrixId = glGetUniformLocation(geomTexturesProgramId, "M");
-  static GLuint geomProjectionMatrixId = glGetUniformLocation(geomTexturesProgramId, "P");
-  static GLuint geomHalfspacePointId = glGetUniformLocation(geomTexturesProgramId, "halfspacePoint");
-  static GLuint geomHalfspaceNormalId = glGetUniformLocation(geomTexturesProgramId, "halfspaceNormal");
-  static GLuint geomUseNoPerspectiveUVId = glGetUniformLocation(geomTexturesProgramId, "useNoPerspectiveUVs");
-  static GLuint geomMeshIdId = glGetUniformLocation(geomTexturesProgramId, "meshId");
-
-  // Handles for material properties (geometry pass).
-  //GLuint material_ka = glGetUniformLocation(geomTexturesProgramId, "material_ka");
-  static GLuint geomMaterialKdId = glGetUniformLocation(geomTexturesProgramId, "material_kd");
-  static GLuint geomMaterialKsId = glGetUniformLocation(geomTexturesProgramId, "material_ks");
-  static GLuint geomMaterialShininessId = glGetUniformLocation(geomTexturesProgramId, "material_shininess");
-  static GLuint geomMaterialEmissiveId = glGetUniformLocation(geomTexturesProgramId, "material_emissive");
-
-  static GLuint geomDiffuseTexId = glGetUniformLocation(geomTexturesProgramId, "diffuseTexture");
-  static GLuint geomUseDiffuseTextureId = glGetUniformLocation(geomTexturesProgramId, "useDiffuseTexture");
-  static GLuint geomNormalTexId = glGetUniformLocation(geomTexturesProgramId, "normalTexture");
-  static GLuint geomUseNormalTextureId = glGetUniformLocation(geomTexturesProgramId, "useNormalTexture");
+  // TODO: Create output methods.
+  static GLuint geomDiffuseTexId = glGetUniformLocation(geomTexturesProgram.getProgramId(), "diffuseTexture");
+  static GLuint geomUseDiffuseTextureId = glGetUniformLocation(geomTexturesProgram.getProgramId(), "useDiffuseTexture");
+  static GLuint geomNormalTexId = glGetUniformLocation(geomTexturesProgram.getProgramId(), "normalTexture");
+  static GLuint geomUseNormalTextureId = glGetUniformLocation(geomTexturesProgram.getProgramId(), "useNormalTexture");
 
   static GLuint deferredViewMatrixId = glGetUniformLocation(deferredShadingProgramId, "V");
   static GLuint deferredProjectionMatrixId = glGetUniformLocation(deferredShadingProgramId, "P");
@@ -580,7 +562,8 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
 
   // ======= Deferred rendering stage 1: Render geometry into textures. ===========
 
-  glUseProgram(geomTexturesProgramId);
+  // TODO: Make using program implicit.
+  glUseProgram(geomTexturesProgram.getProgramId());
 
   // Render to framebuffer.
   glBindFramebuffer(GL_FRAMEBUFFER, deferredShadingFramebuffer);
@@ -613,10 +596,11 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
   const glm::mat4 VP = projectionMatrix * viewMatrix;
 
   // Send MVP transformations to currently bound shader.
-  glUniformMatrix4fv(geomViewMatrixId, 1, GL_FALSE, &viewMatrix[0][0]);
-  glUniformMatrix4fv(geomProjectionMatrixId, 1, GL_FALSE, &projectionMatrix[0][0]);
-  glUniform3fv(geomHalfspacePointId, 1, &halfspacePosition[0]);
-  glUniform3fv(geomHalfspaceNormalId, 1, &halfspaceNormal[0]);
+  geomTexturesProgram.set_V(viewMatrix);
+  geomTexturesProgram.set_P(projectionMatrix);
+  // TODO: Find a better solution for this.
+  geomTexturesProgram.shaders::GeomTexturesVertShader::set_halfspacePoint(halfspacePosition);
+  geomTexturesProgram.shaders::GeomTexturesVertShader::set_halfspaceNormal(halfspaceNormal);
 
 
   for (std::vector<Mesh*>::const_iterator it = thisFrameMeshes.begin(); it != thisFrameMeshes.end(); it++) {
@@ -625,19 +609,19 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
     glm::mat4 modelMatrix = mesh->getModelMatrix();
     glm::mat4 MVP = VP * modelMatrix;
 
-    glUniformMatrix4fv(geomModelMatrixId, 1, GL_FALSE, &modelMatrix[0][0]);
-    glUniformMatrix4fv(geomMVPId, 1, GL_FALSE, &MVP[0][0]);
+    geomTexturesProgram.set_M(modelMatrix);
+    geomTexturesProgram.set_MVP(MVP);
 
     // Bind mesh id for picking.
-    glUniform1i(geomMeshIdId, mesh->getId());
+    geomTexturesProgram.set_meshId(mesh->getId());
 
     Material* material = mesh->getMaterial();
     if (material != NULL) {
-      //glUniform3f(material_ka, material->ka.x, material->ka.y, material->ka.z);
-      glUniform3f(geomMaterialKdId, material->getDiffuse().x, material->getDiffuse().y, material->getDiffuse().z);
-      glUniform3f(geomMaterialKsId, material->getSpecular().x, material->getSpecular().y, material->getSpecular().z);
-      glUniform1f(geomMaterialShininessId, material->getShininess());
-      glUniform3f(geomMaterialEmissiveId, material->getEmissive().x, material->getEmissive().y, material->getEmissive().z);
+      //geomTexturesProgram.set_material_ka(material_ka);
+      geomTexturesProgram.set_material_kd(material->getDiffuse());
+      geomTexturesProgram.set_material_ks(material->getSpecular());
+      geomTexturesProgram.set_material_shininess(material->getShininess());
+      geomTexturesProgram.set_material_emissive(material->getEmissive());
 
       // Bind diffuse texture if it exists.
       if (material->hasDiffuseTexture() && settings->isSet(Settings::TEXTURE_MAP)) {
@@ -650,7 +634,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
       }
 
       // Avoid hardware perspective divide if pre-divided for mirrors.
-      glUniform1i(geomUseNoPerspectiveUVId, material->isMirror() && settings->isSet(Settings::MIRRORS));
+      geomTexturesProgram.set_useNoPerspectiveUVs(material->isMirror() && settings->isSet(Settings::MIRRORS));
 
       // Bind normal texture if it exists.
       if (material->hasNormalTexture() && settings->isSet(Settings::NORMAL_MAP)) {
@@ -676,15 +660,15 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
       // Set model matrix to move model to point light's position.
       glm::mat4 sphereModelMatrix = glm::translate(glm::mat4(1.0), light->getPosition()) * pointLightMesh->getModelMatrix();
       glm::mat4 MVP = VP * sphereModelMatrix;
-      glUniformMatrix4fv(geomModelMatrixId, 1, GL_FALSE, &sphereModelMatrix[0][0]);
-      glUniformMatrix4fv(geomMVPId, 1, GL_FALSE, &MVP[0][0]);
+      geomTexturesProgram.set_M(sphereModelMatrix);
+      geomTexturesProgram.set_MVP(MVP);
 
       // Use light's diffuse as emissive material.
-      glUniform3f(geomMaterialKdId, 0, 0, 0);
-      glUniform3f(geomMaterialKsId, 0, 0, 0);
+      geomTexturesProgram.set_material_kd(glm::vec3(0));
+      geomTexturesProgram.set_material_ks(glm::vec3(0));
       glm::vec3 emissiveLight = light->getColour();
       emissiveLight *= 5.0;
-      glUniform3f(geomMaterialEmissiveId, emissiveLight.x, emissiveLight.y, emissiveLight.z);
+      geomTexturesProgram.set_material_emissive(emissiveLight);
 
       pointLightMesh->renderGL();
     }
@@ -1251,7 +1235,7 @@ Viewer::~Viewer() {
 
   glDeleteProgram(depthProgramId);
   glDeleteProgram(quadProgramId);
-  glDeleteProgram(geomTexturesProgramId);
+  //glDeleteProgram(geomTexturesProgramId);
   glDeleteProgram(deferredShadingProgramId);
 
   glDeleteFramebuffers(1, &deferredShadingFramebuffer);
