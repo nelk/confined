@@ -3,6 +3,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <algorithm>
 
 #include <stdlib.h>
@@ -12,40 +13,43 @@
 
 namespace shaders {
 
-GLuint Shader::loadShader(const char *filepath) {
-  GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
-  // Read the Vertex Shader code from the file
-  std::string VertexShaderCode;
-  std::ifstream VertexShaderStream(filepath, std::ios::in);
-  if(VertexShaderStream.is_open()){
-    std::string Line = "";
-    while(getline(VertexShaderStream, Line))
-      VertexShaderCode += "\n" + Line;
-    VertexShaderStream.close();
-  }else{
-    std::cerr << "Could not open " << filepath << std::endl;
-    return 0;
+bool Shader::loadShader() {
+  shaderId = glCreateShader(getShaderType());
+  std::ifstream fileStream(filename, std::ios::in);
+  std::stringstream shaderStream;
+  if (fileStream.is_open()) {
+    std::string line = "";
+    while (getline(fileStream, line)) {
+      shaderStream << line << "\n";
+    }
+    fileStream.close();
+  } else {
+    std::cerr << "Could not open " << filename << std::endl;
+    return false;
   }
 
-  GLint Result = GL_FALSE;
+  GLint result = GL_FALSE;
   int infoLogLength;
 
-  // Compile Vertex Shader.
-  std::cout << "Compiling shader: " << filepath << std::endl;
-  char const * VertexSourcePointer = VertexShaderCode.c_str();
-  glShaderSource(VertexShaderID, 1, &VertexSourcePointer, NULL);
-  glCompileShader(VertexShaderID);
+  // Compile Shader.
+  std::cout << "Compiling shader: " << filename << std::endl;
+  const std::string shaderSource = shaderStream.str();
+  const char* shaderSourceCStr = shaderSource.c_str();
+  glShaderSource(shaderId, 1, &shaderSourceCStr, NULL);
+  glCompileShader(shaderId);
 
-  // Check Vertex Shader
-  glGetShaderiv(VertexShaderID, GL_COMPILE_STATUS, &Result);
-  glGetShaderiv(VertexShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
-  if ( infoLogLength > 0 ){
-    std::vector<char> VertexShaderErrorMessage(infoLogLength+1);
-    glGetShaderInfoLog(VertexShaderID, infoLogLength, NULL, &VertexShaderErrorMessage[0]);
-    std::cerr << &VertexShaderErrorMessage[0] << std::endl;
+  // Check Shader.
+  std::cout << "Checking shader: " << filename << std::endl;
+  glGetShaderiv(shaderId, GL_COMPILE_STATUS, &result);
+  glGetShaderiv(shaderId, GL_INFO_LOG_LENGTH, &infoLogLength);
+  if (result != GL_TRUE) {
+    std::vector<char> errorMessage(infoLogLength + 1);
+    glGetShaderInfoLog(shaderId, infoLogLength, NULL, &errorMessage[0]);
+    std::cerr << "Shader error: " << &errorMessage[0] << std::endl;
+    return false;
   }
 
-  return VertexShaderID;
+  return true;
 }
 
 

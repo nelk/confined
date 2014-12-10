@@ -35,17 +35,17 @@ struct Field##name { \
 
 class Shader {
 public:
-  Shader(const char* filename): filename(filename) {
-    shaderId = loadShader(filename);
+  Shader(const char* filename): filename(filename), shaderId(0) {
   }
 
   ~Shader() {
     glDeleteShader(shaderId);
   }
 
-  static GLuint loadShader(const char* filename);
+  bool loadShader();
 
   virtual GLuint getProgramId() = 0;
+  virtual GLuint getShaderType() = 0;
 
   GLuint getShaderId() { return shaderId; }
 
@@ -58,53 +58,42 @@ protected:
 class VertexShader: public Shader {
 protected:
   VertexShader(const char* filename): Shader(filename) {}
+  GLuint getShaderType() { return GL_VERTEX_SHADER; }
 };
 
 class FragmentShader: public Shader {
 protected:
   FragmentShader(const char* filename): Shader(filename) {}
+  GLuint getShaderType() { return GL_FRAGMENT_SHADER; }
 };
 
 template<class VERT, class FRAG>
-class ShaderProgram: virtual public VERT, virtual public FRAG {
+class ShaderProgram: public VERT, public FRAG {
 public:
-  ShaderProgram() {
-    linkProgram();
-    setup();
-  }
+  ShaderProgram() {}
 
   GLuint getProgramId() {
     return programId;
   }
 
-  void linkProgram() {
-    std::cout << "Linking program" << std::endl;
-    programId = glCreateProgram();
-    glAttachShader(programId, VERT::getShaderId());
-    glAttachShader(programId, FRAG::getShaderId());
-    glLinkProgram(programId);
+  bool initialize() {
+    // Load shaders.
+    bool loaded = VERT::loadShader();
+    if (!loaded) return false;
+    loaded = FRAG::loadShader();
+    if (!loaded) return false;
 
-    // Check the program
-    GLint Result = GL_FALSE;
-    int infoLogLength;
-
-    glGetProgramiv(programId, GL_LINK_STATUS, &Result);
-    glGetProgramiv(programId, GL_INFO_LOG_LENGTH, &infoLogLength);
-    if (infoLogLength > 0){
-      std::vector<char> ProgramErrorMessage(infoLogLength+1);
-      glGetProgramInfoLog(programId, infoLogLength, NULL, &ProgramErrorMessage[0]);
-      std::cerr << &ProgramErrorMessage[0] << std::endl;
+    if (!linkProgram()) {
+      return false;
     }
-  }
 
-  void setup() {
+    std::cerr << "Validating shader fields" << std::endl;
     for (const GLchar* field : VERT::shaderFieldNames) {
       GLint id = glGetUniformLocation(getProgramId(), field);
       if (id == -1) {
         std::cerr << "Vertex Shader Error: No uniform field " << field << " for shader "
                   << VERT::filename << std::endl;
-        shader_success = false;
-        return;
+        return false;
       }
       VERT::shaderFieldMap[field] = id;
     }
@@ -113,16 +102,39 @@ public:
       if (id == -1) {
         std::cerr << "Fragment Shader Error: No uniform field " << field << " for shader "
                   << FRAG::filename << std::endl;
-        shader_success = false;
-        return;
+        return false;
       }
       FRAG::shaderFieldMap[field] = id;
     }
+
     // TODO: Other setup and validation.
+    return true;
   }
 
-private:
-  bool shader_success;
+protected:
+  bool linkProgram() {
+    std::cout << "Linking program" << std::endl;
+    programId = glCreateProgram();
+    glAttachShader(programId, VERT::getShaderId());
+    glAttachShader(programId, FRAG::getShaderId());
+    glLinkProgram(programId);
+
+    // Check the program
+    GLint result = GL_FALSE;
+    int infoLogLength;
+
+    glGetProgramiv(programId, GL_LINK_STATUS, &result);
+    glGetProgramiv(programId, GL_INFO_LOG_LENGTH, &infoLogLength);
+    if (result != GL_TRUE){
+      std::vector<char> ProgramErrorMessage(infoLogLength+1);
+      glGetProgramInfoLog(programId, infoLogLength, NULL, &ProgramErrorMessage[0]);
+      std::cerr << &ProgramErrorMessage[0] << std::endl;
+      return false;
+    }
+    std::cout << "Shader program (" << VERT::filename << ", " << FRAG::filename << ") linked with id=" << programId << std::endl;
+    return true;
+  }
+
   GLuint programId;
 };
 

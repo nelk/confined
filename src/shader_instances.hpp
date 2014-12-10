@@ -11,7 +11,7 @@ namespace shaders {
 
 class GeomTexturesVertShader: public VertexShader {
 public:
-  GeomTexturesVertShader(): VertexShader("shaders/geomTexture.vert") {}
+  GeomTexturesVertShader(): VertexShader("shaders/geomTextures.vert") {}
 
   // TODO: Create macro for shaderFieldNames.
   static std::vector<const GLchar*> shaderFieldNames;
@@ -19,14 +19,13 @@ public:
   SHADER_UNIFORM_MAT4(MVP)
   SHADER_UNIFORM_MAT4(M)
   SHADER_UNIFORM_MAT4(V)
-  SHADER_UNIFORM_MAT4(P)
   SHADER_UNIFORM_VEC3(halfspacePoint)
   SHADER_UNIFORM_VEC3(halfspaceNormal)
 };
 
 class GeomTexturesFragShader: public FragmentShader {
 public:
-  GeomTexturesFragShader(): FragmentShader("shaders/geomTexture.frag") {}
+  GeomTexturesFragShader(): FragmentShader("shaders/geomTextures.frag") {}
 
   static std::vector<const GLchar*> shaderFieldNames;
 

@@ -124,22 +124,12 @@ void Viewer::updateSize(int width, int height) {
   }
 }
 
-bool Viewer::initialize() {
+bool Viewer::initializeSound() {
   // Initialize OpenAL.
   if (!Sound::initialize()) {
     std::cerr << "Couldn't initialize OpenAL" << std::endl;
     return false;
   }
-
-  settings = new Settings();
-  controller = new Controller(this, settings);
-  startCharAnimTime = 0;
-
-  // Initial settings (all start on).
-  settings->set(Settings::SSAO, false);
-  settings->set(Settings::BLUR, false);
-  settings->set(Settings::HIGHLIGHT_PICK, false);
-
 
   thunderSound = Sound::load("sound/thunder_mono.wav");
   if (thunderSound == NULL) {
@@ -163,6 +153,44 @@ bool Viewer::initialize() {
     std::cerr << "Couldn't load sound/getitem.wav" << std::endl;
     return false;
   }
+  return true;
+}
+
+bool Viewer::initializeShaders() {
+  // Compile GLSL programs.
+  bool success = geomTexturesProgram.initialize();
+  if (!success) {
+    std::cerr << "Failed to initialize geomTexturesProgram" << std::endl;
+    return false;
+  }
+
+  quadProgramId = shaders::loadShaders("shaders/passthrough.vert", "shaders/justTexture.frag");
+
+  depthProgramId = shaders::loadShaders("shaders/depthShadow.vert", "shaders/depthShadow.frag");
+
+  deferredShadingProgramId = shaders::loadShaders("shaders/deferredShading.vert", "shaders/deferredShading.frag");
+
+  postProcessProgramId = shaders::loadShaders("shaders/passthrough.vert", "shaders/postProcess.frag");
+
+  if (quadProgramId == 0 || depthProgramId == 0 || deferredShadingProgramId == 0 || postProcessProgramId == 0) {
+    return false;
+  }
+  return true;
+}
+
+bool Viewer::initialize() {
+  if (!initializeSound()) {
+    return false;
+  }
+
+  settings = new Settings();
+  controller = new Controller(this, settings);
+  startCharAnimTime = 0;
+
+  // Initial settings (all start on).
+  settings->set(Settings::SSAO, false);
+  settings->set(Settings::BLUR, false);
+  settings->set(Settings::HIGHLIGHT_PICK, false);
 
   glfwMakeContextCurrent(window);
 
@@ -182,6 +210,9 @@ bool Viewer::initialize() {
     std::cerr << "Only " << maxAttachments << " supported FBO Colour Attachments, but this program requires " << MIN_REQUIRED_COLOUR_ATTACHMENTS << std::endl;
   }
 
+  if (!initializeShaders()) {
+    return false;
+  }
 
   // Initialize textures.
   Texture::initialize();
@@ -367,19 +398,6 @@ bool Viewer::initialize() {
   glGenBuffers(1, &quadVertexBuffer);
   glBindBuffer(GL_ARRAY_BUFFER, quadVertexBuffer);
   glBufferData(GL_ARRAY_BUFFER, sizeof(quadVBuffer), quadVBuffer, GL_STATIC_DRAW);
-
-  // Compile GLSL programs.
-  quadProgramId = shaders::loadShaders("shaders/passthrough.vert", "shaders/justTexture.frag");
-
-  depthProgramId = shaders::loadShaders("shaders/depthShadow.vert", "shaders/depthShadow.frag");
-
-  deferredShadingProgramId = shaders::loadShaders("shaders/deferredShading.vert", "shaders/deferredShading.frag");
-
-  postProcessProgramId = shaders::loadShaders("shaders/passthrough.vert", "shaders/postProcess.frag");
-
-  if (quadProgramId == 0 || depthProgramId == 0 || deferredShadingProgramId == 0 || postProcessProgramId == 0) {
-    return false;
-  }
 
 
   // Set up constant data.
@@ -597,7 +615,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
 
   // Send MVP transformations to currently bound shader.
   geomTexturesProgram.set_V(viewMatrix);
-  geomTexturesProgram.set_P(projectionMatrix);
+  //geomTexturesProgram.set_P(projectionMatrix);
   // TODO: Find a better solution for this.
   geomTexturesProgram.shaders::GeomTexturesVertShader::set_halfspacePoint(halfspacePosition);
   geomTexturesProgram.shaders::GeomTexturesVertShader::set_halfspaceNormal(halfspaceNormal);

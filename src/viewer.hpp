@@ -26,6 +26,8 @@ public:
   ~Viewer();
 
   bool initialize();
+  bool initializeSound();
+  bool initializeShaders();
   void run();
 
   /**
