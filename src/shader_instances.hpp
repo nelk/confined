@@ -6,15 +6,14 @@
 #include <GL/glew.h>
 #include <GL/gl.h>
 #include "shader.hpp"
+#include "material.hpp"
 
 namespace shaders {
 
 class GeomTexturesVertShader: public VertexShader {
 public:
   GeomTexturesVertShader(): VertexShader("shaders/geomTextures.vert") {}
-
-  // TODO: Create macro for shaderFieldNames.
-  static std::vector<const GLchar*> shaderFieldNames;
+  SHADER_MEMBERS
 
   SHADER_UNIFORM_MAT4(MVP)
   SHADER_UNIFORM_MAT4(M)
@@ -23,11 +22,14 @@ public:
   SHADER_UNIFORM_VEC3(halfspaceNormal)
 };
 
+
 class GeomTexturesFragShader: public FragmentShader {
 public:
   GeomTexturesFragShader(): FragmentShader("shaders/geomTextures.frag") {}
+  SHADER_MEMBERS
 
-  static std::vector<const GLchar*> shaderFieldNames;
+  SHADER_UNIFORM_SAMPLER2D(diffuseTexture, 0)
+  SHADER_UNIFORM_SAMPLER2D(normalTexture, 1)
 
   SHADER_UNIFORM_BOOL(useDiffuseTexture)
   SHADER_UNIFORM_BOOL(useNormalTexture)
@@ -41,6 +43,23 @@ public:
   SHADER_UNIFORM_BOOL(useNoPerspectiveUVs)
 
   SHADER_UNIFORM_INT(meshId)
+};
+
+class PassThroughVert: public VertexShader {
+public:
+  PassThroughVert(): VertexShader("shaders/passthrough.vert") {}
+  SHADER_MEMBERS
+};
+
+class JustTextureFrag: public FragmentShader {
+public:
+  JustTextureFrag(): FragmentShader("shaders/justTexture.frag") {}
+  SHADER_MEMBERS
+};
+
+class DeferredShadingVert: public VertexShader {
+  DeferredShadingVert(): VertexShader("shaders/deferredShading.vert") {}
+  SHADER_MEMBERS
 };
 
 } // namespace shaders

@@ -22,7 +22,7 @@ DEFAULT_BUILD_TARGETS := ${TARGETS}
 CXX := clang++
 
 # CXXFLAGS are the flags passed to the C++ compiler.
-CXXFLAGS := -Wall -Wextra -MMD -MP -g -pedantic -I src
+CXXFLAGS := -Wall -Wextra -std=c++0x -MMD -MP -g -pedantic -I src
 LDFLAGS = -rdynamic -lGLEW -lGLU -lGL -lSM -lICE -lXext -lglfw3 -lXrandr -lrt -ldl -pthread -lXi -lX11 -lXxf86vm -lm -lassimp -lfreeimage -lopenal -lalut
 
 # BUILD_CACHE_KEY should contain all variables that are used when building your

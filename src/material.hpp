@@ -8,7 +8,7 @@
 class Material {
 public:
   Material(const glm::vec3& ka, const glm::vec3& kd, const glm::vec3& ks, const glm::vec3& ke, float shininess)
-    : ka(ka), kd(kd), ks(ks), ke(ke), shininess(shininess), diffuseTexture(0), normalTexture(0) {}
+    : ka(ka), kd(kd), ks(ks), ke(ke), shininess(shininess), diffuseTexture(nullptr), normalTexture(nullptr) {}
 
   ~Material() {}
 
@@ -41,7 +41,7 @@ public:
   }
 
   bool hasDiffuseTexture() {
-    return diffuseTexture != NULL;
+    return diffuseTexture != nullptr;
   }
 
   Texture* getDiffuseTexture() {
@@ -49,7 +49,7 @@ public:
   }
 
   bool hasNormalTexture() {
-    return normalTexture != NULL;
+    return normalTexture != nullptr;
   }
 
   Texture* getNormalTexture() {

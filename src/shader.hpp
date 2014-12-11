@@ -13,7 +13,9 @@ namespace shaders {
 
 GLuint loadShaders(const char* vertex_file_path, const char* fragment_file_path);
 
-#define SHADER_UNIFORM_GENERIC(name, type, cmd) void set_##name (const type &n) { \
+#define SHADER_MEMBERS static std::vector<const GLchar*> shaderFieldNames;
+
+#define SHADER_UNIFORM_GENERIC(name, type, cmd) void set_##name (type n) { \
   GLint id = shaderFieldMap[#name]; \
   if (id == -1) {                                                        \
     std::cerr << "Shader Runtime Error: No uniform field " #name " for shader " \
@@ -27,11 +29,13 @@ struct Field##name { \
   } \
 } _field_##name; \
 
-#define SHADER_UNIFORM_MAT4(name) SHADER_UNIFORM_GENERIC(name, glm::mat4, glUniformMatrix4fv(id, 1, GL_FALSE, &n[0][0]))
-#define SHADER_UNIFORM_VEC3(name) SHADER_UNIFORM_GENERIC(name, glm::vec3, glUniform3fv(id, 1, &n[0]))
+#define SHADER_UNIFORM_MAT4(name) SHADER_UNIFORM_GENERIC(name, const glm::mat4&, glUniformMatrix4fv(id, 1, GL_FALSE, &n[0][0]))
+#define SHADER_UNIFORM_VEC3(name) SHADER_UNIFORM_GENERIC(name, const glm::vec3&, glUniform3fv(id, 1, &n[0]))
 #define SHADER_UNIFORM_INT(name) SHADER_UNIFORM_GENERIC(name, int, glUniform1i(id, n))
 #define SHADER_UNIFORM_BOOL(name) SHADER_UNIFORM_GENERIC(name, bool, glUniform1i(id, n))
 #define SHADER_UNIFORM_FLOAT(name) SHADER_UNIFORM_GENERIC(name, float, glUniform1f(id, n))
+#define SHADER_UNIFORM_SAMPLER2D(name, slot) SHADER_UNIFORM_GENERIC(name, Material*, {glActiveTexture(GL_TEXTURE##slot);glBindTexture(GL_TEXTURE_2D, n->getDiffuseTexture()->getTextureId()); glUniform1i(id, slot);})
+
 
 class Shader {
 public:

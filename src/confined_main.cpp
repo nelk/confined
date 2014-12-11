@@ -9,6 +9,8 @@
 #include "viewer.hpp"
 
 int main(int argc, char* argv[]) {
+#pragma unused(argc)
+#pragma unused(argv)
   // Initialise GLFW
   if(!glfwInit()) {
     std::cerr << "Failed to initialize GLFW" << std::endl;

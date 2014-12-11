@@ -526,12 +526,6 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
   // Handle for MVP uniform (shadow depth pass).
   static GLuint depthMatrixId = glGetUniformLocation(depthProgramId, "depthMVP");
 
-  // TODO: Create output methods.
-  static GLuint geomDiffuseTexId = glGetUniformLocation(geomTexturesProgram.getProgramId(), "diffuseTexture");
-  static GLuint geomUseDiffuseTextureId = glGetUniformLocation(geomTexturesProgram.getProgramId(), "useDiffuseTexture");
-  static GLuint geomNormalTexId = glGetUniformLocation(geomTexturesProgram.getProgramId(), "normalTexture");
-  static GLuint geomUseNormalTextureId = glGetUniformLocation(geomTexturesProgram.getProgramId(), "useNormalTexture");
-
   static GLuint deferredViewMatrixId = glGetUniformLocation(deferredShadingProgramId, "V");
   static GLuint deferredProjectionMatrixId = glGetUniformLocation(deferredShadingProgramId, "P");
   static GLuint lightPosId = glGetUniformLocation(deferredShadingProgramId, "lightPositionWorldspace");
@@ -643,12 +637,10 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
 
       // Bind diffuse texture if it exists.
       if (material->hasDiffuseTexture() && settings->isSet(Settings::TEXTURE_MAP)) {
-        glUniform1i(geomUseDiffuseTextureId, true);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, material->getDiffuseTexture()->getTextureId());
-        glUniform1i(geomDiffuseTexId, 0);
+        geomTexturesProgram.set_useDiffuseTexture(true);
+        geomTexturesProgram.set_diffuseTexture(material);
       } else {
-        glUniform1i(geomUseDiffuseTextureId, false);
+        geomTexturesProgram.set_useDiffuseTexture(false);
       }
 
       // Avoid hardware perspective divide if pre-divided for mirrors.
@@ -656,12 +648,10 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
 
       // Bind normal texture if it exists.
       if (material->hasNormalTexture() && settings->isSet(Settings::NORMAL_MAP)) {
-        glUniform1i(geomUseNormalTextureId, true);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, material->getNormalTexture()->getTextureId());
-        glUniform1i(geomNormalTexId, 1);
+        geomTexturesProgram.set_useNormalTexture(true);
+        geomTexturesProgram.set_normalTexture(material);
       } else {
-        glUniform1i(geomUseNormalTextureId, false);
+        geomTexturesProgram.set_useNormalTexture(false);
       }
     }
     mesh->renderGL();
@@ -669,8 +659,8 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
 
   // Render point lights as spheres.
   if (RENDER_LIGHTS_AS_SPHERES) {
-    glUniform1i(geomUseDiffuseTextureId, false);
-    glUniform1i(geomUseNormalTextureId, false);
+    geomTexturesProgram.set_useDiffuseTexture(false);
+    geomTexturesProgram.set_useNormalTexture(false);
     for (std::vector<Light*>::const_iterator lightIt = lights.begin(); lightIt != lights.end(); lightIt++) {
       Light *light = *lightIt;
       if (!light->isEnabled() || (light->getType() != Light::POINT && light->getType() != Light::SPOT)) continue;
