@@ -7,6 +7,8 @@ namespace shaders {
 
 std::vector<const GLchar*> GeomTexturesVertShader::shaderFieldNames;
 std::vector<const GLchar*> GeomTexturesFragShader::shaderFieldNames;
+std::vector<const GLchar*> JustTextureFrag::shaderFieldNames;
+std::vector<const GLchar*> PassThroughVert::shaderFieldNames;
 
 } // namespace shaders
 

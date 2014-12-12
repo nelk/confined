@@ -87,13 +87,11 @@ private:
   glm::vec3 ssaoKernel[4];
   glm::vec3 ssaoNoise[NOISE_SIZE];
 
-  GLuint programId;
   GLuint depthProgramId;
-  GLuint quadProgramId;
   GLuint postProcessProgramId;
-  //GLuint geomTexturesProgramId;
 
   shaders::ShaderProgram<shaders::GeomTexturesVertShader, shaders::GeomTexturesFragShader> geomTexturesProgram;
+  shaders::ShaderProgram<shaders::PassThroughVert, shaders::JustTextureFrag> quadProgram;
 
   GLuint deferredShadingProgramId;
 

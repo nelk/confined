@@ -13,7 +13,7 @@ namespace shaders {
 class GeomTexturesVertShader: public VertexShader {
 public:
   GeomTexturesVertShader(): VertexShader("shaders/geomTextures.vert") {}
-  SHADER_MEMBERS
+  static std::vector<const GLchar*> shaderFieldNames;
 
   SHADER_UNIFORM_MAT4(MVP)
   SHADER_UNIFORM_MAT4(M)
@@ -26,7 +26,7 @@ public:
 class GeomTexturesFragShader: public FragmentShader {
 public:
   GeomTexturesFragShader(): FragmentShader("shaders/geomTextures.frag") {}
-  SHADER_MEMBERS
+  static std::vector<const GLchar*> shaderFieldNames;
 
   SHADER_UNIFORM_SAMPLER2D(diffuseTexture, 0)
   SHADER_UNIFORM_SAMPLER2D(normalTexture, 1)
@@ -48,18 +48,20 @@ public:
 class PassThroughVert: public VertexShader {
 public:
   PassThroughVert(): VertexShader("shaders/passthrough.vert") {}
-  SHADER_MEMBERS
+  static std::vector<const GLchar*> shaderFieldNames;
 };
 
 class JustTextureFrag: public FragmentShader {
 public:
   JustTextureFrag(): FragmentShader("shaders/justTexture.frag") {}
-  SHADER_MEMBERS
+  static std::vector<const GLchar*> shaderFieldNames;
+
+  SHADER_UNIFORM_SAMPLER2D(texture, 0)
 };
 
 class DeferredShadingVert: public VertexShader {
   DeferredShadingVert(): VertexShader("shaders/deferredShading.vert") {}
-  SHADER_MEMBERS
+  static std::vector<const GLchar*> shaderFieldNames;
 };
 
 } // namespace shaders

@@ -13,7 +13,7 @@ namespace shaders {
 
 GLuint loadShaders(const char* vertex_file_path, const char* fragment_file_path);
 
-#define SHADER_MEMBERS static std::vector<const GLchar*> shaderFieldNames;
+//#define SHADER_MEMBERS static std::vector<const GLchar*> shaderFieldNames;
 
 #define SHADER_UNIFORM_GENERIC(name, type, cmd) void set_##name (type n) { \
   GLint id = shaderFieldMap[#name]; \
@@ -34,7 +34,8 @@ struct Field##name { \
 #define SHADER_UNIFORM_INT(name) SHADER_UNIFORM_GENERIC(name, int, glUniform1i(id, n))
 #define SHADER_UNIFORM_BOOL(name) SHADER_UNIFORM_GENERIC(name, bool, glUniform1i(id, n))
 #define SHADER_UNIFORM_FLOAT(name) SHADER_UNIFORM_GENERIC(name, float, glUniform1f(id, n))
-#define SHADER_UNIFORM_SAMPLER2D(name, slot) SHADER_UNIFORM_GENERIC(name, Material*, {glActiveTexture(GL_TEXTURE##slot);glBindTexture(GL_TEXTURE_2D, n->getDiffuseTexture()->getTextureId()); glUniform1i(id, slot);})
+// TODO: Make this take Texture*.
+#define SHADER_UNIFORM_SAMPLER2D(name, slot) SHADER_UNIFORM_GENERIC(name, GLuint, {glActiveTexture(GL_TEXTURE##slot); glBindTexture(GL_TEXTURE_2D, n); glUniform1i(id, slot);})
 
 
 class Shader {

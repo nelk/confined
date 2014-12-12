@@ -158,13 +158,8 @@ bool Viewer::initializeSound() {
 
 bool Viewer::initializeShaders() {
   // Compile GLSL programs.
-  bool success = geomTexturesProgram.initialize();
-  if (!success) {
-    std::cerr << "Failed to initialize geomTexturesProgram" << std::endl;
-    return false;
-  }
-
-  quadProgramId = shaders::loadShaders("shaders/passthrough.vert", "shaders/justTexture.frag");
+  if (!geomTexturesProgram.initialize()) return false;
+  if (!quadProgram.initialize()) return false;
 
   depthProgramId = shaders::loadShaders("shaders/depthShadow.vert", "shaders/depthShadow.frag");
 
@@ -172,7 +167,7 @@ bool Viewer::initializeShaders() {
 
   postProcessProgramId = shaders::loadShaders("shaders/passthrough.vert", "shaders/postProcess.frag");
 
-  if (quadProgramId == 0 || depthProgramId == 0 || deferredShadingProgramId == 0 || postProcessProgramId == 0) {
+  if (depthProgramId == 0 || deferredShadingProgramId == 0 || postProcessProgramId == 0) {
     return false;
   }
   return true;
@@ -583,6 +578,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
   glEnable(GL_DEPTH_TEST);
 
   // Bind textures to fbo as multiple render target.
+  // TODO: Bind multiple outputs shader interface.
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, deferredDepthTexture, 0);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, deferredDiffuseTexture, 0);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, deferredSpecularTexture, 0);
@@ -638,7 +634,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
       // Bind diffuse texture if it exists.
       if (material->hasDiffuseTexture() && settings->isSet(Settings::TEXTURE_MAP)) {
         geomTexturesProgram.set_useDiffuseTexture(true);
-        geomTexturesProgram.set_diffuseTexture(material);
+        geomTexturesProgram.set_diffuseTexture(material->getDiffuseTexture()->getTextureId());
       } else {
         geomTexturesProgram.set_useDiffuseTexture(false);
       }
@@ -649,7 +645,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
       // Bind normal texture if it exists.
       if (material->hasNormalTexture() && settings->isSet(Settings::NORMAL_MAP)) {
         geomTexturesProgram.set_useNormalTexture(true);
-        geomTexturesProgram.set_normalTexture(material);
+        geomTexturesProgram.set_normalTexture(material->getNormalTexture()->getTextureId());
       } else {
         geomTexturesProgram.set_useNormalTexture(false);
       }
@@ -974,8 +970,6 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
 }
 
 void Viewer::run() {
-  static GLuint texId = glGetUniformLocation(quadProgramId, "texture");
-
   backgroundMusic->loop();
   controller->reset();
 
@@ -1135,7 +1129,7 @@ void Viewer::run() {
 
     // ============ Debug Rendering =============
     if (RENDER_DEBUG_IMAGES) {
-      glUseProgram(quadProgramId);
+      glUseProgram(quadProgram.getProgramId());
 
       // Render to the screen
       glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -1144,8 +1138,6 @@ void Viewer::run() {
       // Must be disabled to draw overtop.
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
       glDisable(GL_DEPTH_TEST);
-      glActiveTexture(GL_TEXTURE0);
-      glUniform1i(texId, 0);
 
       /*
       // Debug draw mirrors.
@@ -1174,27 +1166,27 @@ void Viewer::run() {
 
       // Draw diffuse ----------------
       glViewport(0, 0, height/4, height/4);
-      glBindTexture(GL_TEXTURE_2D, deferredDiffuseTexture);
+      quadProgram.set_texture(deferredDiffuseTexture);
       drawQuad();
 
       // Draw normals ----------------
       glViewport(height/4, 0, height/4, height/4);
-      glBindTexture(GL_TEXTURE_2D, deferredNormalTexture);
+      quadProgram.set_texture(deferredNormalTexture);
       drawQuad();
 
       // Draw depth ----------------
       glViewport(height/2, 0, height/4, height/4);
-      glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
+      quadProgram.set_texture(deferredDepthTexture);
       drawQuad();
 
       // Draw noise --------------------
       glViewport(height * 3 / 4, 0, height/4, height/4);
-      glBindTexture(GL_TEXTURE_2D, ssaoNoiseTexture);
+      quadProgram.set_texture(ssaoNoiseTexture);
       drawQuad();
 
       // Draw shadowmap ----------------
       glViewport(0, height*3/4, height/4, height/4);
-      glBindTexture(GL_TEXTURE_2D, shadowmapDepthTexture);
+      quadProgram.set_texture(shadowmapDepthTexture);
       drawQuad();
 
       // Draw cube shadowmap ----------
@@ -1242,8 +1234,6 @@ Viewer::~Viewer() {
   thunderSound = NULL;
 
   glDeleteProgram(depthProgramId);
-  glDeleteProgram(quadProgramId);
-  //glDeleteProgram(geomTexturesProgramId);
   glDeleteProgram(deferredShadingProgramId);
 
   glDeleteFramebuffers(1, &deferredShadingFramebuffer);
