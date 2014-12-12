@@ -31,11 +31,13 @@ struct Field##name { \
 
 #define SHADER_UNIFORM_MAT4(name) SHADER_UNIFORM_GENERIC(name, const glm::mat4&, glUniformMatrix4fv(id, 1, GL_FALSE, &n[0][0]))
 #define SHADER_UNIFORM_VEC3(name) SHADER_UNIFORM_GENERIC(name, const glm::vec3&, glUniform3fv(id, 1, &n[0]))
+#define SHADER_UNIFORM_VEC3_ARRAY(name) SHADER_UNIFORM_GENERIC(name, const glm::vec3*, glUniform3fv(id, sizeof(n), (float*)n))
 #define SHADER_UNIFORM_INT(name) SHADER_UNIFORM_GENERIC(name, int, glUniform1i(id, n))
 #define SHADER_UNIFORM_BOOL(name) SHADER_UNIFORM_GENERIC(name, bool, glUniform1i(id, n))
 #define SHADER_UNIFORM_FLOAT(name) SHADER_UNIFORM_GENERIC(name, float, glUniform1f(id, n))
 // TODO: Make this take Texture*.
-#define SHADER_UNIFORM_SAMPLER2D(name, slot) SHADER_UNIFORM_GENERIC(name, GLuint, {glActiveTexture(GL_TEXTURE##slot); glBindTexture(GL_TEXTURE_2D, n); glUniform1i(id, slot);})
+#define SHADER_UNIFORM_SAMPLER2D(name, slot) SHADER_UNIFORM_GENERIC(name, GLuint, {glActiveTexture(GL_TEXTURE0 + slot); glBindTexture(GL_TEXTURE_2D, n); glUniform1i(id, slot);})
+#define SHADER_UNIFORM_SAMPLER_CUBE(name, slot) SHADER_UNIFORM_GENERIC(name, GLuint, {glActiveTexture(GL_TEXTURE0 + slot); glBindTexture(GL_TEXTURE_CUBE_MAP, n); glUniform1i(id, slot);})
 
 
 class Shader {

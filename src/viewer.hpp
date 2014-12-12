@@ -92,8 +92,7 @@ private:
 
   shaders::ShaderProgram<shaders::GeomTexturesVertShader, shaders::GeomTexturesFragShader> geomTexturesProgram;
   shaders::ShaderProgram<shaders::PassThroughVert, shaders::JustTextureFrag> quadProgram;
-
-  GLuint deferredShadingProgramId;
+  shaders::ShaderProgram<shaders::DeferredShadingVert, shaders::DeferredShadingFrag> deferredShadingProgram;
 
   // Deferred Shading textures.
   GLuint deferredDiffuseTexture;

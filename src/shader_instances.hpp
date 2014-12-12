@@ -60,8 +60,43 @@ public:
 };
 
 class DeferredShadingVert: public VertexShader {
+public:
   DeferredShadingVert(): VertexShader("shaders/deferredShading.vert") {}
   static std::vector<const GLchar*> shaderFieldNames;
+};
+
+class DeferredShadingFrag: public FragmentShader {
+public:
+  DeferredShadingFrag(): FragmentShader("shaders/deferredShading.frag") {}
+  static std::vector<const GLchar*> shaderFieldNames;
+
+  SHADER_UNIFORM_SAMPLER2D(diffuseTexture, 0)
+  SHADER_UNIFORM_SAMPLER2D(specularTexture, 1)
+  SHADER_UNIFORM_SAMPLER2D(emissiveTexture, 2)
+  SHADER_UNIFORM_SAMPLER2D(normalTexture, 3)
+  SHADER_UNIFORM_SAMPLER2D(depthTexture, 4)
+  SHADER_UNIFORM_SAMPLER2D(shadowMap, 5)
+  SHADER_UNIFORM_SAMPLER_CUBE(shadowMapCube, 6)
+  SHADER_UNIFORM_SAMPLER2D(ssaoNoiseTexture, 7)
+
+  SHADER_UNIFORM_VEC3(lightPositionWorldspace)
+  SHADER_UNIFORM_VEC3(lightDirectionWorldspace)
+  SHADER_UNIFORM_INT(lightType)
+  SHADER_UNIFORM_VEC3(lightColour)
+  SHADER_UNIFORM_VEC3(lightAmbience)
+  SHADER_UNIFORM_VEC3(lightFalloff)
+  SHADER_UNIFORM_FLOAT(lightSpreadDegrees)
+
+  SHADER_UNIFORM_MAT4(P)
+  SHADER_UNIFORM_MAT4(V)
+  SHADER_UNIFORM_MAT4(shadowmapDepthBiasVP)
+
+  SHADER_UNIFORM_BOOL(useDiffuse)
+  SHADER_UNIFORM_BOOL(useSpecular)
+  SHADER_UNIFORM_BOOL(useShadow)
+  SHADER_UNIFORM_BOOL(useSSAO)
+  SHADER_UNIFORM_VEC3_ARRAY(ssaoKernel)
+
 };
 
 } // namespace shaders

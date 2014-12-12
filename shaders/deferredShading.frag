@@ -26,7 +26,6 @@ uniform vec3 lightAmbience;
 uniform vec3 lightFalloff;
 uniform float lightSpreadDegrees;
 
-uniform vec3 cameraPositionWorldspace;
 uniform mat4 P;
 uniform mat4 V;
 uniform mat4 shadowmapDepthBiasVP;

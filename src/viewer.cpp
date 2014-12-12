@@ -160,14 +160,13 @@ bool Viewer::initializeShaders() {
   // Compile GLSL programs.
   if (!geomTexturesProgram.initialize()) return false;
   if (!quadProgram.initialize()) return false;
+  if (!deferredShadingProgram.initialize()) return false;
 
   depthProgramId = shaders::loadShaders("shaders/depthShadow.vert", "shaders/depthShadow.frag");
 
-  deferredShadingProgramId = shaders::loadShaders("shaders/deferredShading.vert", "shaders/deferredShading.frag");
-
   postProcessProgramId = shaders::loadShaders("shaders/passthrough.vert", "shaders/postProcess.frag");
 
-  if (depthProgramId == 0 || deferredShadingProgramId == 0 || postProcessProgramId == 0) {
+  if (depthProgramId == 0 || postProcessProgramId == 0) {
     return false;
   }
   return true;
@@ -521,37 +520,6 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
   // Handle for MVP uniform (shadow depth pass).
   static GLuint depthMatrixId = glGetUniformLocation(depthProgramId, "depthMVP");
 
-  static GLuint deferredViewMatrixId = glGetUniformLocation(deferredShadingProgramId, "V");
-  static GLuint deferredProjectionMatrixId = glGetUniformLocation(deferredShadingProgramId, "P");
-  static GLuint lightPosId = glGetUniformLocation(deferredShadingProgramId, "lightPositionWorldspace");
-  static GLuint deferredUseDiffuseId = glGetUniformLocation(deferredShadingProgramId, "useDiffuse");
-  static GLuint deferredUseSpecularId = glGetUniformLocation(deferredShadingProgramId, "useSpecular");
-  static GLuint deferredUseShadowId = glGetUniformLocation(deferredShadingProgramId, "useShadow");
-  static GLuint lightDirId = glGetUniformLocation(deferredShadingProgramId, "lightDirectionWorldspace");
-  static GLuint lightTypeId = glGetUniformLocation(deferredShadingProgramId, "lightType");
-  static GLuint lightColourId = glGetUniformLocation(deferredShadingProgramId, "lightColour");
-  static GLuint lightAmbienceId = glGetUniformLocation(deferredShadingProgramId, "lightAmbience");
-  static GLuint lightFalloffId = glGetUniformLocation(deferredShadingProgramId, "lightFalloff");
-  static GLuint lightSpreadDegreesId = glGetUniformLocation(deferredShadingProgramId, "lightSpreadDegrees");
-  static GLuint cameraPositionId = glGetUniformLocation(deferredShadingProgramId, "cameraPositionWorldspace");
-
-  static GLuint depthBiasId = glGetUniformLocation(deferredShadingProgramId, "shadowmapDepthBiasVP");
-
-  // Deferred shading textures.
-  static GLuint deferredDiffuseTextureId = glGetUniformLocation(deferredShadingProgramId, "diffuseTexture");
-  static GLuint deferredSpecularTextureId = glGetUniformLocation(deferredShadingProgramId, "specularTexture");
-  static GLuint deferredEmissiveTextureId = glGetUniformLocation(deferredShadingProgramId, "emissiveTexture");
-  static GLuint deferredNormalTextureId = glGetUniformLocation(deferredShadingProgramId, "normalTexture");
-  static GLuint deferredDepthTextureId = glGetUniformLocation(deferredShadingProgramId, "depthTexture");
-  static GLuint shadowmapId = glGetUniformLocation(deferredShadingProgramId, "shadowMap");
-  static GLuint shadowmapCubeId = glGetUniformLocation(deferredShadingProgramId, "shadowMapCube");
-
-  // SSAO.
-  static GLuint deferredUseSSAOId = glGetUniformLocation(deferredShadingProgramId, "useSSAO");
-  static GLuint ssaoKernelId = glGetUniformLocation(deferredShadingProgramId, "ssaoKernel");
-  static GLuint ssaoNoiseId = glGetUniformLocation(deferredShadingProgramId, "ssaoNoiseTexture");
-
-
   static GLuint postProcessTexId = glGetUniformLocation(postProcessProgramId, "tex");
   static GLuint postProcessDepthTexId = glGetUniformLocation(postProcessProgramId, "depthTexture");
   static GLuint postProcessPickingTexId = glGetUniformLocation(postProcessProgramId, "pickingTexture");
@@ -806,7 +774,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
 
     // ======= Deferred rendering stage 2: Deferred rendering using textures. ===========
 
-    glUseProgram(deferredShadingProgramId);
+    glUseProgram(deferredShadingProgram.getProgramId());
 
     if (postProcess) {
       // Set output to accumulation texture.
@@ -832,29 +800,12 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
       glBlendFunc(GL_ONE, GL_ONE);
     }
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, deferredDiffuseTexture);
-    glUniform1i(deferredDiffuseTextureId, 0);
-
-    glActiveTexture(GL_TEXTURE0 + 1);
-    glBindTexture(GL_TEXTURE_2D, deferredSpecularTexture);
-    glUniform1i(deferredSpecularTextureId, 1);
-
-    glActiveTexture(GL_TEXTURE0 + 2);
-    glBindTexture(GL_TEXTURE_2D, deferredEmissiveTexture);
-    glUniform1i(deferredEmissiveTextureId, 2);
-
-    glActiveTexture(GL_TEXTURE0 + 3);
-    glBindTexture(GL_TEXTURE_2D, deferredNormalTexture);
-    glUniform1i(deferredNormalTextureId, 3);
-
-    glActiveTexture(GL_TEXTURE0 + 4);
-    glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
-    glUniform1i(deferredDepthTextureId, 4);
-
-    glActiveTexture(GL_TEXTURE0 + 5);
-    glBindTexture(GL_TEXTURE_2D, shadowmapDepthTexture);
-    glUniform1i(shadowmapId, 5);
+    deferredShadingProgram.set_diffuseTexture(deferredDiffuseTexture);
+    deferredShadingProgram.set_specularTexture(deferredSpecularTexture);
+    deferredShadingProgram.set_emissiveTexture(deferredEmissiveTexture);
+    deferredShadingProgram.set_normalTexture(deferredNormalTexture);
+    deferredShadingProgram.set_depthTexture(deferredDepthTexture);
+    deferredShadingProgram.set_shadowMap(shadowmapDepthTexture);
 
     /*
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
@@ -867,9 +818,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
     //glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE, GL_INTENSITY);
     */
 
-    glActiveTexture(GL_TEXTURE0 + 6);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, shadowmapCubeDepthTexture);
-    glUniform1i(shadowmapCubeId, 6);
+    deferredShadingProgram.set_shadowMapCube(shadowmapCubeDepthTexture);
 
     // TODO: Do we need these?
     /*
@@ -881,9 +830,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
     */
 
-    glActiveTexture(GL_TEXTURE0 + 7);
-    glBindTexture(GL_TEXTURE_2D, ssaoNoiseTexture);
-    glUniform1i(ssaoNoiseId, 7);
+    deferredShadingProgram.set_ssaoNoiseTexture(ssaoNoiseTexture);
 
     /*
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
@@ -895,27 +842,23 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
     //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_DEPTH_TEXTURE_MODE, GL_INTENSITY);
     */
 
-    glUniformMatrix4fv(deferredViewMatrixId, 1, GL_FALSE, &viewMatrix[0][0]);
-    glUniformMatrix4fv(deferredProjectionMatrixId, 1, GL_FALSE, &projectionMatrix[0][0]);
-    glUniformMatrix4fv(depthBiasId, 1, GL_FALSE, &shadowmapDepthBiasVP[0][0]);
-    glUniform3f(cameraPositionId, cameraPosition.x, cameraPosition.y, cameraPosition.z);
-    glUniform3f(lightDirId, lightDir.x, lightDir.y, lightDir.z);
-    glUniform3f(lightPosId, lightPos.x, lightPos.y, lightPos.z);
+    deferredShadingProgram.set_V(viewMatrix);
+    deferredShadingProgram.set_P(projectionMatrix);
+    deferredShadingProgram.set_shadowmapDepthBiasVP(shadowmapDepthBiasVP);
+    deferredShadingProgram.set_lightDirectionWorldspace(lightDir);
+    deferredShadingProgram.set_lightPositionWorldspace(lightPos);
 
-    glUniform1i(deferredUseDiffuseId, settings->isSet(Settings::LIGHT_DIFFUSE));
-    glUniform1i(deferredUseSpecularId, settings->isSet(Settings::LIGHT_SPECULAR));
-    glUniform1i(deferredUseShadowId, settings->isSet(Settings::SHADOW_MAP));
-    glUniform1i(deferredUseSSAOId, settings->isSet(Settings::SSAO));
-    glUniform3fv(ssaoKernelId, sizeof(ssaoKernel), (float*)ssaoKernel);
+    deferredShadingProgram.set_useDiffuse(settings->isSet(Settings::LIGHT_DIFFUSE));
+    deferredShadingProgram.set_useSpecular(settings->isSet(Settings::LIGHT_SPECULAR));
+    deferredShadingProgram.set_useShadow(settings->isSet(Settings::SHADOW_MAP));
+    deferredShadingProgram.set_useSSAO(settings->isSet(Settings::SSAO));
+    deferredShadingProgram.set_ssaoKernel(ssaoKernel);
 
-    glm::vec3 lightColour = light->getColour();
-    glm::vec3 lightAmbience = light->getAmbience();
-    glm::vec3 lightFalloff = light->getFalloff();
-    glUniform1i(lightTypeId, (int) light->getType());
-    glUniform3f(lightColourId, lightColour.x, lightColour.y, lightColour.z);
-    glUniform3f(lightAmbienceId, lightAmbience.x, lightAmbience.y, lightAmbience.z);
-    glUniform3f(lightFalloffId, lightFalloff.x, lightFalloff.y, lightFalloff.z);
-    glUniform1f(lightSpreadDegreesId, light->getSpread());
+    deferredShadingProgram.set_lightType((int) light->getType());
+    deferredShadingProgram.set_lightColour(light->getColour());
+    deferredShadingProgram.set_lightAmbience(light->getAmbience());
+    deferredShadingProgram.set_lightFalloff(light->getFalloff());
+    deferredShadingProgram.set_lightSpreadDegrees(light->getSpread());
 
     drawQuad();
 
@@ -1234,7 +1177,6 @@ Viewer::~Viewer() {
   thunderSound = NULL;
 
   glDeleteProgram(depthProgramId);
-  glDeleteProgram(deferredShadingProgramId);
 
   glDeleteFramebuffers(1, &deferredShadingFramebuffer);
   glDeleteFramebuffers(1, &shadowMapFramebuffer);
