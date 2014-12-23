@@ -161,14 +161,9 @@ bool Viewer::initializeShaders() {
   if (!geomTexturesProgram.initialize()) return false;
   if (!quadProgram.initialize()) return false;
   if (!deferredShadingProgram.initialize()) return false;
-
-  depthProgramId = shaders::loadShaders("shaders/depthShadow.vert", "shaders/depthShadow.frag");
-
-  postProcessProgramId = shaders::loadShaders("shaders/passthrough.vert", "shaders/postProcess.frag");
-
-  if (depthProgramId == 0 || postProcessProgramId == 0) {
-    return false;
-  }
+  if (!deferredShadingProgram.initialize()) return false;
+  if (!depthProgram.initialize()) return false;
+  if (!postProcessProgram.initialize()) return false;
   return true;
 }
 
@@ -517,23 +512,7 @@ void Viewer::bindRenderTarget(GLuint renderTargetFBO) {
 
 void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMeshes, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const glm::vec3& cameraPosition, bool postProcess, double currentTime, double deltaTime, const glm::vec3& halfspacePosition, const glm::vec3& halfspaceNormal, bool doPicking) {
 
-  // Handle for MVP uniform (shadow depth pass).
-  static GLuint depthMatrixId = glGetUniformLocation(depthProgramId, "depthMVP");
-
-  static GLuint postProcessTexId = glGetUniformLocation(postProcessProgramId, "tex");
-  static GLuint postProcessDepthTexId = glGetUniformLocation(postProcessProgramId, "depthTexture");
-  static GLuint postProcessPickingTexId = glGetUniformLocation(postProcessProgramId, "pickingTexture");
-  static GLuint postProcessUseBlurId = glGetUniformLocation(postProcessProgramId, "useBlur");
-  static GLuint postProcessUseMotionBlurId = glGetUniformLocation(postProcessProgramId, "useMotionBlur");
-  static GLuint postProcessShudderId = glGetUniformLocation(postProcessProgramId, "shudder");
-  static GLuint postProcessCurrentTimeId = glGetUniformLocation(postProcessProgramId, "currentTime");
-  static GLuint postProcessNewToOldMatrixId = glGetUniformLocation(postProcessProgramId, "newToOldMatrix");
-  static GLuint postProcessFPSCorrectionId = glGetUniformLocation(postProcessProgramId, "fpsCorrection");
-  static GLuint postProcessSelectedMeshIdId = glGetUniformLocation(postProcessProgramId, "selectedMeshId");
-
-
   static glm::mat4 lastVP = projectionMatrix * viewMatrix;
-
 
   // ======= Deferred rendering stage 1: Render geometry into textures. ===========
 
@@ -687,7 +666,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
 
     // ======= Shadow mapping =========
     if (settings->isSet(Settings::SHADOW_MAP)) {
-      glUseProgram(depthProgramId);
+      glUseProgram(depthProgram.getProgramId());
       if (light->getType() == Light::POINT) {
         glBindFramebuffer(GL_FRAMEBUFFER, shadowCubeMapFramebuffer);
       } else {
@@ -756,7 +735,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
 
         for (std::vector<Mesh*>::const_iterator it = thisFrameMeshes.begin(); it != thisFrameMeshes.end(); it++) {
           glm::mat4 depthMVP = depthVP * (*it)->getModelMatrix();
-          glUniformMatrix4fv(depthMatrixId, 1, GL_FALSE, &depthMVP[0][0]);
+          depthProgram.set_depthMVP(depthMVP);
 
           (*it)->renderGLVertsOnly();
         }
@@ -868,7 +847,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
   // --------- Final pass - post-processing and rendering to screen ---------------
 
   if (postProcess) {
-    glUseProgram(postProcessProgramId);
+    glUseProgram(postProcessProgram.getProgramId());
 
     glViewport(0, 0, width, height);
     // TODO: Clear?
@@ -877,33 +856,23 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
     glDisable(GL_DEPTH_TEST);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, accumRenderTexture);
-    glUniform1i(postProcessTexId, 0);
-
-    glActiveTexture(GL_TEXTURE0 + 1);
-    glBindTexture(GL_TEXTURE_2D, deferredDepthTexture);
-    glUniform1i(postProcessDepthTexId, 1);
-
-    glActiveTexture(GL_TEXTURE0 + 2);
-    glBindTexture(GL_TEXTURE_2D, pickingTexture);
-    glUniform1i(postProcessPickingTexId, 2);
-
+    postProcessProgram.set_tex(accumRenderTexture);
+    postProcessProgram.set_depthTexture(deferredDepthTexture);
+    postProcessProgram.set_pickingTexture(pickingTexture);
 
     // Settings.
-    glUniform1i(postProcessUseBlurId, settings->isSet(Settings::BLUR));
-    glUniform1i(postProcessUseMotionBlurId, settings->isSet(Settings::MOTION_BLUR));
-    glUniform1i(postProcessShudderId, currentTime - startShudderTime < 0.4);
-    glUniform1f(postProcessCurrentTimeId, currentTime);
+    postProcessProgram.set_useBlur(settings->isSet(Settings::BLUR));
+    postProcessProgram.set_useMotionBlur(settings->isSet(Settings::MOTION_BLUR));
+    postProcessProgram.set_shudder(currentTime - startShudderTime < 0.4);
+    postProcessProgram.set_currentTime(currentTime);
 
     glm::mat4 newToOldMatrix = lastVP * glm::inverse(VP);
-    glUniformMatrix4fv(postProcessNewToOldMatrixId, 1, GL_FALSE, &newToOldMatrix[0][0]);
-    float fpsCorrection = TARGET_FRAME_DELTA / deltaTime;
-    glUniform1f(postProcessFPSCorrectionId, fpsCorrection);
+    postProcessProgram.set_newToOldMatrix(newToOldMatrix);
+    postProcessProgram.set_fpsCorrection(TARGET_FRAME_DELTA / deltaTime);
     if (settings->isSet(Settings::HIGHLIGHT_PICK)) {
-      glUniform1i(postProcessSelectedMeshIdId, lastPickedMesh);
+      postProcessProgram.set_selectedMeshId(lastPickedMesh);
     } else {
-      glUniform1i(postProcessSelectedMeshIdId, 0);
+      postProcessProgram.set_selectedMeshId(0);
     }
 
     drawQuad();
@@ -1175,8 +1144,6 @@ Viewer::~Viewer() {
 
   delete thunderSound;
   thunderSound = NULL;
-
-  glDeleteProgram(depthProgramId);
 
   glDeleteFramebuffers(1, &deferredShadingFramebuffer);
   glDeleteFramebuffers(1, &shadowMapFramebuffer);

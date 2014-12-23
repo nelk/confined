@@ -27,7 +27,7 @@ struct Field##name { \
   Field##name() { \
     shaderFieldNames.push_back(#name); \
   } \
-} _field_##name; \
+} _field_##name
 
 #define SHADER_UNIFORM_MAT4(name) SHADER_UNIFORM_GENERIC(name, const glm::mat4&, glUniformMatrix4fv(id, 1, GL_FALSE, &n[0][0]))
 #define SHADER_UNIFORM_VEC3(name) SHADER_UNIFORM_GENERIC(name, const glm::vec3&, glUniform3fv(id, 1, &n[0]))
