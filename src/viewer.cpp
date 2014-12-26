@@ -477,23 +477,10 @@ bool Viewer::initialize() {
   return true;
 }
 
-
 void Viewer::drawQuad() {
-  glEnableVertexAttribArray(0);
-  glBindBuffer(GL_ARRAY_BUFFER, quadVertexBuffer);
-  glVertexAttribPointer(
-    0,                  // attribute 0.
-    3,                  // size
-    GL_FLOAT,           // type
-    GL_FALSE,           // normalized?
-    0,                  // stride
-    (void*)0            // array buffer offset
-  );
-
-  glDrawArrays(GL_TRIANGLES, 0, 2*3);
-  glDisableVertexAttribArray(0);
+  quadProgram.vbo_vertexPositionModelspace(quadVertexBuffer);
+  quadProgram.drawTriangles(2*3);
 }
-
 
 void Viewer::bindRenderTarget(GLuint renderTargetFBO) {
 
@@ -508,6 +495,19 @@ void Viewer::bindRenderTarget(GLuint renderTargetFBO) {
     glDrawBuffer(GL_COLOR_ATTACHMENT0);
   }
   checkGLErrors("bindRenderTarget end");
+}
+
+void Viewer::renderMesh(Mesh* mesh, bool onlyVerts) {
+  geomTexturesProgram.vbo_vertexPositionModelspace(mesh->getBuffer(Mesh::VERTEX_BUF));
+  if (!onlyVerts) {
+    geomTexturesProgram.vbo_vertexUV(mesh->getBuffer(Mesh::UV_BUF));
+    geomTexturesProgram.vbo_vertexNormalModelspace(mesh->getBuffer(Mesh::NORMAL_BUF));
+    geomTexturesProgram.vbo_vertexTangentModelspace(mesh->getBuffer(Mesh::TANGENT_BUF));
+    geomTexturesProgram.vbo_vertexBitangentModelspace(mesh->getBuffer(Mesh::BITANGENT_BUF));
+  }
+  geomTexturesProgram.drawTriangleElements(mesh->getBuffer(Mesh::ELEMENT_BUF), mesh->getNumIndices());
+  geomTexturesProgram.shaders::VertexShader::unbindVertexAttribPointers();
+  geomTexturesProgram.shaders::FragmentShader::unbindVertexAttribPointers();
 }
 
 void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMeshes, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const glm::vec3& cameraPosition, bool postProcess, double currentTime, double deltaTime, const glm::vec3& halfspacePosition, const glm::vec3& halfspaceNormal, bool doPicking) {
@@ -597,7 +597,8 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
         geomTexturesProgram.set_useNormalTexture(false);
       }
     }
-    mesh->renderGL();
+
+    renderMesh(mesh);
   }
 
   // Render point lights as spheres.
@@ -621,7 +622,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
       emissiveLight *= 5.0;
       geomTexturesProgram.set_material_emissive(emissiveLight);
 
-      pointLightMesh->renderGL();
+      renderMesh(pointLightMesh);
     }
   }
 
@@ -737,7 +738,7 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
           glm::mat4 depthMVP = depthVP * (*it)->getModelMatrix();
           depthProgram.set_depthMVP(depthMVP);
 
-          (*it)->renderGLVertsOnly();
+          renderMesh(*it, true);
         }
 
         if (light->getType() != Light::POINT) break;

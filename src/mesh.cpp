@@ -6,6 +6,7 @@
 
 #include "mirror.hpp"
 #include "texture.hpp"
+#include "shader.hpp"
 
 uint32_t Mesh::meshIdCounter = 1;
 
@@ -128,114 +129,6 @@ void Mesh::setUVs(std::vector<glm::vec2>& uvs) {
   glBindBuffer(GL_ARRAY_BUFFER, buffers[UV_BUF]);
   glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
 }
-
-
-// Bind only vertices and index buffer.
-void Mesh::renderGLVertsOnly() {
-  glEnableVertexAttribArray(0);
-  glBindBuffer(GL_ARRAY_BUFFER, buffers[VERTEX_BUF]);
-
-  glVertexAttribPointer(
-    0,  // The attribute we want to configure
-    3,                  // size
-    GL_FLOAT,           // type
-    GL_FALSE,           // normalized?
-    0,                  // stride
-    (void*)0            // array buffer offset
-  );
-
-  // Index buffer
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[ELEMENT_BUF]);
-
-  glDrawElements(
-    GL_TRIANGLES,      // mode
-    numIndices,        // count
-    GL_UNSIGNED_SHORT, // type
-    (void*)0           // element array buffer offset
-  );
-
-  glDisableVertexAttribArray(0);
-}
-
-void Mesh::renderGL() {
-  // 1st attribute buffer - vertices.
-  glEnableVertexAttribArray(0);
-  glBindBuffer(GL_ARRAY_BUFFER, buffers[VERTEX_BUF]);
-  glVertexAttribPointer(
-    0,                  // attribute
-    3,                  // size
-    GL_FLOAT,           // type
-    GL_FALSE,           // normalized?
-    0,                  // stride
-    (void*)0            // array buffer offset
-  );
-
-  // 2nd attribute buffer - UVs.
-  glEnableVertexAttribArray(1);
-  glBindBuffer(GL_ARRAY_BUFFER, buffers[UV_BUF]);
-  glVertexAttribPointer(
-    1,                                // attribute
-    2,                                // size
-    GL_FLOAT,                         // type
-    GL_FALSE,                         // normalized?
-    0,                                // stride
-    (void*)0                          // array buffer offset
-  );
-
-  // 3rd attribute buffer - normals.
-  glEnableVertexAttribArray(2);
-  glBindBuffer(GL_ARRAY_BUFFER, buffers[NORMAL_BUF]);
-  glVertexAttribPointer(
-    2,                                // attribute
-    3,                                // size
-    GL_FLOAT,                         // type
-    GL_FALSE,                         // normalized?
-    0,                                // stride
-    (void*)0                          // array buffer offset
-  );
-
-  // 4rd attribute buffer - tangents.
-  glEnableVertexAttribArray(3);
-  glBindBuffer(GL_ARRAY_BUFFER, buffers[TANGENT_BUF]);
-  glVertexAttribPointer(
-    3,                                // attribute
-    3,                                // size
-    GL_FLOAT,                         // type
-    GL_FALSE,                         // normalized?
-    0,                                // stride
-    (void*)0                          // array buffer offset
-  );
-
-  // 5th attribute buffer - bitangents.
-  glEnableVertexAttribArray(4);
-  glBindBuffer(GL_ARRAY_BUFFER, buffers[BITANGENT_BUF]);
-  glVertexAttribPointer(
-    4,                                // attribute
-    3,                                // size
-    GL_FLOAT,                         // type
-    GL_FALSE,                         // normalized?
-    0,                                // stride
-    (void*)0                          // array buffer offset
-  );
-
-  // Index buffer
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[ELEMENT_BUF]);
-
-  // Draw the triangles for render pass.
-  glDrawElements(
-    GL_TRIANGLES,      // mode
-    numIndices,        // count
-    GL_UNSIGNED_SHORT, // type
-    (void*)0           // element array buffer offset
-  );
-
-  glDisableVertexAttribArray(0);
-  glDisableVertexAttribArray(1);
-  glDisableVertexAttribArray(2);
-  glDisableVertexAttribArray(3);
-  glDisableVertexAttribArray(4);
-}
-
 
 bool loadTexture(aiTextureType aiType, const aiMaterial* m, Material *material) {
   aiString texFileName;

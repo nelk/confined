@@ -48,11 +48,16 @@ public:
     return name;
   }
 
+  GLuint getBuffer(BufferIndex bufferIndex) {
+    if (bufferIndex < 0 || bufferIndex >= NUM_BUFS) {
+      return 0;
+    }
+    return buffers[bufferIndex];
+  }
+
   Material* getMaterial() {
     return material;
   }
-  void renderGLVertsOnly();
-  void renderGL();
 
   int getNumIndices() {
     return numIndices;

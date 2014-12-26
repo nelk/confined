@@ -30,6 +30,8 @@ public:
   bool initializeShaders();
   void run();
 
+  void renderMesh(Mesh* mesh, bool onlyVerts=false);
+
   /**
    * Render scene with deferred pipeline.
    * Set renderTarget=0 to render to screen.

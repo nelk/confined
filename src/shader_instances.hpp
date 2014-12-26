@@ -1,4 +1,3 @@
-
 #ifndef SHADER_INSTANCES_HPP
 #define SHADER_INSTANCES_HPP
 
@@ -14,6 +13,14 @@ class GeomTexturesVertShader: public VertexShader {
 public:
   GeomTexturesVertShader(): VertexShader("shaders/geomTextures.vert") {}
   static std::vector<const GLchar*> shaderFieldNames;
+
+  SHADER_IN_VBO_VEC3(vertexPositionModelspace, 0);
+  SHADER_IN_VBO_VEC2(vertexUV, 1);
+  SHADER_IN_VBO_VEC3(vertexNormalModelspace, 2);
+  SHADER_IN_VBO_VEC3(vertexTangentModelspace, 3);
+  SHADER_IN_VBO_VEC3(vertexBitangentModelspace, 4);
+
+  SHADER_DRAW_TRIANGLE_ELEMENTS();
 
   SHADER_UNIFORM_MAT4(MVP);
   SHADER_UNIFORM_MAT4(M);
@@ -49,6 +56,9 @@ class PassThroughVert: public VertexShader {
 public:
   PassThroughVert(): VertexShader("shaders/passthrough.vert") {}
   static std::vector<const GLchar*> shaderFieldNames;
+
+  SHADER_IN_VBO_VEC3(vertexPositionModelspace, 0);
+  SHADER_DRAW_TRIANGLE_ARRAYS();
 };
 
 class JustTextureFrag: public FragmentShader {
