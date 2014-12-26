@@ -506,8 +506,6 @@ void Viewer::renderMesh(Mesh* mesh, bool onlyVerts) {
     geomTexturesProgram.vbo_vertexBitangentModelspace(mesh->getBuffer(Mesh::BITANGENT_BUF));
   }
   geomTexturesProgram.drawTriangleElements(mesh->getBuffer(Mesh::ELEMENT_BUF), mesh->getNumIndices());
-  geomTexturesProgram.shaders::VertexShader::unbindVertexAttribPointers();
-  geomTexturesProgram.shaders::FragmentShader::unbindVertexAttribPointers();
 }
 
 void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMeshes, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const glm::vec3& cameraPosition, bool postProcess, double currentTime, double deltaTime, const glm::vec3& halfspacePosition, const glm::vec3& halfspaceNormal, bool doPicking) {
