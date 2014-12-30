@@ -68,7 +68,7 @@ Viewer::Viewer(): width(DEFAULT_WIDTH), height(DEFAULT_HEIGHT) {
   // Open a window and create its OpenGL context
   window = glfwCreateWindow(width, height, "Confined", NULL, NULL);
 
-  if( window == NULL ){
+  if (window == NULL) {
     std::cerr << "Failed to open GLFW window. This application requires OpenGL 3.3 support." << std::endl;
     glfwTerminate();
     return;
@@ -523,18 +523,15 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
   glEnable(GL_DEPTH_TEST);
 
   // Bind textures to fbo as multiple render target.
-  // TODO: Bind multiple outputs shader interface.
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, deferredDepthTexture, 0);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, deferredDiffuseTexture, 0);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, deferredSpecularTexture, 0);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, deferredEmissiveTexture, 0);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, deferredNormalTexture, 0);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, pickingTexture, 0);
+  geomTexturesProgram.attach_gl_FragDepth(deferredDepthTexture);
+  geomTexturesProgram.attach_outDiffuse(deferredDiffuseTexture);
+  geomTexturesProgram.attach_outSpecular(deferredSpecularTexture);
+  geomTexturesProgram.attach_outEmissive(deferredEmissiveTexture);
+  geomTexturesProgram.attach_outNormal(deferredNormalTexture);
+  geomTexturesProgram.attach_outPicking(pickingTexture);
 
-  // Set to render all colour attachments.
-  glBindFramebuffer(GL_FRAMEBUFFER, deferredShadingFramebuffer);
-  GLenum drawBuffers[5] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4};
-  glDrawBuffers(5, drawBuffers);
+  // Setup attachments here so we can clear all of them.
+  geomTexturesProgram.shaders::FragmentShader::setupDrawBuffers();
 
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);

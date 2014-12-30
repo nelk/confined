@@ -51,13 +51,28 @@ struct Field##name { \
 
 #define SHADER_DRAW_TRIANGLE_ELEMENTS() void drawTriangleElements(GLuint elem_buf, GLuint num_triangles) { \
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elem_buf); \
+  prepareDraw(); \
   glDrawElements(GL_TRIANGLES, num_triangles, GL_UNSIGNED_SHORT, (void*)0); \
   arrayBufferSet = true; \
-  unbindVertexAttribPointers(); \
+  cleanupDraw(); \
 }
 #define SHADER_DRAW_TRIANGLE_ARRAYS() void drawTriangles(GLuint num_triangles) { \
+  prepareDraw(); \
   glDrawArrays(GL_TRIANGLES, 0, num_triangles); \
-  unbindVertexAttribPointers(); \
+  cleanupDraw(); \
+}
+
+
+#define SHADER_OUT_COLOR_ATTACHMENT(name, slot) void attach_##name(GLuint texture) { \
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + slot, GL_TEXTURE_2D, texture, 0); \
+  enabledColorAttachements[slot] = true; \
+  drawBuffersSetUp = false; \
+}
+#define SHADER_OUT_DEPTH_ATTACHMENT(name) void attach_##name(GLuint texture) { \
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texture, 0); \
+}
+#define SHADER_OUT_DEPTH_CUBE_ATTACHMENT(name, slot) void attach_##name(GLuint texture) { \
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D_CUBE_MAP_POSITIVE_X + slot, texture, 0); \
 }
 
 // TODO: Make typesafe VBOs wrapper.
@@ -65,7 +80,7 @@ struct Field##name { \
 
 class Shader {
 public:
-  Shader(const char* filename): filename(filename), shaderId(0), enabledVertexAttribPointers(10, false), arrayBufferSet(false) {
+  Shader(const char* filename): filename(filename), shaderId(0), enabledColorAttachements(20, false), enabledVertexAttribPointers(10, false), arrayBufferSet(false), drawBuffersSetUp(false) {
   }
 
   ~Shader() {
@@ -77,6 +92,34 @@ public:
   virtual GLuint getProgramId() = 0;
   virtual GLuint getShaderType() = 0;
   GLuint getShaderId() { return shaderId; }
+
+  void setupDrawBuffers() {
+    if (drawBuffersSetUp) {
+      return;
+    }
+    std::vector<GLuint> drawBuffers;
+    for (uint i = 0; i < enabledColorAttachements.size(); ++i) {
+      if (enabledColorAttachements[i]) {
+        drawBuffers.push_back(GL_COLOR_ATTACHMENT0 + i);
+      }
+    }
+    if (drawBuffers.size() > 0) {
+      glDrawBuffers(drawBuffers.size(), &drawBuffers[0]);
+    }
+    drawBuffersSetUp = true;
+  }
+
+  void prepareDraw() {
+    setupDrawBuffers();
+  }
+
+  void cleanupDraw() {
+    unbindVertexAttribPointers();
+    for (uint i = 0; i < enabledColorAttachements.size(); ++i) {
+      enabledColorAttachements[i] = false;
+    }
+    drawBuffersSetUp = false;
+  }
 
   void unbindVertexAttribPointers() {
     for (uint i = 0; i < enabledVertexAttribPointers.size(); ++i) {
@@ -93,8 +136,10 @@ protected:
   const char* filename;
   GLuint shaderId;
   std::map<std::string, GLint> shaderFieldMap;
+  std::vector<bool> enabledColorAttachements;
   std::vector<bool> enabledVertexAttribPointers;
   bool arrayBufferSet;
+  bool drawBuffersSetUp;
 };
 
 class VertexShader: public Shader {

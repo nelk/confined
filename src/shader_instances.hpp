@@ -50,6 +50,13 @@ public:
   SHADER_UNIFORM_BOOL(useNoPerspectiveUVs);
 
   SHADER_UNIFORM_INT(meshId);
+
+  SHADER_OUT_COLOR_ATTACHMENT(outDiffuse, 0);
+  SHADER_OUT_COLOR_ATTACHMENT(outSpecular, 1);
+  SHADER_OUT_COLOR_ATTACHMENT(outEmissive, 2);
+  SHADER_OUT_COLOR_ATTACHMENT(outNormal, 3);
+  SHADER_OUT_COLOR_ATTACHMENT(outPicking, 4);
+  SHADER_OUT_DEPTH_ATTACHMENT(gl_FragDepth);
 };
 
 class PassThroughVert: public VertexShader {
