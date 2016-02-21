@@ -101,12 +101,13 @@ Mesh::Mesh(
       }
     }
 
-    glBindBuffer(GL_ARRAY_BUFFER, buffers[TANGENT_BUF]);
-    glBufferData(GL_ARRAY_BUFFER, tangents.size() * sizeof(glm::vec3), &tangents[0], GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ARRAY_BUFFER, buffers[BITANGENT_BUF]);
-    glBufferData(GL_ARRAY_BUFFER, bitangents.size() * sizeof(glm::vec3), &bitangents[0], GL_STATIC_DRAW);
   }
+
+  glBindBuffer(GL_ARRAY_BUFFER, buffers[TANGENT_BUF]);
+  glBufferData(GL_ARRAY_BUFFER, tangents.size() * sizeof(glm::vec3), &tangents[0], GL_STATIC_DRAW);
+
+  glBindBuffer(GL_ARRAY_BUFFER, buffers[BITANGENT_BUF]);
+  glBufferData(GL_ARRAY_BUFFER, bitangents.size() * sizeof(glm::vec3), &bitangents[0], GL_STATIC_DRAW);
 
 
   numIndices = indices.size();
@@ -242,6 +243,8 @@ std::vector<Mesh*> loadScene(std::string fileName, bool invertNormals) {
         aiVector3D UVW = mesh->mTextureCoords[0][i]; // Assume only 1 set of UV coords; AssImp supports 8 UV sets.
         uvs.push_back(glm::vec2(UVW.x, UVW.y));
       }
+    } else {
+      uvs.push_back(glm::vec2(0, 0));
     }
 
     // Vertex normals.

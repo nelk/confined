@@ -123,8 +123,10 @@ public:
 
   void unbindVertexAttribPointers() {
     for (uint i = 0; i < enabledVertexAttribPointers.size(); ++i) {
-      glDisableVertexAttribArray(i);
-      enabledVertexAttribPointers[i] = false;
+      if (enabledVertexAttribPointers[i]) {
+        glDisableVertexAttribArray(i);
+        enabledVertexAttribPointers[i] = false;
+      }
     }
     if (arrayBufferSet) {
       glBindBuffer(GL_ARRAY_BUFFER, 0);
