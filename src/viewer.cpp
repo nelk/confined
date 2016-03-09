@@ -177,8 +177,8 @@ bool Viewer::initialize() {
   startCharAnimTime = 0;
 
   // Initial settings (all start on).
-  settings->set(Settings::SSAO, false);
-  settings->set(Settings::BLUR, false);
+  settings->set(Settings::SSAO, true);
+  settings->set(Settings::BLUR, true);
   settings->set(Settings::HIGHLIGHT_PICK, false);
 
   glfwMakeContextCurrent(window);
@@ -707,16 +707,16 @@ void Viewer::renderScene(GLuint renderTargetFBO, std::vector<Mesh*>& thisFrameMe
             depthProjectionMatrix = glm::perspective(90.0f, 1.0f, 1.0f, 500.0f);
             switch (shadowMapFace) {
               case 0: // +X
-                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(1, 0, 0),glm::vec3(0, -1, 0));
+                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(1, 0, 0), glm::vec3(0, -1, 0));
                 break;
               case 1: // -X
-                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(-1, 0, 0),glm::vec3(0, -1, 0));
+                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(-1, 0, 0), glm::vec3(0, -1, 0));
                 break;
               case 2:// +Y
-                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, 1, 0),glm::vec3(0, 0, 1));
+                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, 1, 0), glm::vec3(0, 0, 1));
                 break;
               case 3: // -Y
-                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, -1, 0),glm::vec3(0, 0, -1));
+                depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, -1, 0), glm::vec3(0, 0, -1));
                 break;
               case 4:// +Z
                 depthViewMatrix = glm::lookAt(lightPos, lightPos + glm::vec3(0, 0, 1), glm::vec3(0, -1, 0));
