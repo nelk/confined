@@ -2,4 +2,5 @@
 *.d
 tags
 confined
+/.idea
 

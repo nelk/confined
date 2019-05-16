@@ -1,6 +1,7 @@
 Confined - OpenGL Rendering Engine and Demo
 ============================================
 
+![Confined Screenshot](./doc/screenshot01.png)
 
 ## Description
 This engine was started as a final project for an upper-year graphics course at the University of Waterloo.
